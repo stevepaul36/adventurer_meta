@@ -50,6 +50,22 @@ fun AiStoryStudioScreen(
     val videoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri -> selectedVideoUri = uri }
+    var pendingEdlJson by remember { mutableStateOf("") }
+    val edlFilePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { stream ->
+                    stream.write(pendingEdlJson.toByteArray(Charsets.UTF_8))
+                } ?: error("Could not open the selected destination.")
+            }.onSuccess {
+                Toast.makeText(context, "EDL JSON saved.", Toast.LENGTH_SHORT).show()
+            }.onFailure {
+                Toast.makeText(context, "Could not save EDL JSON. Try another location.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     var highlightClips by remember {
         mutableStateOf(
@@ -352,11 +368,12 @@ fun AiStoryStudioScreen(
                             if (selectedClips.isEmpty()) {
                                 Toast.makeText(context, "Select at least one highlight to export.", Toast.LENGTH_SHORT).show()
                             } else {
-                                val edlJson = JSONObject()
+                                pendingEdlJson = JSONObject()
                                     .put("format", "adventurer-edl-v1")
                                     .put("region", selectedRegion)
                                     .put("targetLength", targetLength)
                                     .put("narrationLanguage", narrationLang)
+                                    .put("sourceVideoSelected", selectedVideoUri != null)
                                     .put("clips", JSONArray().apply {
                                         selectedClips.forEach { clip ->
                                             put(
@@ -370,13 +387,7 @@ fun AiStoryStudioScreen(
                                         }
                                     })
                                     .toString(2)
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Adventurer Ride Story EDL", edlJson))
-                                Toast.makeText(
-                                    context,
-                                    "Copied ${selectedClips.size} highlight${if (selectedClips.size == 1) "" else "s"} as EDL JSON.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                edlFilePicker.launch("adventurer-ride-story.edl.json")
                             }
                         },
                         label = { Text("Export EDL JSON", color = HighAltitudeCyan) },
