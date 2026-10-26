@@ -4,8 +4,8 @@ import android.content.Context
 import android.net.Uri
 import com.google.firebase.ai.ai
 import com.google.firebase.ai.type.GenerativeBackend
-import com.google.firebase.ai.type.content
 import com.google.firebase.Firebase
+import com.google.firebase.ai.type.content
 
 /**
  * Firebase AI Logic wrapper for turning ride metadata into a social-ready story.
@@ -44,7 +44,7 @@ object RideStoryAiService {
             "For this demo, choose a video smaller than 15 MB."
         }
 
-        val clipDetails = clips.joinToString(separator = "\\n") { clip ->
+        val clipDetails = clips.joinToString(separator = "\n") { clip ->
             "- ${clip.timeRange}: ${clip.title} (tag: ${clip.tag}; speed metadata: ${clip.speedKmh} km/h; altitude metadata: ${clip.altitudeM} m)"
         }
         val prompt = """
@@ -58,7 +58,7 @@ object RideStoryAiService {
             Never encourage speeding or dangerous riding. Use at most four hashtags.
             Return only the caption.
         """.trimIndent()
-        val model = com.google.firebase.Firebase.ai(backend = GenerativeBackend.googleAI())
+        val model = Firebase.ai(backend = GenerativeBackend.googleAI())
             .generativeModel("gemini-2.5-flash")
         val request = content {
             inlineData(bytes, mimeType)
