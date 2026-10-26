@@ -137,7 +137,7 @@ fun AiStoryStudioScreen(
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    "Choose a clip from your device. Video analysis/export is not enabled in this build yet.",
+                                    "Selected video is analyzed by Firebase AI Logic when you generate a caption (15 MB demo limit).",
                                     color = Color(0xFF94A3B8),
                                     style = MaterialTheme.typography.labelSmall
                                 )
@@ -265,20 +265,32 @@ fun AiStoryStudioScreen(
                                                 if (selected.isEmpty()) {
                                                     aiError = "Select at least one highlight before generating a story."
                                                 } else {
-                                                    generatedCaption = RideStoryAiService.generateCaption(
-                                                        region = selectedRegion,
-                                                        targetLength = targetLength,
-                                                        narrationLanguage = narrationLang,
-                                                        clips = selected.map {
-                                                            RideStoryAiService.ClipContext(
-                                                                timeRange = it.timestamp,
-                                                                title = it.title,
-                                                                tag = it.tag,
-                                                                speedKmh = it.speedKmh,
-                                                                altitudeM = it.altitudeM
-                                                            )
-                                                        }
-                                                    )
+                                                    val clipContext = selected.map {
+                                                        RideStoryAiService.ClipContext(
+                                                            timeRange = it.timestamp,
+                                                            title = it.title,
+                                                            tag = it.tag,
+                                                            speedKmh = it.speedKmh,
+                                                            altitudeM = it.altitudeM
+                                                        )
+                                                    }
+                                                    generatedCaption = if (selectedVideoUri != null) {
+                                                        RideStoryAiService.analyzeVideoAndGenerateCaption(
+                                                            context = context,
+                                                            videoUri = selectedVideoUri!!,
+                                                            region = selectedRegion,
+                                                            targetLength = targetLength,
+                                                            narrationLanguage = narrationLang,
+                                                            clips = clipContext
+                                                        )
+                                                    } else {
+                                                        RideStoryAiService.generateCaption(
+                                                            region = selectedRegion,
+                                                            targetLength = targetLength,
+                                                            narrationLanguage = narrationLang,
+                                                            clips = clipContext
+                                                        )
+                                                    }
                                                 }
                                             } catch (error: Exception) {
                                                 aiError = "AI generation failed. Check Firebase AI Logic setup and App Check, then try again. Your current caption is preserved."
