@@ -4,6 +4,7 @@ import { getStorage } from "firebase-admin/storage";
 import { logger } from "firebase-functions";
 import { defineSecret, defineString } from "firebase-functions/params";
 import { HttpsError, onCall, type CallableRequest } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import {
   isEntitlementActive,
   isSafeStoragePath,
@@ -319,3 +320,30 @@ export const generateRideCaption = onCall({
     await settleMonthlyUsage(usageRef, succeeded);
   }
 });
+
+
+/** Safety net for temporary clips left behind when a client is force-stopped. */
+export const cleanupTemporaryRideVideos = onSchedule(
+  { schedule: "every 24 hours", timeZone: "UTC", region: REGION, maxInstances: 1 },
+  async () => {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const bucket = getStorage().bucket();
+    const [objects] = await bucket.getFiles({ prefix: "ride-videos/" });
+    let deleted = 0;
+
+    for (const object of objects) {
+      try {
+        const [metadata] = await object.getMetadata();
+        const createdAt = typeof metadata.timeCreated === "string"
+          ? Date.parse(metadata.timeCreated) : Number.NaN;
+        if (Number.isFinite(createdAt) && createdAt < cutoff) {
+          await object.delete({ ignoreNotFound: true });
+          deleted += 1;
+        }
+      } catch (error) {
+        logger.warn("Could not inspect/delete a temporary ride video", { object: object.name, error });
+      }
+    }
+    logger.info("Temporary ride-video cleanup completed", { deleted });
+  },
+);

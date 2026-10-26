@@ -36,3 +36,6 @@ Cloud Functions/Storage require a Firebase project with billing enabled. Review 
 - Videos may only use the caller's `ride-videos/<uid>/<filename>` path, are limited to 14 MiB and video content types, and cannot be read by clients.
 - Missing secrets, failed RevenueCat verification, and inactive entitlements fail closed.
 - The Android client deletes each uploaded video in a `finally` block. Add a scheduled object-lifecycle cleanup for uploads abandoned after force-closes.
+
+
+A scheduled cleanup job removes temporary ride-video files older than 24 hours so abandoned uploads do not accumulate. Keep immediate client-side deletion in place as the primary cleanup path.
