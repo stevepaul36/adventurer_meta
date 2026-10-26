@@ -41,7 +41,7 @@ Adventurer is a production-grade native Android application crafted for motorcyc
   - Direct run posting to community feed and riding clubs.
 
 - **AI Ride Story Studio**:
-  - Selectable ride-footage input and editable highlight timeline.
+  - Selectable ride-footage input, AI-detected candidate moments with suggested source timestamps, and an editable highlight timeline.
   - Firebase AI Logic caption generation grounded in the selected clip metadata; when a video is selected, the model also receives the video for multimodal captioning (demo limit: 15 MB).
   - English, Hindi हिन्दी, and Marathi मराठी caption styles.
   - Share generated captions to the local community feed.
@@ -94,7 +94,8 @@ If Firebase is not configured, AI generation will fail and the screen will show 
 2. Choose the route, target reel length, and narration language.
 3. Select the candidate moments to include in the edit decision list.
 4. Generate a caption with Gemini. If a video was selected, the model analyzes that video together with the selected metadata.
-5. Share the caption to the app's local feed, render the selected moments into an MP4 reel using **Render & Export MP4 Reel**, or save the selected moments as an EDL JSON file.
+5. Optionally tap **AI Find Highlights** to ask Gemini to suggest moments and timestamps from the actual video. Review the timeline because AI timestamps can be approximate.
+6. Share the caption to the app's local feed, render selected moments into an MP4 reel using **Render & Export MP4 Reel**, or save the selected moments as an EDL JSON file.
 
 Video rendering runs locally on the device and uses the selected timeline timestamps; it does not yet use AI to discover exact scene boundaries automatically. Review timestamps before exporting. The reel keeps the source audio and does not add generated narration or licensed music.
 
