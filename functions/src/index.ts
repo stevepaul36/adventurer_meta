@@ -132,7 +132,7 @@ type UsageReservation = {
 
 async function reserveMonthlyUsage(quotaOwnerKey: string): Promise<UsageReservation> {
   const month = utcMonthKey(new Date());
-  const usageRef = db.doc(`aiUsage/${uid}/months/${month}`);
+  const usageRef = db.doc(`aiUsage/${quotaOwnerKey}/months/${month}`);
   const reservationRef = usageRef.collection("reservations").doc(randomUUID());
 
   const isFull = await db.runTransaction(async (transaction) => {
@@ -154,7 +154,7 @@ async function reserveMonthlyUsage(quotaOwnerKey: string): Promise<UsageReservat
     }
 
     transaction.set(usageRef, {
-      uid,
+      quotaOwnerKey,
       month,
       used,
       updatedAt: FieldValue.serverTimestamp(),
