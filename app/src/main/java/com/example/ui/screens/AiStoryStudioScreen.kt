@@ -28,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.model.HighlightClip
 import com.example.data.ai.RideStoryAiService
+import com.example.data.ai.RideStoryVideoExporter
+import java.io.File
 import kotlinx.coroutines.launch
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
@@ -51,6 +53,31 @@ fun AiStoryStudioScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri -> selectedVideoUri = uri }
     var pendingEdlJson by remember { mutableStateOf("") }
+    var pendingVideoFile by remember { mutableStateOf<File?>(null) }
+    var isExportingReel by remember { mutableStateOf(false) }
+    var reelExportError by remember { mutableStateOf<String?>(null) }
+    val reelFilePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("video/mp4")
+    ) { uri ->
+        val file = pendingVideoFile
+        if (uri != null && file != null) {
+            runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { output ->
+                    file.inputStream().use { input -> input.copyTo(output) }
+                } ?: error("Could not open the selected destination.")
+            }.onSuccess {
+                Toast.makeText(context, "Ride highlight reel saved as MP4.", Toast.LENGTH_LONG).show()
+            }.onFailure {
+                Toast.makeText(context, "Could not save the MP4. Try another location.", Toast.LENGTH_LONG).show()
+            }.also {
+                file.delete()
+                pendingVideoFile = null
+            }
+        } else {
+            file?.delete()
+            pendingVideoFile = null
+        }
+    }
     val edlFilePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -346,6 +373,66 @@ fun AiStoryStudioScreen(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text("Share")
                             }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Button(
+                            onClick = {
+                                val source = selectedVideoUri
+                                val selected = highlightClips.filter { it.isSelected }
+                                if (source == null) {
+                                    reelExportError = "Choose a ride video before exporting a reel."
+                                } else if (selected.isEmpty()) {
+                                    reelExportError = "Select at least one highlight before exporting."
+                                } else if (!isExportingReel) {
+                                    isExportingReel = true
+                                    reelExportError = null
+                                    coroutineScope.launch {
+                                        try {
+                                            val output = RideStoryVideoExporter.export(
+                                                context = context,
+                                                sourceUri = source,
+                                                segments = selected.map {
+                                                    RideStoryVideoExporter.Segment(
+                                                        timeRange = it.timestamp,
+                                                        title = it.title
+                                                    )
+                                                },
+                                                targetLength = targetLength
+                                            )
+                                            pendingVideoFile = output
+                                            reelFilePicker.launch("adventurer-ride-story.mp4")
+                                        } catch (error: Exception) {
+                                            reelExportError = error.message ?: "Video export failed. Try a different source video."
+                                        } finally {
+                                            isExportingReel = false
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = !isExportingReel,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = HighAltitudeCyan)
+                        ) {
+                            if (isExportingReel) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = Color.Black,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Rendering highlight reel…", color = Color.Black)
+                            } else {
+                                Icon(Icons.Default.Movie, contentDescription = null, tint = Color.Black)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Render & Export MP4 Reel", color = Color.Black)
+                            }
+                        }
+                        if (reelExportError != null) {
+                            Text(
+                                text = reelExportError!!,
+                                color = Color(0xFFFCA5A5),
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                     }
                 }
