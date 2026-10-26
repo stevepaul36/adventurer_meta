@@ -108,6 +108,8 @@ dependencies {
   implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
+  implementation("androidx.media3:media3-transformer:1.8.0")
+  implementation("androidx.media3:media3-common:1.8.0")
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 
