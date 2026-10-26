@@ -41,9 +41,12 @@ Adventurer is a production-grade native Android application crafted for motorcyc
   - Direct run posting to community feed and riding clubs.
 
 - **AI Ride Story Studio**:
-  - AI highlight reel timeline and Edit Decision List (EDL) generator.
-  - Multilingual travel narration and caption generation (English, Hindi हिन्दी, Marathi मराठी).
-  - 1-click clipboard copy and EDL JSON timeline export.
+  - Selectable ride-footage input and editable highlight timeline.
+  - Firebase AI Logic caption generation grounded in the selected clip metadata; when a video is selected, the model also receives the video for multimodal captioning (demo limit: 15 MB).
+  - English, Hindi हिन्दी, and Marathi मराठी caption styles.
+  - Share generated captions to the local community feed.
+  - Export a structured EDL JSON file with selected clip metadata, target length, language, and source-video selection state.
+  - EDL is an editing manifest, not a rendered video file; final video rendering and audio narration are not yet included.
 
 - **Gamification & 3D Trophy Showcase**:
   - Rider Level and XP progress with daily streak counter.
@@ -69,3 +72,26 @@ Adventurer is a production-grade native Android application crafted for motorcyc
 - **Architecture**: MVVM with Repository pattern and StateFlow
 - **Typography**: Local Google Font (Outfit)
 - **Icon**: Custom adaptive launcher icon
+
+
+## Configure Firebase AI Logic
+
+The repository intentionally does not include a Firebase configuration file or API secrets. To enable live AI caption generation:
+
+1. Create or select a Firebase project and register the Android app using the application ID from `app/build.gradle.kts`.
+2. Enable Firebase AI Logic and the Gemini Developer API backend in the Firebase console.
+3. Download the project's `google-services.json` and place it in the `app/` directory. Do not commit credentials or configuration from a private production project unless your team has explicitly approved that.
+4. Confirm the Google Services Gradle plugin is configured, then build and run the app on a device with network access.
+5. Configure App Check for production. Use the debug provider only for local development, never as the production enforcement strategy.
+
+If Firebase is not configured, AI generation will fail and the screen will show an error while preserving the existing caption. The non-AI caption template remains available. Video upload is performed directly from the app to Firebase AI Logic when a video is selected; for this prototype, keep video files under 15 MB and do not select sensitive footage without consent.
+
+## Ride Story Studio workflow
+
+1. Choose an optional video from device storage.
+2. Choose the route, target reel length, and narration language.
+3. Select the candidate moments to include in the edit decision list.
+4. Generate a caption with Gemini. If a video was selected, the model analyzes that video together with the selected metadata.
+5. Share the caption to the app's local feed, or export the selected moments as an EDL JSON file using Android's save dialog.
+
+The EDL records proposed source time ranges and metadata. It does not trim, transcode, or stitch the video. Video rendering, scene-by-scene timestamps, soundtrack generation, and narration audio remain future work.
