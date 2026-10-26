@@ -197,8 +197,8 @@ object RideStoryAiService {
             - Return only the caption, without a heading or explanation.
         """.trimIndent()
 
-        val model = Firebase.ai(backend = GenerativeBackend.googleAI())
-            .generativeModel("gemini-2.5-flash")
+        val model = Firebase.ai(backend = GenerativeBackend.googleAI(), useLimitedUseAppCheckTokens = true)
+            .generativeModel("gemini-3.8-flash")
         val response = model.generateContent(prompt)
         return response.text?.trim()?.takeIf { it.isNotEmpty() }
             ?: throw IllegalStateException("The AI model returned an empty caption.")
