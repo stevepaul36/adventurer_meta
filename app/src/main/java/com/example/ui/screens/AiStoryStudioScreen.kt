@@ -101,29 +101,11 @@ fun AiStoryStudioScreen(
         }
     }
 
+    // Populate the timeline only with moments found in the user's selected video.
     var highlightClips by remember {
-        mutableStateOf(
-            listOf(
-                HighlightClip("00:14 - 00:22", "Khardung La Summit Ascent", 48, 5359, "Hairpin Carve", true),
-                HighlightClip("01:05 - 01:18", "Pangong Tso Turquoise Shoreline", 64, 4270, "High Speed Drift", true),
-                HighlightClip("02:40 - 02:52", "Nubra Sand Dunes Golden Sunset", 52, 3048, "Scenic Panorama", true),
-                HighlightClip("04:12 - 04:26", "Baralacha Glacial Water Crossing", 24, 4890, "River Splashdown", true),
-                HighlightClip("06:30 - 06:44", "Umling La 19,024 ft Finish Flag", 42, 5798, "Summit Victory", true)
-            )
-        )
+        mutableStateOf<List<HighlightClip>>(emptyList())
     }
-
-    val fallbackCaption = remember(selectedRegion, narrationLang) {
-        when {
-            narrationLang.contains("Hindi") ->
-                "🏔️ लद्दाख की बर्फीली हवाओं और ऊँचाई पर हमारी बाइकों की गूंज! हर मोड़ पर एक नई दास्तान। एडवेंचर कभी रुकता नहीं! 🏍️💨 #LehLadakh #AdventurerRider"
-            narrationLang.contains("Marathi") ->
-                "सह्याद्री ते हिमालयाचे उत्तुंग शिखर! दोन चाकांवरची थरारक सफर आणि प्रत्येक वळणावर नवा अनुभव. 🏍️✨ #HimalayanOdyssey #Adventurer"
-            else ->
-                "🏔️ The road unfolds one turn at a time. Big skies, mountain air, and the moments that make every ride a story. 🏍️💨 #Adventurer #RideStory"
-        }
-    }
-    var generatedCaption by remember(selectedRegion, narrationLang) { mutableStateOf(fallbackCaption) }
+    var generatedCaption by remember { mutableStateOf("") }
     var isGenerating by remember { mutableStateOf(false) }
     var aiError by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
@@ -406,6 +388,7 @@ fun AiStoryStudioScreen(
                             }
 
                             IconButton(
+                                enabled = generatedCaption.isNotBlank(),
                                 onClick = {
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     clipboard.setPrimaryClip(ClipData.newPlainText("Ride Caption", generatedCaption))
@@ -418,9 +401,11 @@ fun AiStoryStudioScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = generatedCaption,
+                            text = generatedCaption.ifBlank {
+                                "Your AI caption will appear here after you analyze your actual ride footage."
+                            },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFFE2E8F0)
+                            color = if (generatedCaption.isBlank()) Color(0xFF94A3B8) else Color(0xFFE2E8F0)
                         )
                         if (aiError != null) {
                             Text(
@@ -445,8 +430,10 @@ fun AiStoryStudioScreen(
                                         coroutineScope.launch {
                                             try {
                                                 val selected = highlightClips.filter { it.isSelected }
-                                                if (selected.isEmpty()) {
-                                                    aiError = "Select at least one highlight before generating a story."
+                                                if (selectedVideoUri != null && analyzedVideoUri != selectedVideoUri) {
+                                                    aiError = "Run AI Find Highlights for the selected video before generating its caption."
+                                                } else if (selected.isEmpty()) {
+                                                    aiError = "Choose a video and run AI Find Highlights before generating a story."
                                                 } else {
                                                     val clipContext = selected.map {
                                                         RideStoryAiService.ClipContext(
@@ -504,6 +491,7 @@ fun AiStoryStudioScreen(
                                 }
                             }
                             OutlinedButton(
+                                enabled = generatedCaption.isNotBlank(),
                                 onClick = {
                                     viewModel.createPost(generatedCaption, null)
                                     Toast.makeText(context, "Ride story shared to your feed.", Toast.LENGTH_SHORT).show()
