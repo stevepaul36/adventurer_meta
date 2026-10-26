@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Subscription and AI quota records are server-owned only.
+    match /users/{uid}/billing/{document=**} {
+      allow read, write: if false;
+    }
+    match /aiUsage/{uid}/months/{month} {
+      allow read, write: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

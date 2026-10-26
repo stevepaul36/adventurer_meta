@@ -89,7 +89,7 @@ class LocationManager(private val context: Context) : SensorEventListener {
         return LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L).apply {
             setMinUpdateIntervalMillis(500L)
             setMinUpdateDistanceMeters(0.5f)
-            setGranularity(Granularity.GRANULARITY_FINE)
+            setGranularity(Granularity.GRANULARITY_PERMISSION_LEVEL)
             setWaitForAccurateLocation(false)
         }.build()
     }
@@ -189,6 +189,7 @@ class LocationManager(private val context: Context) : SensorEventListener {
 
         val request = createRideLocationRequest()
         fusedLocationClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
+            .addOnFailureListener { close(it) }
 
         awaitClose {
             fusedLocationClient.removeLocationUpdates(callback)

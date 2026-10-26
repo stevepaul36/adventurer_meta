@@ -1,5 +1,13 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
 
+val revenueCatTestApiKey = providers.gradleProperty("REVENUECAT_TEST_API_KEY")
+  .orElse(providers.environmentVariable("REVENUECAT_TEST_API_KEY"))
+  .getOrElse("")
+val revenueCatProductionApiKey = providers.gradleProperty("REVENUECAT_API_KEY")
+  .orElse(providers.environmentVariable("REVENUECAT_API_KEY"))
+  .getOrElse("")
+fun buildConfigString(value: String): String = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -42,6 +50,7 @@ android {
 
   buildTypes {
     release {
+      buildConfigField("String", "REVENUECAT_API_KEY", buildConfigString(revenueCatProductionApiKey))
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -50,6 +59,7 @@ android {
       signingConfig = signingConfigs.getByName("release")
     }
     debug {
+      buildConfigField("String", "REVENUECAT_API_KEY", buildConfigString(revenueCatTestApiKey))
       // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
       // AI Studio.
       signingConfig = signingConfigs.getByName("debugConfig")
@@ -111,7 +121,12 @@ dependencies {
   implementation(libs.androidx.room.runtime)
   implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
-  implementation(libs.firebase.ai)
+  implementation(libs.firebase.auth)
+  implementation(libs.firebase.functions)
+  implementation(libs.firebase.storage)
+  implementation(libs.kotlinx.coroutines.play.services)
+  implementation("androidx.media3:media3-transformer:1.8.0")
+  implementation("androidx.media3:media3-common:1.8.0")
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 
@@ -123,6 +138,9 @@ dependencies {
   // implementation(libs.googleid)
   implementation(libs.firebase.appcheck.recaptcha)
   implementation(libs.firebase.appcheck.debug)
+  implementation("com.google.firebase:firebase-appcheck-playintegrity")
+  // Store-backed subscriptions and entitlement status.
+  implementation("com.revenuecat.purchases:purchases:10.24.1")
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.logging.interceptor)

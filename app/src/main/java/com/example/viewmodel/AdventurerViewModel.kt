@@ -19,7 +19,8 @@ enum class Screen(val title: String, val isTopLevel: Boolean = false) {
     APEX_MOTO("Apex Moto 3D"),
     GAMIFICATION("Gamification Hub"),
     CLUBS("Riding Clubs"),
-    PROFILE("Rider Profile", isTopLevel = true)
+    PROFILE("Rider Profile", isTopLevel = true),
+    PRO_PAYWALL("Adventurer Pro")
 }
 
 enum class SupportedLang(val code: String, val displayName: String, val localName: String) {
@@ -70,7 +71,7 @@ class AdventurerViewModel(
     val currentUser = repository.currentUser
 
     init {
-        // Ride clock (1 s) and demo-mode simulation (2 s) while a ride is recording.
+        // Wall-clock time runs independently of GPS cadence. Simulation is demo-only.
         viewModelScope.launch {
             var tick = 0
             while (true) {
@@ -81,19 +82,11 @@ class AdventurerViewModel(
         }
     }
 
-    /**
-     * Bottom-bar tabs replace each other (back from any tab returns to the Feed);
-     * detail screens (Studio, Clubs, Trophies, Apex Moto) stack on top of the current tab.
-     */
     fun navigateTo(screen: Screen) {
-        val current = _currentScreen.value
-        if (current == screen) return
-        if (screen.isTopLevel) {
-            screenStack.clear()
-        } else {
-            screenStack.add(current)
+        if (_currentScreen.value != screen) {
+            screenStack.add(_currentScreen.value)
+            _currentScreen.value = screen
         }
-        _currentScreen.value = screen
     }
 
     fun navigateBack(): Boolean {
@@ -167,10 +160,8 @@ class AdventurerViewModel(
     private var locationJob: kotlinx.coroutines.Job? = null
 
     fun attachLocationManager(manager: com.example.data.location.LocationManager) {
-        this.locationManager = manager
-        if (telemetry.value.isRecording) {
-            startGpsTracking()
-        }
+        locationManager = manager
+        if (telemetry.value.isRecording) startGpsTracking()
     }
 
     fun startGpsTracking() {
@@ -179,11 +170,11 @@ class AdventurerViewModel(
         locationJob?.cancel()
         locationJob = viewModelScope.launch {
             try {
-                manager.getLocationUpdates().collect { rideLoc ->
-                    repository.updateFromGpsLocation(rideLoc)
+                manager.getLocationUpdates().collect { rideLocation ->
+                    repository.updateFromGpsLocation(rideLocation)
                 }
             } catch (_: Exception) {
-                // Handled gracefully
+                // The HUD remains available if permission is revoked or GPS is unavailable.
             }
         }
     }
@@ -195,13 +186,12 @@ class AdventurerViewModel(
     }
 
     fun startRide() {
-        val hasLocation = locationManager?.hasLocationPermission() == true
-        repository.startRide(demo = !hasLocation)
-        startGpsTracking()
+        val hasPermission = locationManager?.hasLocationPermission() == true
+        repository.startRide(demo = !hasPermission)
+        if (hasPermission) startGpsTracking()
         navigateTo(Screen.LIVE_TRACKER)
     }
 
-    /** Called when the rider grants location permission from the HUD. */
     fun onLocationPermissionGranted() {
         repository.leaveDemoMode()
         if (telemetry.value.isRecording) startGpsTracking()
@@ -220,12 +210,15 @@ class AdventurerViewModel(
     }
 
     fun finishRide() {
+        val wasDemo = telemetry.value.isDemo
         stopGpsTracking()
         val stats = repository.stopAndSaveRide()
-        repository.createPost(
-            caption = "🏁 Completed ride! ${stats.distanceKm} km in ${stats.duration} · top ${stats.topSpeedKmH.toInt()} km/h · max lean ${stats.maxLeanAngleDeg}° · +${stats.elevationGainM} m climbed.",
-            rideStats = stats
-        )
+        val caption = if (wasDemo) {
+            "🏁 Demo ride completed. Distance, speed and lean values were simulated and are not a recorded GPS route."
+        } else {
+            "🏁 Completed ride! Distance: ${stats.distanceKm} km, Duration: ${stats.duration}, Max Lean: ${stats.maxLeanAngleDeg}°, Elevation gain: +${stats.elevationGainM}m."
+        }
+        repository.createPost(caption = caption, rideStats = stats)
         navigateTo(Screen.FEED)
     }
 

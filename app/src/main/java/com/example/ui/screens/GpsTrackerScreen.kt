@@ -7,9 +7,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,35 +21,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.model.LiveRideTelemetry
-import com.example.data.repository.formatRideDuration
-import com.example.ui.components.HoldToStartRideButton
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
 import com.example.ui.theme.DangerRed
-import com.example.ui.theme.DarkBackground
-import com.example.ui.theme.DarkSurface
-import com.example.ui.theme.DarkSurfaceBorder
-import com.example.ui.theme.DarkSurfaceVariant
 import com.example.ui.theme.HighAltitudeCyan
-import com.example.ui.theme.SuccessGreen
-import com.example.ui.theme.TextSecondary
 import com.example.viewmodel.AdventurerViewModel
-import kotlin.math.abs
-
-private enum class RideStatus { READY, RECORDING, PAUSED }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,81 +43,416 @@ fun GpsTrackerScreen(
     BackHandler { viewModel.navigateBack() }
 
     val telemetry by viewModel.telemetry.collectAsState()
-    val status = when {
-        !telemetry.isRecording -> RideStatus.READY
-        telemetry.isPaused -> RideStatus.PAUSED
-        else -> RideStatus.RECORDING
+    var hasLocationPermission by remember { mutableStateOf(viewModel.locationManager?.hasLocationPermission() == true) }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        hasLocationPermission = result[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (hasLocationPermission) viewModel.onLocationPermissionGranted()
     }
-    var hasPermission by remember { mutableStateOf(viewModel.locationManager?.hasLocationPermission() == true) }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        hasPermission = result[Manifest.permission.ACCESS_FINE_LOCATION] == true || result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        if (hasPermission) viewModel.onLocationPermissionGranted()
-    }
-    val requestLocation = {
-        permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+    val requestLocationPermission = {
+        locationPermissionLauncher.launch(
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+        )
     }
 
     var showWaypointDialog by remember { mutableStateOf(false) }
-    var showFinishDialog by remember { mutableStateOf(false) }
-
-    // Riders glance at the HUD — don't let the screen sleep mid-ride.
-    val view = LocalView.current
-    DisposableEffect(telemetry.isRecording) {
-        view.keepScreenOn = telemetry.isRecording
-        onDispose { view.keepScreenOn = false }
-    }
+    var waypointLabel by remember { mutableStateOf("") }
+    var waypointType by remember { mutableStateOf("Photo") }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(if (status == RideStatus.READY) "Ride" else "Live ride", fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("Speed · lean angle · altitude", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = CircleShape,
+                            color = if (telemetry.isRecording) Color(0xFF10B981) else AmberGold,
+                            modifier = Modifier.size(12.dp)
+                        ) {}
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = if (telemetry.isRecording) "LIVE TELEMETRY HUD" else "GPS RIDE RECORDER",
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "High-Pass Speed, Lean Angle & Barometric Altitude",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AmberGold
+                            )
+                        }
                     }
                 },
-                actions = { StatusPill(status, telemetry.isDemo) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+                navigationIcon = {
+                    IconButton(onClick = { viewModel.navigateBack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B0F17))
             )
         },
-        bottomBar = {
-            if (status != RideStatus.READY) {
-                RideControls(
-                    paused = status == RideStatus.PAUSED,
-                    onPauseToggle = { if (status == RideStatus.PAUSED) viewModel.resumeRide() else viewModel.pauseRide() },
-                    onWaypoint = { showWaypointDialog = true },
-                    onFinish = { showFinishDialog = true },
-                )
-            }
-        },
-        containerColor = DarkBackground,
+        containerColor = Color(0xFF0B0F17),
         modifier = modifier
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { GpsStatusCard(hasPermission, telemetry, onEnable = requestLocation) }
-
-            if (status == RideStatus.READY) {
-                item { ReadyCard(hasPermission, onStart = { viewModel.startRide() }) }
-            } else {
-                item { SpeedCard(telemetry, paused = status == RideStatus.PAUSED) }
-                item { LeanCard(telemetry) }
-                if (telemetry.markedWaypoints.isNotEmpty()) {
-                    item {
-                        Text("Waypoints (${telemetry.markedWaypoints.size})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color.White)
+            if (!hasLocationPermission) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2637))
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Enable location for real ride telemetry", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Without location permission, the app can show demo motion. Demo speed/distance/lean are simulated, not GPS-recorded.",
+                                color = Color(0xFFCBD5E1), style = MaterialTheme.typography.bodySmall
+                            )
+                            Button(onClick = requestLocationPermission, colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange)) {
+                                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Black)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Enable GPS", color = Color.Black)
+                            }
+                        }
                     }
-                    items(telemetry.markedWaypoints.reversed()) { wp ->
-                        Surface(shape = RoundedCornerShape(12.dp), color = DarkSurface, modifier = Modifier.fillMaxWidth()) {
-                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(waypointIcon(wp.type), contentDescription = wp.type, tint = AmberGold, modifier = Modifier.size(24.dp))
-                                Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(wp.label, fontWeight = FontWeight.Bold, color = Color.White)
-                                    Text("${wp.timestamp} · ${wp.altitudeM} m · ${wp.speedKmH.toInt()} km/h", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                }
+            }
+            if (telemetry.isDemo && telemetry.isRecording) {
+                item {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF3A2A17))) {
+                        Text(
+                            "DEMO MODE — movement and telemetry are simulated. Grant location permission to record actual GPS data.",
+                            color = Color(0xFFFDE68A), modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+            if (telemetry.isRecording && !telemetry.isDemo && !telemetry.hasGpsFix) {
+                item {
+                    Text("Waiting for the first accurate GPS fix…", color = AmberGold, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            // Speedometer HUD Card
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("speedometer_hud_card"),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A)),
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = Brush.verticalGradient(
+                            listOf(AdventureOrange.copy(alpha = 0.6f), Color(0xFF1E293B))
+                        )
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Analog / Digital Speed Dial
+                        val speedAngle = (telemetry.currentSpeedKmH / 160.0).coerceIn(0.0, 1.0).toFloat()
+                        val animatedSpeedAngle by animateFloatAsState(
+                            targetValue = speedAngle,
+                            animationSpec = tween(durationMillis = 200),
+                            label = "speed_arc"
+                        )
+
+                        Box(
+                            modifier = Modifier.size(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                val strokeWidth = 12.dp.toPx()
+                                // Background Arc (240 deg sweep from 150 deg)
+                                drawArc(
+                                    color = Color(0xFF1E293B),
+                                    startAngle = 150f,
+                                    sweepAngle = 240f,
+                                    useCenter = false,
+                                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                                )
+                                // Active Speed Arc
+                                drawArc(
+                                    brush = Brush.sweepGradient(
+                                        listOf(HighAltitudeCyan, AmberGold, AdventureOrange)
+                                    ),
+                                    startAngle = 150f,
+                                    sweepAngle = animatedSpeedAngle * 240f,
+                                    useCenter = false,
+                                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                                )
+                            }
+
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "${telemetry.currentSpeedKmH.toInt()}",
+                                    style = MaterialTheme.typography.displayLarge.copy(fontSize = 54.sp),
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "KM / H",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = AmberGold,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Avg: ${telemetry.averageSpeedKmH} km/h • Max: ${telemetry.topSpeedKmH.toInt()} km/h",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF94A3B8)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Stats Grid: Distance, Time, Altitude, Calories
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            HudStatBox("DISTANCE", "${telemetry.distanceKm} km", AmberGold)
+                            val minutes = telemetry.elapsedSeconds / 60
+                            val seconds = telemetry.elapsedSeconds % 60
+                            HudStatBox("ELAPSED", "${minutes}m ${seconds}s", Color.White)
+                            HudStatBox("ALTITUDE", "${telemetry.altitudeM} m", HighAltitudeCyan)
+                            HudStatBox("CALORIES", "${telemetry.caloriesBurned} kcal", AdventureOrange)
+                        }
+                    }
+                }
+            }
+
+            // Real-Time Motorcycle Lean Angle Gauge
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A)),
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF334155))
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Corner Lean Angle Meter",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = AmberGold.copy(alpha = 0.2f)
+                            ) {
+                                Text(
+                                    text = "MAX LEAN: ${telemetry.maxLeanAngleDeg}°",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = AmberGold,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Motorcycle Lean Indicator Canvas
+                        val leanDeg = telemetry.leanAngleDeg.toFloat()
+                        val animatedLean by animateFloatAsState(
+                            targetValue = leanDeg,
+                            animationSpec = tween(durationMillis = 150),
+                            label = "lean_angle"
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                val centerX = size.width / 2
+                                val groundY = size.height * 0.75f
+
+                                // Horizon ground line
+                                drawLine(
+                                    color = Color(0xFF334155),
+                                    start = Offset(20f, groundY),
+                                    end = Offset(size.width - 20f, groundY),
+                                    strokeWidth = 2.dp.toPx()
+                                )
+
+                                // Center reference line
+                                drawLine(
+                                    color = Color(0x66FFFFFF),
+                                    start = Offset(centerX, groundY - 50.dp.toPx()),
+                                    end = Offset(centerX, groundY + 10.dp.toPx()),
+                                    strokeWidth = 1.dp.toPx()
+                                )
+
+                                // Tilted bike axis indicator
+                                rotate(degrees = animatedLean, pivot = Offset(centerX, groundY)) {
+                                    drawLine(
+                                        brush = Brush.verticalGradient(
+                                            listOf(
+                                                if (kotlin.math.abs(animatedLean) > 35f) DangerRed else AdventureOrange,
+                                                AmberGold
+                                            )
+                                        ),
+                                        start = Offset(centerX, groundY - 60.dp.toPx()),
+                                        end = Offset(centerX, groundY),
+                                        strokeWidth = 6.dp.toPx(),
+                                        cap = StrokeCap.Round
+                                    )
+                                    // Pointer head
+                                    drawCircle(
+                                        color = Color.White,
+                                        radius = 6.dp.toPx(),
+                                        center = Offset(centerX, groundY - 60.dp.toPx())
+                                    )
                                 }
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("◀ 45° LEFT", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
+                                Text(
+                                    text = "${kotlin.math.abs(telemetry.leanAngleDeg)}° ${if (telemetry.leanAngleDeg < 0) "LEFT" else if (telemetry.leanAngleDeg > 0) "RIGHT" else "UPRIGHT"}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (kotlin.math.abs(telemetry.leanAngleDeg) > 35) DangerRed else AdventureOrange
+                                )
+                                Text("RIGHT 45° ▶", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!telemetry.isRecording) {
+                item {
+                    Button(
+                        onClick = { viewModel.startRide() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Start ride", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                }
+            } else {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Button(
+                                onClick = { showWaypointDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.AddLocation, contentDescription = null, tint = HighAltitudeCyan, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Drop waypoint", color = Color.White)
+                            }
+                            Button(
+                                onClick = { if (telemetry.isPaused) viewModel.resumeRide() else viewModel.pauseRide() },
+                                colors = ButtonDefaults.buttonColors(containerColor = AmberGold),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(if (telemetry.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (telemetry.isPaused) "Resume" else "Pause", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Button(
+                            onClick = { viewModel.finishRide() },
+                            colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Flag, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Finish & Post", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.discardRide() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Discard ride")
+                        }
+                    }
+                }
+            }
+
+            // Marked Waypoints History
+            if (telemetry.markedWaypoints.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Marked Trail Waypoints (${telemetry.markedWaypoints.size})",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+
+                items(telemetry.markedWaypoints.size) { i ->
+                    val wp = telemetry.markedWaypoints[i]
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF131B2A),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = when (wp.type) {
+                                    "Fuel" -> Icons.Default.LocalGasStation
+                                    "Chai" -> Icons.Default.Coffee
+                                    "Photo" -> Icons.Default.CameraAlt
+                                    else -> Icons.Default.Map
+                                },
+                                contentDescription = null,
+                                tint = AmberGold,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(wp.label, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text("${wp.timestamp} • Alt: ${wp.altitudeM}m • Speed: ${wp.speedKmH.toInt()} km/h", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
                             }
                         }
                     }
@@ -144,347 +462,68 @@ fun GpsTrackerScreen(
     }
 
     if (showWaypointDialog) {
-        WaypointDialog(
-            onDismiss = { showWaypointDialog = false },
-            onSave = { label, type -> viewModel.addWaypoint(label, type); showWaypointDialog = false },
-        )
-    }
-
-    if (showFinishDialog) {
         AlertDialog(
-            onDismissRequest = { showFinishDialog = false },
-            icon = { Icon(Icons.Default.Flag, contentDescription = null, tint = AdventureOrange) },
-            title = { Text("Finish this ride?", fontWeight = FontWeight.Bold, color = Color.White) },
+            onDismissRequest = { showWaypointDialog = false },
+            title = { Text("Mark Trail Waypoint", fontWeight = FontWeight.Bold, color = Color.White) },
             text = {
-                Text(
-                    "${telemetry.distanceKm} km · ${formatRideDuration(telemetry.elapsedSeconds)} · max lean ${telemetry.maxLeanAngleDeg}°" +
-                        if (telemetry.isDemo) "\n\nThis ride used demo data because location was off." else "",
-                    color = Color(0xFFCBD5E1)
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = waypointLabel,
+                        onValueChange = { waypointLabel = it },
+                        label = { Text("Waypoint Name") },
+                        placeholder = { Text("e.g. Rohtang Chai Stop, Fuel point") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = AdventureOrange
+                        )
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Photo", "Chai", "Fuel", "Pass").forEach { t ->
+                            FilterChip(
+                                selected = waypointType == t,
+                                onClick = { waypointType = t },
+                                label = { Text(t) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AdventureOrange,
+                                    selectedLabelColor = Color.Black,
+                                    containerColor = Color(0xFF1E293B),
+                                    labelColor = Color.White
+                                )
+                            )
+                        }
+                    }
+                }
             },
             confirmButton = {
                 Button(
-                    onClick = { showFinishDialog = false; viewModel.finishRide() },
-                    colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange),
-                    modifier = Modifier.testTag("confirm_finish_ride")
-                ) { Text("Save & post", color = Color.Black, fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = { showFinishDialog = false; viewModel.discardRide() }) { Text("Discard", color = DangerRed) }
-                    TextButton(onClick = { showFinishDialog = false }) { Text("Keep riding", color = TextSecondary) }
+                    onClick = {
+                        val name = if (waypointLabel.isBlank()) "$waypointType Stop" else waypointLabel
+                        viewModel.addWaypoint(name, waypointType)
+                        waypointLabel = ""
+                        showWaypointDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange)
+                ) {
+                    Text("Save Waypoint", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = DarkSurface,
-            shape = RoundedCornerShape(20.dp)
+            dismissButton = {
+                TextButton(onClick = { showWaypointDialog = false }) {
+                    Text("Cancel", color = Color(0xFF94A3B8))
+                }
+            },
+            containerColor = Color(0xFF131B2A),
+            shape = RoundedCornerShape(16.dp)
         )
     }
 }
 
-// ----------------------------------------------------------------------------
-
 @Composable
-private fun StatusPill(status: RideStatus, demo: Boolean) {
-    val (label, color) = when {
-        status == RideStatus.READY -> "READY" to TextSecondary
-        status == RideStatus.PAUSED -> "PAUSED" to AmberGold
-        demo -> "DEMO" to HighAltitudeCyan
-        else -> "REC" to DangerRed
+private fun HudStatBox(label: String, value: String, valueColor: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = valueColor)
     }
-    Surface(shape = RoundedCornerShape(50), color = color.copy(alpha = 0.18f), modifier = Modifier.padding(end = 12.dp)) {
-        Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = color, modifier = Modifier.size(8.dp)) {}
-            Spacer(Modifier.width(6.dp))
-            Text(label, color = color, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
-private fun GpsStatusCard(hasPermission: Boolean, t: LiveRideTelemetry, onEnable: () -> Unit) {
-    when {
-        !hasPermission -> Card(
-            modifier = Modifier.fillMaxWidth().testTag("gps_permission_banner"),
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant),
-            border = CardDefaults.outlinedCardBorder().copy(brush = SolidColor(AmberGold))
-        ) {
-            Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.LocationOff, contentDescription = null, tint = AmberGold)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Location is off", fontWeight = FontWeight.Bold, color = AmberGold)
-                    Text(
-                        if (t.isRecording) "Showing demo data. Turn on location to record this ride for real."
-                        else "Needed for real speed, distance and route. Without it the HUD runs in demo mode.",
-                        style = MaterialTheme.typography.bodySmall, color = Color(0xFFCBD5E1)
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                Button(onClick = onEnable, colors = ButtonDefaults.buttonColors(containerColor = AmberGold)) {
-                    Text("Turn on", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-        t.isRecording && !t.hasGpsFix && !t.isDemo -> Surface(
-            shape = RoundedCornerShape(12.dp), color = DarkSurfaceVariant, modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(color = AmberGold, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(10.dp))
-                Text("Searching for GPS… open sky helps", color = Color.White, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-        t.hasGpsFix -> Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = SuccessGreen.copy(alpha = 0.12f),
-            border = CardDefaults.outlinedCardBorder().copy(brush = SolidColor(SuccessGreen.copy(alpha = 0.6f))),
-            modifier = Modifier.fillMaxWidth().testTag("gps_coordinates_strip")
-        ) {
-            Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.GpsFixed, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(formatCoordinates(t.latitude, t.longitude), color = Color.White, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                Text("${compassPoint(t.bearingDeg)} ${t.bearingDeg.toInt()}°", color = SuccessGreen, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-            }
-        }
-        else -> Surface(shape = RoundedCornerShape(12.dp), color = SuccessGreen.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.GpsFixed, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Location ready", color = Color.White, style = MaterialTheme.typography.labelMedium)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReadyCard(hasPermission: Boolean, onStart: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        border = CardDefaults.outlinedCardBorder().copy(brush = Brush.verticalGradient(listOf(AdventureOrange.copy(alpha = 0.6f), DarkSurfaceVariant)))
-    ) {
-        Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("Ready when you are", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
-            HoldToStartRideButton(onRideStarted = onStart)
-            Text(
-                "Press and hold to start recording. Holding prevents accidental starts in a pocket or tank bag.",
-                style = MaterialTheme.typography.bodySmall, color = TextSecondary, textAlign = TextAlign.Center
-            )
-            if (!hasPermission) {
-                Text("Location is off — this ride will use demo data.", style = MaterialTheme.typography.labelMedium, color = AmberGold)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SpeedCard(t: LiveRideTelemetry, paused: Boolean) {
-    Card(
-        modifier = Modifier.fillMaxWidth().testTag("speedometer_hud_card"),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        border = CardDefaults.outlinedCardBorder().copy(brush = Brush.verticalGradient(listOf(AdventureOrange.copy(alpha = 0.6f), DarkSurfaceVariant)))
-    ) {
-        Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            val fraction by animateFloatAsState((t.currentSpeedKmH / 160.0).coerceIn(0.0, 1.0).toFloat(), tween(250), label = "speed")
-            Box(
-                Modifier.size(220.dp).semantics { contentDescription = "Speed ${t.currentSpeedKmH.toInt()} kilometres per hour" },
-                contentAlignment = Alignment.Center
-            ) {
-                Canvas(Modifier.fillMaxSize()) {
-                    val stroke = 14.dp.toPx()
-                    drawArc(DarkSurfaceVariant, 150f, 240f, false, style = Stroke(stroke, cap = StrokeCap.Round))
-                    drawArc(
-                        brush = Brush.sweepGradient(listOf(HighAltitudeCyan, AmberGold, AdventureOrange)),
-                        startAngle = 150f, sweepAngle = fraction * 240f, useCenter = false,
-                        style = Stroke(stroke, cap = StrokeCap.Round)
-                    )
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        if (paused) "—" else "${t.currentSpeedKmH.toInt()}",
-                        style = MaterialTheme.typography.displayLarge.copy(fontSize = 72.sp, lineHeight = 72.sp),
-                        fontWeight = FontWeight.Bold, color = Color.White
-                    )
-                    Text("km/h", style = MaterialTheme.typography.titleSmall, color = AmberGold, fontWeight = FontWeight.Bold)
-                    if (t.isDemo) Text("demo data", style = MaterialTheme.typography.labelSmall, color = HighAltitudeCyan)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth()) {
-                HudStat("AVG", "${t.averageSpeedKmH.toInt()} km/h", Color.White, Modifier.weight(1f))
-                HudStat("TOP", "${t.topSpeedKmH.toInt()} km/h", AdventureOrange, Modifier.weight(1f))
-            }
-            HorizontalDivider(color = DarkSurfaceVariant, modifier = Modifier.padding(vertical = 14.dp))
-            Row(Modifier.fillMaxWidth()) {
-                HudStat("DISTANCE", "%.2f km".format(t.distanceKm), AmberGold, Modifier.weight(1f))
-                HudStat("RIDE TIME", formatRideDuration(t.elapsedSeconds), Color.White, Modifier.weight(1f))
-            }
-            Spacer(Modifier.height(14.dp))
-            Row(Modifier.fillMaxWidth()) {
-                HudStat("ALTITUDE", if (t.hasGpsFix || t.isDemo) "${t.altitudeM} m" else "—", HighAltitudeCyan, Modifier.weight(1f))
-                HudStat("CLIMBED", "+${t.elevationGainM} m", SuccessGreen, Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun LeanCard(t: LiveRideTelemetry) {
-    val lean = t.leanAngleDeg
-    val danger = abs(lean) > 40
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        border = CardDefaults.outlinedCardBorder().copy(brush = SolidColor(DarkSurfaceBorder))
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Lean angle", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
-                Text("max ${t.maxLeanAngleDeg}°", style = MaterialTheme.typography.labelLarge, color = AmberGold, fontWeight = FontWeight.Bold)
-            }
-            val animated by animateFloatAsState(lean.toFloat(), tween(150), label = "lean")
-            Box(
-                Modifier.fillMaxWidth().height(110.dp).semantics {
-                    contentDescription = "Lean ${abs(lean)} degrees ${if (lean < 0) "left" else if (lean > 0) "right" else "upright"}"
-                },
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Canvas(Modifier.fillMaxSize()) {
-                    val cx = size.width / 2
-                    val gy = size.height * 0.85f
-                    val len = size.height * 0.7f
-                    // ±45° guide marks
-                    listOf(-45f, -30f, -15f, 0f, 15f, 30f, 45f).forEach { a ->
-                        rotate(a, Offset(cx, gy)) {
-                            drawLine(if (a == 0f) Color(0x66FFFFFF) else DarkSurfaceBorder, Offset(cx, gy - len), Offset(cx, gy - len + 10.dp.toPx()), 2.dp.toPx())
-                        }
-                    }
-                    drawLine(DarkSurfaceBorder, Offset(16f, gy), Offset(size.width - 16f, gy), 2.dp.toPx())
-                    rotate(animated, Offset(cx, gy)) {
-                        drawLine(
-                            brush = Brush.verticalGradient(listOf(if (danger) DangerRed else AdventureOrange, AmberGold)),
-                            start = Offset(cx, gy - len + 14.dp.toPx()), end = Offset(cx, gy),
-                            strokeWidth = 7.dp.toPx(), cap = StrokeCap.Round
-                        )
-                        drawCircle(Color.White, 7.dp.toPx(), Offset(cx, gy - len + 14.dp.toPx()))
-                    }
-                }
-            }
-            Text(
-                "${abs(lean)}° ${if (lean < 0) "LEFT" else if (lean > 0) "RIGHT" else "UPRIGHT"}",
-                style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
-                color = if (danger) DangerRed else AdventureOrange,
-                modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-/** Large, glove-friendly controls pinned to the bottom while a ride is active. */
-@Composable
-private fun RideControls(paused: Boolean, onPauseToggle: () -> Unit, onWaypoint: () -> Unit, onFinish: () -> Unit) {
-    Surface(color = DarkSurface, tonalElevation = 4.dp) {
-        Row(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Button(
-                onClick = onPauseToggle,
-                colors = ButtonDefaults.buttonColors(containerColor = if (paused) SuccessGreen else DarkSurfaceVariant),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.weight(1f).height(56.dp).testTag("pause_ride_button")
-            ) {
-                Icon(if (paused) Icons.Default.PlayArrow else Icons.Default.Pause, contentDescription = null, tint = if (paused) Color.Black else Color.White)
-                Spacer(Modifier.width(6.dp))
-                Text(if (paused) "Resume" else "Pause", color = if (paused) Color.Black else Color.White, fontWeight = FontWeight.Bold)
-            }
-            FilledTonalIconButton(
-                onClick = onWaypoint,
-                colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = DarkSurfaceVariant),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.size(56.dp)
-            ) {
-                Icon(Icons.Default.AddLocationAlt, contentDescription = "Drop waypoint", tint = HighAltitudeCyan)
-            }
-            Button(
-                onClick = onFinish,
-                colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.weight(1f).height(56.dp).testTag("finish_ride_button")
-            ) {
-                Icon(Icons.Default.Flag, contentDescription = null, tint = Color.Black)
-                Spacer(Modifier.width(6.dp))
-                Text("Finish", color = Color.Black, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun WaypointDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
-    var label by remember { mutableStateOf("") }
-    var type by remember { mutableStateOf("Photo") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Drop a waypoint", fontWeight = FontWeight.Bold, color = Color.White) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Photo", "Chai", "Fuel", "Pass").forEach { t ->
-                        FilterChip(
-                            selected = type == t, onClick = { type = t }, label = { Text(t) },
-                            leadingIcon = { Icon(waypointIcon(t), contentDescription = null, modifier = Modifier.size(16.dp)) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = AdventureOrange, selectedLabelColor = Color.Black, selectedLeadingIconColor = Color.Black,
-                                containerColor = DarkSurfaceVariant, labelColor = Color.White, iconColor = Color.White
-                            )
-                        )
-                    }
-                }
-                OutlinedTextField(
-                    value = label, onValueChange = { label = it.take(60) },
-                    label = { Text("Name (optional)") }, placeholder = { Text("e.g. Rohtang chai stop") },
-                    singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = AdventureOrange)
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onSave(label.ifBlank { "$type stop" }, type) }, colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange)) {
-                Text("Save", color = Color.Black, fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) } },
-        containerColor = DarkSurface,
-        shape = RoundedCornerShape(20.dp)
-    )
-}
-
-@Composable
-private fun HudStat(label: String, value: String, valueColor: Color, modifier: Modifier = Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = TextSecondary, letterSpacing = 1.sp)
-        Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = valueColor)
-    }
-}
-
-private fun waypointIcon(type: String) = when (type) {
-    "Fuel" -> Icons.Default.LocalGasStation
-    "Chai" -> Icons.Default.Coffee
-    "Photo" -> Icons.Default.CameraAlt
-    else -> Icons.Default.Terrain
-}
-
-private fun formatCoordinates(lat: Double, lon: Double): String =
-    "%.4f° %s, %.4f° %s".format(abs(lat), if (lat >= 0) "N" else "S", abs(lon), if (lon >= 0) "E" else "W")
-
-private fun compassPoint(bearing: Float): String {
-    val points = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
-    return points[(((bearing % 360) + 360) % 360 / 45f + 0.5f).toInt() % 8]
 }

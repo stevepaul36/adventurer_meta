@@ -425,7 +425,6 @@ class AdventurerRepository {
         }
     }
 
-    /** Starts a fresh ride. [demo] = no location permission, so the HUD shows simulated data. */
     fun startRide(demo: Boolean = false) {
         _telemetry.value = LiveRideTelemetry(isRecording = true, isPaused = false, isDemo = demo)
     }
@@ -434,98 +433,110 @@ class AdventurerRepository {
         _telemetry.value = LiveRideTelemetry()
     }
 
-    /** Location permission granted mid-ride: stop simulating and wait for real fixes. */
     fun leaveDemoMode() {
-        val curr = _telemetry.value
-        if (curr.isDemo) _telemetry.value = curr.copy(isDemo = false, currentSpeedKmH = 0.0, leanAngleDeg = 0)
+        val current = _telemetry.value
+        if (current.isDemo) {
+            _telemetry.value = current.copy(isDemo = false, currentSpeedKmH = 0.0, leanAngleDeg = 0)
+        }
     }
 
     fun setPaused(paused: Boolean) {
-        val curr = _telemetry.value
-        if (curr.isRecording) _telemetry.value = curr.copy(isPaused = paused, currentSpeedKmH = if (paused) 0.0 else curr.currentSpeedKmH)
+        val current = _telemetry.value
+        if (current.isRecording) {
+            _telemetry.value = current.copy(
+                isPaused = paused,
+                currentSpeedKmH = if (paused) 0.0 else current.currentSpeedKmH
+            )
+        }
     }
 
-    /** Wall-clock ride timer: +1 s while recording and not paused (independent of GPS fixes). */
     fun tickClock() {
-        val curr = _telemetry.value
-        if (!curr.isRecording || curr.isPaused) return
-        val nextSec = curr.elapsedSeconds + 1
-        val avg = if (nextSec > 0) kotlin.math.round(curr.distanceKm / (nextSec / 3600.0) * 10) / 10.0 else 0.0
-        _telemetry.value = curr.copy(elapsedSeconds = nextSec, averageSpeedKmH = avg, caloriesBurned = (nextSec * 0.4).toInt())
+        val current = _telemetry.value
+        if (!current.isRecording || current.isPaused) return
+        val nextSeconds = current.elapsedSeconds + 1
+        val averageSpeed = if (nextSeconds > 0) {
+            kotlin.math.round(current.distanceKm / (nextSeconds / 3600.0) * 10.0) / 10.0
+        } else 0.0
+        _telemetry.value = current.copy(
+            elapsedSeconds = nextSeconds,
+            averageSpeedKmH = averageSpeed,
+            caloriesBurned = (nextSeconds * 0.4).toInt()
+        )
     }
 
     fun updateFromGpsLocation(location: com.example.data.location.RideLocation) {
-        val curr = _telemetry.value
-        if (!curr.isRecording || curr.isPaused) return
-        val distDeltaKm = location.distanceDeltaM / 1000.0
-        val nextDist = curr.distanceKm + distDeltaKm
-        val nextTop = maxOf(curr.topSpeedKmH, location.speedKmH)
-        val newAlt = if (location.altitudeM > 0) location.altitudeM.toInt() else curr.altitudeM
-        // Count climbs above a small threshold so GPS altitude noise doesn't inflate the total.
-        val climb = if (curr.hasGpsFix && newAlt - curr.altitudeM >= 3) newAlt - curr.altitudeM else 0
-        // Real lean angle from LocationManager's accelerometer + gyroscope fusion.
+        val current = _telemetry.value
+        if (!current.isRecording || current.isPaused) return
+        val usableFix = location.accuracyM in 0f..35f
+        val usableDistance = usableFix && location.distanceDeltaM in 0f..50f
+        val nextDistance = current.distanceKm +
+            if (usableDistance) location.distanceDeltaM / 1000.0 else 0.0
+        val newAltitude = if (location.altitudeM > 0.0) location.altitudeM.toInt() else current.altitudeM
+        val climb = if (current.hasGpsFix && newAltitude - current.altitudeM >= 3) {
+            newAltitude - current.altitudeM
+        } else 0
         val nextLean = kotlin.math.round(location.leanAngleDeg).toInt()
-        val nextMaxLean = maxOf(curr.maxLeanAngleDeg, kotlin.math.abs(nextLean))
-        _telemetry.value = curr.copy(
-            distanceKm = kotlin.math.round(nextDist * 100.0) / 100.0,
-            currentSpeedKmH = location.speedKmH,
-            topSpeedKmH = nextTop,
-            altitudeM = newAlt,
-            elevationGainM = curr.elevationGainM + climb,
+        _telemetry.value = current.copy(
+            distanceKm = kotlin.math.round(nextDistance * 100.0) / 100.0,
+            currentSpeedKmH = if (usableFix) location.speedKmH else current.currentSpeedKmH,
+            topSpeedKmH = maxOf(current.topSpeedKmH, if (usableFix) location.speedKmH else 0.0),
+            altitudeM = newAltitude,
+            elevationGainM = current.elevationGainM + climb,
             latitude = location.latitude,
             longitude = location.longitude,
             bearingDeg = location.bearingDeg,
             hasGpsFix = true,
             leanAngleDeg = nextLean,
-            maxLeanAngleDeg = nextMaxLean
+            maxLeanAngleDeg = maxOf(current.maxLeanAngleDeg, kotlin.math.abs(nextLean))
         )
     }
 
-    /** Demo mode only (location permission off): simulate movement so the HUD can be explored. */
+    /** Simulated movement is only used when location permission is not available. */
     fun updateTelemetryTick() {
-        val curr = _telemetry.value
-        if (!curr.isRecording || curr.isPaused || !curr.isDemo) return
-        val nextDist = curr.distanceKm + 0.03
-        val nextSpeed = (35 + (System.currentTimeMillis() % 45)).toDouble()
-        val nextLean = ((System.currentTimeMillis() % 35) - 15).toInt()
-        _telemetry.value = curr.copy(
-            distanceKm = kotlin.math.round(nextDist * 100.0) / 100.0,
+        val current = _telemetry.value
+        if (!current.isRecording || current.isPaused || !current.isDemo) return
+        val nextDistance = current.distanceKm + 0.01
+        val nextSpeed = (15 + (System.currentTimeMillis() % 35)).toDouble()
+        val nextLean = ((System.currentTimeMillis() % 25) - 12).toInt()
+        _telemetry.value = current.copy(
+            distanceKm = kotlin.math.round(nextDistance * 100.0) / 100.0,
             currentSpeedKmH = nextSpeed,
-            topSpeedKmH = maxOf(curr.topSpeedKmH, nextSpeed),
+            averageSpeedKmH = nextSpeed,
+            topSpeedKmH = maxOf(current.topSpeedKmH, nextSpeed),
             leanAngleDeg = nextLean,
-            maxLeanAngleDeg = maxOf(curr.maxLeanAngleDeg, kotlin.math.abs(nextLean))
+            maxLeanAngleDeg = maxOf(current.maxLeanAngleDeg, kotlin.math.abs(nextLean))
         )
     }
 
     fun addTelemetryWaypoint(label: String, type: String) {
-        val curr = _telemetry.value
-        val wp = TelemetryWaypoint(
+        val current = _telemetry.value
+        val waypoint = TelemetryWaypoint(
             label = label,
             type = type,
-            timestamp = "${formatRideDuration(curr.elapsedSeconds)} · ${curr.distanceKm} km",
-            speedKmH = curr.currentSpeedKmH,
-            altitudeM = curr.altitudeM
+            timestamp = "${formatRideDuration(current.elapsedSeconds)} · ${current.distanceKm} km",
+            speedKmH = current.currentSpeedKmH,
+            altitudeM = current.altitudeM
         )
-        _telemetry.value = curr.copy(markedWaypoints = curr.markedWaypoints + wp)
+        _telemetry.value = current.copy(markedWaypoints = current.markedWaypoints + waypoint)
     }
 
     fun stopAndSaveRide(): RideStats {
-        val curr = _telemetry.value
+        val current = _telemetry.value
         val stats = RideStats(
-            distanceKm = curr.distanceKm,
-            duration = formatRideDuration(curr.elapsedSeconds),
-            elevationGainM = curr.elevationGainM,
-            topSpeedKmH = curr.topSpeedKmH,
-            maxLeanAngleDeg = curr.maxLeanAngleDeg
+            distanceKm = current.distanceKm,
+            duration = formatRideDuration(current.elapsedSeconds),
+            elevationGainM = current.elevationGainM,
+            topSpeedKmH = current.topSpeedKmH,
+            maxLeanAngleDeg = current.maxLeanAngleDeg
         )
-        _telemetry.value = LiveRideTelemetry() // reset
-        // Add XP to gamification
-        val g = _gamification.value
+        _telemetry.value = LiveRideTelemetry()
+        val gamification = _gamification.value
         val gainedXp = (stats.distanceKm * 20).toInt() + 150
-        _gamification.value = g.copy(
-            currentXp = g.currentXp + gainedXp,
-            totalRides = g.totalRides + 1,
-            totalDistanceKm = g.totalDistanceKm + stats.distanceKm
+        _gamification.value = gamification.copy(
+            currentXp = gamification.currentXp + gainedXp,
+            totalRides = gamification.totalRides + 1,
+            totalDistanceKm = gamification.totalDistanceKm + stats.distanceKm,
+            totalElevationM = gamification.totalElevationM + stats.elevationGainM
         )
         return stats
     }
@@ -548,10 +559,11 @@ class AdventurerRepository {
     }
 }
 
-/** 0:42:05 style ride duration. */
+/** Format seconds as m:ss or h:mm:ss. */
 fun formatRideDuration(seconds: Long): String {
-    val h = seconds / 3600
-    val m = (seconds % 3600) / 60
-    val sec = seconds % 60
-    return if (h > 0) "%d:%02d:%02d".format(h, m, sec) else "%d:%02d".format(m, sec)
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    val remainingSeconds = seconds % 60
+    return if (hours > 0) "%d:%02d:%02d".format(hours, minutes, remainingSeconds)
+    else "%d:%02d".format(minutes, remainingSeconds)
 }

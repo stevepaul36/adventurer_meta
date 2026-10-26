@@ -2,125 +2,76 @@
 
 **Motorcycle-first. Offline-capable. Built for the high passes.**
 
-Adventurer is a production-grade native Android application for motorcycle adventure enthusiasts, dual-sport riders, and high-pass explorers. It combines live ride telemetry (including real lean-angle estimation), curated Indian high-pass expeditions with Plan A/B contingency routing, roadside assistance radar, AI-powered ride story generation, social feed, clubs, and gamification.
+Adventurer is a native Android prototype for motorcycle adventure riders and explorers. It combines ride telemetry, curated expedition concepts, roadside assistance UI, AI Ride Story Studio, social/feed screens, clubs and gamification. The repository is not yet a public-launch-ready service: profile/feed data and some community behavior remain mock-backed.
 
-Built with modern Kotlin and Jetpack Compose.
+## Product features
 
-> This branch (`improvise/motorcycle-first`) contains focused improvisations based on deep product research: sharper personas, stronger sensor foundation, clearer offline-first architecture, and a prioritized roadmap.
+- **Ride telemetry HUD:** speed, altitude, elapsed time, distance and sensor-based lean-angle foundation.
+- **Expedition concepts:** routes, contingency plans, high-altitude guidance and trip-budget tools.
+- **Roadside radar/SOS UI:** roadside service concepts and one-tap safety UI; live dispatch workflows require backend integration.
+- **AI Ride Story Studio:** select a video, ask AI for candidate highlights, edit timestamps, generate captions and export a local MP4 using Media3 Transformer or save EDL JSON.
+- **Adventurer Pro:** RevenueCat subscription paywall, store-priced purchase flow, restore purchases, and Pro gating for AI generation.
 
-## Core Philosophy
+## Technology
 
-- **Local-first**: Tracks, maps, and expeditions work offline. Sync when online.
-- **Motorcycle-native**: Lean angle, high-altitude oxygen warnings, cold-engine protocols, puncture/mechanic radar, crew roles.
-- **India high-pass focused**: Ladakh, Spiti, Western Ghats, Rann of Kutch with real contingency logic.
-- **Safety-critical**: One-tap SOS, AMS alerts, geo-fences, medical profile support.
-- **Content-friendly**: AI Story Studio generates multilingual narrations and EDLs from telemetry + photos.
+- Kotlin, Jetpack Compose, Android lifecycle/ViewModel/StateFlow.
+- Media3 Transformer for local video trimming/concatenation.
+- Firebase Auth, App Check, Cloud Functions, private Cloud Storage and Firestore security rules.
+- Server-side Gemini API and RevenueCat subscriber verification for paid AI.
+- RevenueCat Android SDK for Google Play subscriptions.
 
-## Key Features (Current + Improvised Direction)
+## Secure AI request flow
 
-### Live Ride Telemetry HUD
-- High-contrast outdoor heads-up display.
-- Analog + digital speedometer, top/average speed.
-- **Real Motorcycle Corner Lean Angle Gauge** (accelerometer + gyroscope fusion foundation).
-- Altitude, climb, ride timer and distance; ready / recording / paused / demo states.
-- Large glove-friendly Pause · Waypoint · Finish bar; Finish asks to save, discard or keep riding.
-- Screen stays on while recording; tab bar hides mid-ride; "ride in progress" banner elsewhere.
-- One-tap waypoints (Photo, Chai, Fuel, Pass).
-- Hold-to-Start with progressive haptics (and a TalkBack long-press action).
+1. Firebase Anonymous Authentication provides a per-install UID.
+2. RevenueCat is initialized with that UID, keeping purchase identity aligned with the server.
+3. Videos upload to `ride-videos/<uid>/<random-file>.mp4`; Storage rules cap them at 14 MiB, restrict uploads to the authenticated owner and deny client reads.
+4. The app calls a Firebase callable Function using Auth and App Check.
+5. The server checks the live `adventurer_pro` entitlement through RevenueCat's subscriber API, reserves quota transactionally, then requests Gemini output.
+6. The app deletes its temporary video after the call. A scheduled backend cleanup deletes abandoned video uploads older than 24 hours.
+7. AI allowance is currently capped at 30 successful generations per user per UTC month. Keep or adjust that limit only after reviewing model costs.
 
-### Indian High-Pass Expeditions
-- Curated routes:
-  - Leh-Ladakh Trans-Himalayan Circuit (Umling La 19,024 ft)
-  - Spiti Valley Cold Desert & Monasteries (Kunzum La)
-  - Western Ghats Monsoon Rain & Ridge Odyssey
-  - Rann of Kutch & Flamingo Road
-- Plan A (primary) + Plan B (emergency contingency) with crew roster (Wilderness Medic, Certified Mechanic, Lead Navigator).
-- High-altitude oxygen warnings (>14,000 ft) and monsoon flood advisories.
-- Expedition Budget Calculator (INR) — fuel, lodging, meals, wildlife permits, emergency spares.
+## Configure Firebase, RevenueCat and server secrets
 
-### Roadside Assistance Radar & SOS
-- SOS sheet: call 112 / 108 through the dialer and share your real location via WhatsApp/SMS. The app never claims to alert anyone on its own.
-- "Find help near you": mechanics, puncture repair, fuel, hospitals and dhabas via your maps app.
-- Example station listings are sample data (clearly labelled) until a live places source is wired in.
-- Trans-Himalayan protocols for AMS, glacial river crossings (mallams), sub-zero cold starts.
+The repository intentionally does **not** contain production `google-services.json`, a Gemini key, a RevenueCat secret key, or signing material.
 
-### RideStory AI Studio (Meta Global AI Developer Hackathon)
-- **Record** a ride with the phone camera or **pick** a long video from the gallery.
-- **On-device moment scoring**: samples up to ~320 frames and scores colour, motion, sharpness, open sky, greenery and golden-hour light. It detects scene cuts, skips dark/idle/shaky footage and picks the best clips for a 30 s – 3 min reel. The video never leaves the phone.
-- **Enhance with Meta AI**: sends only small keyframes to Muse Spark (vision) to name, re-rank and privacy-check moments (faces / licence plates).
-- **Real MP4 export** with Media3 Transformer: H.264/AAC, 16:9 or 9:16 crop, title and lower-third labels; save to *Movies/Adventurer* or share.
-- **Travel story**: caption, hashtags, diary, chapters and voice-over in English, Hindi, Marathi, Kannada or Tamil, read aloud with on-device TTS; post to the feed with the reel's cover frame. Works offline with a template built only from detected moments.
+1. Register the Android app in Firebase using the application ID in `app/build.gradle.kts`. Add the matching `app/google-services.json` locally.
+2. Enable **Anonymous** sign-in in Firebase Authentication, plus Cloud Firestore, Cloud Storage and Cloud Functions.
+3. Configure App Check for the Android app: Debug provider for local development; Play Integrity for production. Do not use debug tokens in production.
+4. Create a RevenueCat Android app connected to Google Play. Create entitlement ID exactly `adventurer_pro`, attach monthly/annual subscription products and configure a current offering (for example `default`).
+5. Provide `REVENUECAT_TEST_API_KEY` for debug builds and `REVENUECAT_API_KEY` for Google Play test/release builds through Gradle properties or environment variables. A RevenueCat Test Store key is for Test Store testing only; Google Play billing tests need the public Android SDK key.
+6. Configure server-only secrets:
+   ```bash
+   firebase functions:secrets:set GEMINI_API_KEY
+   firebase functions:secrets:set REVENUECAT_SECRET_API_KEY
+   ```
+   Use a Gemini Developer API key and RevenueCat **secret** API key with subscriber read access. Never put those secrets in the Android app, `.env`, Git, or Gradle properties.
+7. Review the `GEMINI_MODEL` default in `functions/src/index.ts`, select your Firebase project, and deploy:
+   ```bash
+   firebase use <your-project-id>
+   firebase deploy --only functions,firestore:rules,storage
+   ```
+8. Use a Google Play internal testing track and license testers to test purchase, cancel, restore, pending payment, expiry/refund, quota exhaustion, App Check rejection and offline/error recovery.
 
-#### Setting up Meta AI
-1. Copy `.env.example` to `.env` (never commit `.env`) and set `MODEL_API_KEY`.
-2. Defaults: `MODEL_API_BASE_URL=https://api.meta.ai/v1`, `MODEL_TEXT` / `MODEL_VISION=muse-spark-1.3` (check the hackathon docs for current IDs). Any OpenAI-compatible host serving Meta open-weights models also works.
-3. Without a key the Studio still scores, renders and writes template stories on-device.
+More detail: [functions/README.md](functions/README.md) and [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
 
-The key is compiled into the APK for the hackathon demo; move `MetaAiClient` calls behind a server before a public release.
+## Build and tests
 
-### Social, Clubs & Gamification
-- Telemetry-rich posts, route sharing, GPX export.
-- Riding Clubs with collective mileage/ascent goals and trail radio.
-- Rider Level, XP, daily streaks, 3D Trophy Showcase (Golden Piston of Umling La, etc.).
-- Multi-discipline badges (Motorcycling primary).
+- Android: GitHub Actions workflow `.github/workflows/android-build.yml` assembles the debug APK and runs unit tests.
+- Functions: `cd functions && npm install && npm test` runs TypeScript compilation and entitlement/path unit tests.
+- Local MP4 rendering happens on device; server-side Gemini requests need network access, deployed Functions, valid secrets, Auth and App Check.
 
-### Rider Profile & Garage
-- Bike specs (e.g. Royal Enfield Himalayan 450).
-- Lifetime stats, multi-sport mode preference.
-- Multilingual UI (English, Hindi, Marathi, Kannada, Tamil).
+A green CI workflow verifies compilation and automated tests only. It does not configure Firebase/RevenueCat, verify Play Billing on a physical device, or make the app production-ready by itself.
 
-## Tech Stack
+## Before public release
 
-- **Platform**: Android (minSdk 24, targetSdk 36)
-- **Language**: Kotlin 2.2.10
-- **UI**: Jetpack Compose + Material Design 3
-- **Architecture**: MVVM + Repository + StateFlow (local-first)
-- **Location**: Google Play Services FusedLocationProvider + planned SensorManager lean-angle fusion
-- **Images**: Coil Compose
-- **Typography**: Outfit (Google Font)
-- **AI**: Designed for Gemini (server-side + future on-device)
+- Select an application ID you own; the current one is a generated `com.aistudio.*` ID.
+- Implement real account linking, persistent user-owned profiles/feed data and appropriate account/data deletion.
+- Host a privacy policy, terms and support page that match actual route/location/video data flows.
+- Complete Play Console declarations, configure signing secrets, test all purchase and restoration paths, set budgets/alerts, and stage rollout.
+- Replace mock rider stats, feed posts, groups and service listings before marketing them as live community features.
 
-## Architecture Highlights (Improvised)
+## Google AI Studio handoff
 
-```
-Mobile Client (Compose)
-├── UI Layer (Screens + Components)
-├── ViewModel (AdventurerViewModel)
-├── Repository (AdventurerRepository — currently mock, ready for Room + remote)
-├── LocationManager + future SensorFusion (lean angle, barometer)
-└── Local storage (tracks, offline expeditions)
-
-When online → Backend sync (feed, clubs, stories)
-When offline → Full ride recording + map cache + mesh-ready crew chat
-```
-
-Key principles:
-- Sensor data (GNSS, accel, gyro, barometer) flows into LiveRideTelemetry.
-- Rides produce GPX-ready tracks + stats for feed and AI Story Studio.
-- SOS and medical data are privacy-sensitive and opt-in.
-
-## Roadmap (Prioritized)
-
-See [ROADMAP.md](ROADMAP.md) for the full improvised plan.
-
-**Near-term focus**:
-1. Real lean-angle sensor fusion + max lean badges.
-2. Stronger offline map / GPX foundation.
-3. Production-ready AI Story Studio prompts + Gemini integration.
-4. Navigation Compose + better back-stack.
-5. Room persistence for rides and expeditions.
-
-## Getting Started
-
-1. Clone the repo.
-2. Open in Android Studio.
-3. Add your `GEMINI_API_KEY` via the Secrets panel / `.env` (see `.env.example`).
-4. Build & run on a device with location + sensors (emulator works for UI).
-
-## License & Attribution
-
-Generated / evolved from AI Studio templates. Map data should respect ODbL (OpenStreetMap) when offline tiles are added. Always leave no trace on the high passes.
-
----
+Use [GOOGLE_AI_STUDIO_HANDOFF.md](GOOGLE_AI_STUDIO_HANDOFF.md) for the repository-aware coding prompt and exact Firebase/RevenueCat/Google Play setup steps. Do not replace this branch with a new starter.
 
 **Ride safe. Lean deeper. Tell better stories.**
