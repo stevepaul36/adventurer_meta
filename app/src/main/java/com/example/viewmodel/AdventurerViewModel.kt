@@ -153,8 +153,42 @@ class AdventurerViewModel(
         repository.sendClubMessage(id, text)
     }
 
+    var locationManager: com.example.data.location.LocationManager? = null
+        private set
+
+    private var locationJob: kotlinx.coroutines.Job? = null
+
+    fun attachLocationManager(manager: com.example.data.location.LocationManager) {
+        this.locationManager = manager
+        if (telemetry.value.isRecording) {
+            startGpsTracking()
+        }
+    }
+
+    fun startGpsTracking() {
+        val manager = locationManager ?: return
+        if (!manager.hasLocationPermission()) return
+        locationJob?.cancel()
+        locationJob = viewModelScope.launch {
+            try {
+                manager.getLocationUpdates().collect { rideLoc ->
+                    repository.updateFromGpsLocation(rideLoc)
+                }
+            } catch (_: Exception) {
+                // Handled gracefully
+            }
+        }
+    }
+
+    fun stopGpsTracking() {
+        locationJob?.cancel()
+        locationJob = null
+        locationManager?.stopTracking()
+    }
+
     fun startRide() {
         repository.startRide()
+        startGpsTracking()
         navigateTo(Screen.LIVE_TRACKER)
     }
 
@@ -163,6 +197,7 @@ class AdventurerViewModel(
     }
 
     fun finishRide() {
+        stopGpsTracking()
         val stats = repository.stopAndSaveRide()
         repository.createPost(
             caption = "🏁 Completed ride! Distance: ${stats.distanceKm} km, Duration: ${stats.duration}, Max Lean: ${stats.maxLeanAngleDeg}°, Elevation: +${stats.elevationGainM}m.",

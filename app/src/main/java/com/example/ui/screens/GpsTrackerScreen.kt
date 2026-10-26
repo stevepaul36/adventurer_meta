@@ -1,6 +1,9 @@
 package com.example.ui.screens
 
+import android.Manifest
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -40,6 +43,20 @@ fun GpsTrackerScreen(
     BackHandler { viewModel.navigateBack() }
 
     val telemetry by viewModel.telemetry.collectAsState()
+    var hasPermission by remember {
+        mutableStateOf(viewModel.locationManager?.hasLocationPermission() == true)
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        hasPermission = fineGranted || coarseGranted
+        if (hasPermission) {
+            viewModel.startGpsTracking()
+        }
+    }
 
     var showWaypointDialog by remember { mutableStateOf(false) }
     var waypointLabel by remember { mutableStateOf("") }
@@ -88,6 +105,81 @@ fun GpsTrackerScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Real-Time GPS Status / Permission Banner
+            item {
+                if (!hasPermission) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().testTag("gps_permission_banner"),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                        border = CardDefaults.outlinedCardBorder().copy(
+                            brush = androidx.compose.ui.graphics.SolidColor(AmberGold)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Satellite GPS Locked", fontWeight = FontWeight.Bold, color = AmberGold)
+                                Text("Enable Fused Location to record real speed and coordinates.", style = MaterialTheme.typography.bodySmall, color = Color(0xFFCBD5E1))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    permissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                        )
+                                    )
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = AmberGold)
+                            ) {
+                                Text("Enable GPS", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF10B981).copy(alpha = 0.15f),
+                        border = CardDefaults.outlinedCardBorder().copy(
+                            brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF10B981))
+                        ),
+                        modifier = Modifier.fillMaxWidth().testTag("gps_coordinates_strip")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.GpsFixed, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (telemetry.latitude != 0.0) {
+                                        "📍 Lat: ${String.format("%.4f", telemetry.latitude)}° N, Long: ${String.format("%.4f", telemetry.longitude)}° E"
+                                    } else {
+                                        "📍 Lat: 32.5512° N, Long: 77.1724° E (Sarchu Pass)"
+                                    },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Text(
+                                text = "Heading: ${telemetry.bearingDeg.toInt()}°",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF10B981),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
             // Speedometer HUD Card
             item {
                 Card(

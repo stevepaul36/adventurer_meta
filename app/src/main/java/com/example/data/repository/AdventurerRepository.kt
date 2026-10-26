@@ -441,9 +441,39 @@ class AdventurerRepository {
         )
     }
 
+    fun updateFromGpsLocation(location: com.example.data.location.RideLocation) {
+        val curr = _telemetry.value
+        if (!curr.isRecording || curr.isPaused) return
+        val distDeltaKm = location.distanceDeltaM / 1000.0
+        val nextDist = curr.distanceKm + distDeltaKm
+        val nextSec = curr.elapsedSeconds + 1
+        val nextTop = maxOf(curr.topSpeedKmH, location.speedKmH)
+        val nextLean = ((System.currentTimeMillis() % 25) - 10).toInt()
+        val nextMaxLean = maxOf(curr.maxLeanAngleDeg, kotlin.math.abs(nextLean))
+        val avgSpeed = if (nextSec > 0) kotlin.math.round((nextDist / (nextSec / 3600.0).coerceAtLeast(0.001)) * 10) / 10.0 else 0.0
+
+        _telemetry.value = curr.copy(
+            elapsedSeconds = nextSec,
+            distanceKm = kotlin.math.round(nextDist * 100.0) / 100.0,
+            currentSpeedKmH = location.speedKmH,
+            averageSpeedKmH = avgSpeed,
+            topSpeedKmH = nextTop,
+            altitudeM = if (location.altitudeM > 0) location.altitudeM.toInt() else curr.altitudeM,
+            latitude = location.latitude,
+            longitude = location.longitude,
+            bearingDeg = location.bearingDeg,
+            hasGpsFix = true,
+            leanAngleDeg = nextLean,
+            maxLeanAngleDeg = nextMaxLean,
+            caloriesBurned = (nextSec * 0.4).toInt()
+        )
+    }
+
     fun updateTelemetryTick() {
         val curr = _telemetry.value
         if (!curr.isRecording || curr.isPaused) return
+        // If real GPS fix is active, do not override with simulated ticker
+        if (curr.hasGpsFix) return
         val nextSec = curr.elapsedSeconds + 2
         val nextDist = curr.distanceKm + 0.03
         val nextSpeed = (35 + (System.currentTimeMillis() % 45)).toDouble()

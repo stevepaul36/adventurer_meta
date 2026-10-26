@@ -48,6 +48,13 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AdventurerApp(viewModel: AdventurerViewModel) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val locationManager = remember { com.example.data.location.LocationManager(context.applicationContext) }
+
+    LaunchedEffect(locationManager) {
+        viewModel.attachLocationManager(locationManager)
+    }
+
     val currentScreen by viewModel.currentScreen.collectAsState()
     val showCreatePost by viewModel.showCreatePost.collectAsState()
     val activeCommentIndex by viewModel.activeCommentPostIndex.collectAsState()

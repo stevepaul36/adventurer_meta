@@ -47,6 +47,10 @@ data class LiveRideTelemetry(
     val distanceKm: Double = 0.0,
     val elapsedSeconds: Long = 0,
     val altitudeM: Int = 940,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val bearingDeg: Float = 0f,
+    val hasGpsFix: Boolean = false,
     val leanAngleDeg: Int = 0, // Negative for left, positive for right
     val maxLeanAngleDeg: Int = 0,
     val caloriesBurned: Int = 0,
@@ -69,6 +73,44 @@ data class HighlightClip(
     val altitudeM: Int,
     val tag: String,
     val isSelected: Boolean = true
+)
+
+data class Moment(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val startSec: Double,
+    val peakSec: Double,
+    val endSec: Double,
+    val label: String,
+    val description: String,
+    val score: Double, // 0.0 to 1.0
+    val tags: List<String>,
+    val speedKmh: Int,
+    val altitudeM: Int,
+    val hasFaceOrPlateAlert: Boolean = false,
+    val isSelected: Boolean = true
+) {
+    val durationSec: Double get() = endSec - startSec
+}
+
+data class StoryChapter(
+    val timeLabel: String,
+    val title: String,
+    val speedKmh: Int,
+    val altitudeM: Int
+)
+
+data class RideStoryResult(
+    val title: String,
+    val location: String,
+    val caption: String,
+    val diary: String,
+    val hashtags: List<String>,
+    val chapters: List<StoryChapter>,
+    val narration: String,
+    val language: String,
+    val targetDurationSec: Int,
+    val aspect: String, // "16:9 Landscape" or "9:16 Vertical Reel"
+    val moments: List<Moment>
 )
 
 data class AiGeneratedStory(
