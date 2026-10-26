@@ -49,9 +49,13 @@ fun AiStoryStudioScreen(
     var targetLength by remember { mutableStateOf("60s Reel") }
     var narrationLang by remember { mutableStateOf("English (Adventure Epic)") }
     var selectedVideoUri by remember { mutableStateOf<Uri?>(null) }
+    var analyzedVideoUri by remember { mutableStateOf<Uri?>(null) }
     val videoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
-    ) { uri -> selectedVideoUri = uri }
+    ) {
+        selectedVideoUri = it
+        analyzedVideoUri = null
+    }
     var pendingEdlJson by remember { mutableStateOf("") }
     var pendingVideoFile by remember { mutableStateOf<File?>(null) }
     var isExportingReel by remember { mutableStateOf(false) }
@@ -207,6 +211,7 @@ fun AiStoryStudioScreen(
                                             if (suggestions.isEmpty()) {
                                                 highlightAnalysisError = "AI could not find reliable highlights. Try a different video."
                                             } else {
+                                                analyzedVideoUri = source
                                                 highlightClips = suggestions.map { suggestion ->
                                                     HighlightClip(
                                                         suggestion.timeRange,
@@ -255,6 +260,20 @@ fun AiStoryStudioScreen(
                                 text = highlightAnalysisError!!,
                                 color = Color(0xFFFCA5A5),
                                 style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        if (selectedVideoUri == null) {
+                            Text(
+                                "The initial timeline contains demo moments. Choose a real video and run AI Find Highlights before exporting a reel.",
+                                color = Color(0xFFFBBF24),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        } else if (analyzedVideoUri != selectedVideoUri) {
+                            Text(
+                                "Run AI Find Highlights for this video before rendering, so the timeline timestamps match your footage.",
+                                color = Color(0xFFFBBF24),
+                                style = MaterialTheme.typography.labelSmall
                             )
                         }
 
@@ -452,6 +471,8 @@ fun AiStoryStudioScreen(
                                 val selected = highlightClips.filter { it.isSelected }
                                 if (source == null) {
                                     reelExportError = "Choose a ride video before exporting a reel."
+                                } else if (analyzedVideoUri != source) {
+                                    reelExportError = "Tap AI Find Highlights for this video first, then review the suggested timestamps."
                                 } else if (selected.isEmpty()) {
                                     reelExportError = "Select at least one highlight before exporting."
                                 } else if (!isExportingReel) {
