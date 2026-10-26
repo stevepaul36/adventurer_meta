@@ -70,4 +70,8 @@ A green CI workflow verifies compilation and automated tests only. It does not c
 - Complete Play Console declarations, configure signing secrets, test all purchase and restoration paths, set budgets/alerts, and stage rollout.
 - Replace mock rider stats, feed posts, groups and service listings before marketing them as live community features.
 
+## Google AI Studio handoff
+
+Use [GOOGLE_AI_STUDIO_HANDOFF.md](GOOGLE_AI_STUDIO_HANDOFF.md) for the repository-aware coding prompt and exact Firebase/RevenueCat/Google Play setup steps. Do not replace this branch with a new starter.
+
 **Ride safe. Lean deeper. Tell better stories.**

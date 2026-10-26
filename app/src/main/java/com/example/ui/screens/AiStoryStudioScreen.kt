@@ -118,6 +118,13 @@ fun AiStoryStudioScreen(
         reelExportError = null
     }
 
+    // Settings are inputs to a caption. Clear output when the inputs change so the
+    // UI never implies a previous caption was generated for a new configuration.
+    LaunchedEffect(selectedRegion, targetLength, narrationLang) {
+        generatedCaption = ""
+        aiError = null
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -199,7 +206,7 @@ fun AiStoryStudioScreen(
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Story Configuration", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
 
-                        Text("Ride Footage (optional)", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
+                        Text("Ride Footage (required for AI highlights)", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -470,7 +477,7 @@ fun AiStoryStudioScreen(
                                             } catch (error: Exception) {
                                                 aiError = when (error) {
                                                     is IllegalArgumentException -> error.message ?: "Check the selected video and highlights."
-                                                    else -> "AI generation failed. Check Firebase AI Logic setup and App Check, then try again. Your current caption is preserved."
+                                                    else -> "AI generation failed. Check Firebase Auth, App Check, deployed Cloud Functions and server secrets, then try again."
                                                 }
                                             } finally {
                                                 isGenerating = false
@@ -588,6 +595,7 @@ fun AiStoryStudioScreen(
                     )
 
                     AssistChip(
+                        enabled = highlightClips.any { it.isSelected },
                         onClick = {
                             val selectedClips = highlightClips.filter { it.isSelected }
                             if (selectedClips.isEmpty()) {
@@ -620,6 +628,17 @@ fun AiStoryStudioScreen(
                             Icon(Icons.Default.FileDownload, contentDescription = null, tint = HighAltitudeCyan, modifier = Modifier.size(14.dp))
                         },
                         colors = AssistChipDefaults.assistChipColors(containerColor = Color(0xFF1E293B))
+                    )
+                }
+            }
+
+            if (highlightClips.isEmpty()) {
+                item {
+                    Text(
+                        "No highlights yet. Choose a real ride video and tap AI Find Highlights to build an editable timeline from that footage.",
+                        color = Color(0xFF94A3B8),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                     )
                 }
             }
