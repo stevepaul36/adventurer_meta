@@ -9,7 +9,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+// This resource lookup does not require API 36. Use API 35 for stable Robolectric support.
+@Config(sdk = [35])
 class ExampleRobolectricTest {
 
   @Test
