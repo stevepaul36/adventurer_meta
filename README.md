@@ -1,80 +1,90 @@
 # Adventurer — Motorcycle Adventure Social, Telemetry & Expeditions
 
-Adventurer is a production-grade native Android application crafted for motorcycle adventure enthusiasts, touring riders, and high-pass explorers. Built with modern Kotlin and Jetpack Compose.
+**Motorcycle-first. Offline-capable. Built for the high passes.**
+
+Adventurer is a production-grade native Android application for motorcycle adventure enthusiasts, dual-sport riders, and high-pass explorers. It combines live ride telemetry (including real lean-angle estimation), curated Indian high-pass expeditions with Plan A/B contingency routing, roadside assistance radar, AI-powered ride story generation, social feed, clubs, and gamification.
+
+Built with modern Kotlin and Jetpack Compose.
+
+## Core Philosophy
+
+- **Local-first**: Tracks, maps, and expeditions work offline. Sync when online.
+- **Motorcycle-native**: Lean angle, high-altitude oxygen warnings, cold-engine protocols, puncture/mechanic radar, crew roles.
+- **India high-pass focused**: Ladakh, Spiti, Western Ghats, Rann of Kutch with real contingency logic.
+- **Safety-critical**: One-tap SOS, AMS alerts, geo-fences, medical profile support.
+- **Content-friendly**: AI Story Studio generates multilingual narrations and EDLs from telemetry + photos/video.
 
 ## Key Features
 
-- **Social Feed & Community**:
-  - Rider posts with telemetry stats (distance, duration, elevation gain, lean angle).
-  - Route sharing with map previews and GPX export.
-  - Multi-waypoint expedition stories.
-  - Real-time likes and trail comments.
-  - Interactive **Hold-to-Start Ride** button with circular animated progress and haptic vibration feedback.
+### Live Ride Telemetry HUD
+- High-contrast outdoor heads-up display.
+- Analog + digital speedometer, top/average speed.
+- **Real Motorcycle Corner Lean Angle Gauge** (accelerometer + gyroscope fusion foundation).
+- Barometric altitude, elapsed timer, distance, calories.
+- One-tap waypoints (Photo, Chai, Fuel, Scenic Pass).
+- Hold-to-Start with progressive haptics + auto-publish on finish.
 
-- **Indian High-Pass Expeditions**:
-  - Curated routes across the Himalayas, Sahyadris, and Western deserts:
-    - Leh-Ladakh Trans-Himalayan Circuit (19,024 ft Umling La summit)
-    - Spiti Valley Cold Desert & Monasteries (Kunzum La)
-    - Western Ghats Monsoon Rain & Ridge Odyssey (Amboli & Varandha Ghats)
-    - Rann of Kutch & Flamingo Road (Salt desert flats)
-  - Plan A (Primary) and Plan B (Emergency contingency) routing with crew rosters (Wilderness medic, certified mechanic, lead navigator).
-  - High-altitude oxygen warnings (>14,000 ft) and monsoon flood advisories.
-  - Integrated **Expedition Budget Calculator** in INR (₹) covering fuel, lodging, meals, wildlife permits, and emergency spare parts.
+### Indian High-Pass Expeditions
+- Curated routes:
+  - Leh-Ladakh Trans-Himalayan Circuit (Umling La 19,024 ft)
+  - Spiti Valley Cold Desert & Monasteries (Kunzum La)
+  - Western Ghats Monsoon Rain & Ridge Odyssey
+  - Rann of Kutch & Flamingo Road
+- Plan A (primary) + Plan B (emergency contingency) with crew roster (Wilderness Medic, Certified Mechanic, Lead Navigator).
+- High-altitude oxygen warnings (>14,000 ft) and monsoon flood advisories.
+- Expedition Budget Calculator (INR) — fuel, lodging, meals, wildlife permits, emergency spares.
 
-- **Roadside Assistance Radar & SOS**:
-  - Nearby emergency stations: Certified motorcycle mechanics, 24/7 puncture repair hubs, high-altitude fuel stashes, and mountain oxygen clinics.
-  - One-tap emergency SOS transmitter broadcasting live GPS coordinates, altitude, and battery levels.
-  - Trans-Himalayan safety protocols for Acute Mountain Sickness (AMS), glacial river crossings (mallams), and sub-zero cold engine starts.
+### Roadside Assistance Radar & SOS
+- Nearby certified mechanics, puncture hubs, high-altitude fuel stashes, oxygen clinics.
+- One-tap SOS broadcasting GPS, altitude, battery, and medical profile (when configured).
+- Trans-Himalayan protocols for AMS, glacial river crossings (mallams), sub-zero cold starts.
 
-- **Live Ride Telemetry HUD**:
-  - High-contrast outdoor heads-up display.
-  - Analog and digital speedometer with top/average speed tracking.
-  - Real-time **Motorcycle Corner Lean Angle Gauge** with visual tilt indicator and maximum lean recording.
-  - Barometric altitude meter, elapsed timer, distance odometer, and calorie tracking.
-  - One-tap trail waypoint tagging (Photo, Chai stop, Fuel, Scenic pass).
-  - Finish ride flow with automatic community feed publishing.
+### AI Ride Story Studio
+- Selectable ride-footage input, AI-detected candidate moments with suggested source timestamps, and an editable highlight timeline.
+- Firebase AI Logic caption generation grounded in the selected clip metadata; when a video is selected, the model also receives the video for multimodal captioning (demo limit: 14 MB).
+- English, Hindi हिन्दी, and Marathi मराठी caption styles.
+- Share generated captions to the local community feed.
+- Export a structured EDL JSON file with selected clip metadata, target length, language, and source-video selection state.
+- Render selected time ranges from a chosen source video into a single local MP4 highlight reel with Android Media3 Transformer (capped to 15s/30s/60s target).
+- EDL JSON remains available as a separate editing manifest for external editors.
+- Automatic AI narration audio, music licensing, and generated title-card overlays are not included yet.
 
-- **Apex Moto 3D — Canyon Racer**:
-  - Pure Jetpack Compose Canvas 3D-perspective arcade motorcycle runner.
-  - Steer through mountain pass canyon switchbacks, collect turbo boosts, and dodge boulders.
-  - Real-time scoring, top speed, and distance recording.
-  - Direct run posting to community feed and riding clubs.
+### Social, Clubs & Gamification
+- Telemetry-rich posts, route sharing, GPX export.
+- Riding Clubs with collective mileage/ascent goals and trail radio.
+- Rider Level, XP, daily streaks, 3D Trophy Showcase (Golden Piston of Umling La, etc.).
+- Multi-discipline badges (Motorcycling primary).
 
-- **AI Ride Story Studio**:
-  - Selectable ride-footage input, AI-detected candidate moments with suggested source timestamps, and an editable highlight timeline.
-  - Firebase AI Logic caption generation grounded in the selected clip metadata; when a video is selected, the model also receives the video for multimodal captioning (demo limit: 14 MB).
-  - English, Hindi हिन्दी, and Marathi मराठी caption styles.
-  - Share generated captions to the local community feed.
-  - Export a structured EDL JSON file with selected clip metadata, target length, language, and source-video selection state.
-  - Render selected time ranges from a chosen source video into a single local MP4 highlight reel with Android Media3 Transformer. The reel is capped to the selected 15s/30s/60s target.
-  - EDL JSON remains available as a separate editing manifest for external editors.
-  - Automatic AI narration audio, music licensing, and generated title-card overlays are not included yet.
-
-- **Gamification & 3D Trophy Showcase**:
-  - Rider Level and XP progress with daily streak counter.
-  - Interactive 3D rotatable Trophy Showcase pedestal (Golden Piston of Umling La, Silver Compass of the Sahyadris, Bronze Carburetor of Rohtang).
-  - Multi-discipline achievement badges (Motorcycling, Cycling, Trekking) across Bronze, Silver, Gold, and Platinum tiers.
-
-- **Motorcycle Riding Clubs**:
-  - Himalayan Wanderers MC, Sahyadri Apex Predators, and South Adventure Guild.
-  - Collective club mileage and ascent goals with progress meters.
-  - Real-time club trail radio chat.
-
-- **Rider Profile & Garage**:
-  - Alex 'Torque' Rider profile with bike specifications (Royal Enfield Himalayan 450 Kamet White).
-  - Lifetime ride statistics and multi-sport tracking mode preferences.
-  - Multilingual language selection (English, Hindi, Marathi, Kannada, Tamil).
+### Rider Profile & Garage
+- Bike specs (e.g. Royal Enfield Himalayan 450).
+- Lifetime stats, multi-sport mode preference.
+- Multilingual UI (English, Hindi, Marathi, Kannada, Tamil).
 
 ## Tech Stack
 
 - **Platform**: Android (minSdk 24, targetSdk 36)
 - **Language**: Kotlin 2.2.10
-- **UI Framework**: Jetpack Compose (Material Design 3)
-- **Image Loading**: Coil Compose
-- **Architecture**: MVVM with Repository pattern and StateFlow
-- **Typography**: Local Google Font (Outfit)
-- **Icon**: Custom adaptive launcher icon
+- **UI**: Jetpack Compose + Material Design 3
+- **Architecture**: MVVM + Repository + StateFlow (local-first)
+- **Location**: Google Play Services FusedLocationProvider + SensorManager lean-angle fusion
+- **Images**: Coil Compose
+- **Video / AI**: Firebase AI Logic (Gemini) + Android Media3 Transformer
+- **Typography**: Outfit (Google Font)
 
+## Architecture Highlights
+
+```
+Mobile Client (Compose)
+├── UI Layer (Screens + Components)
+├── ViewModel (AdventurerViewModel)
+├── Repository (AdventurerRepository — currently mock, ready for Room + remote)
+├── LocationManager + SensorFusion (lean angle, barometer)
+├── RideStoryAiService + RideStoryVideoExporter
+└── Local storage (tracks, offline expeditions)
+
+When online → Backend sync (feed, clubs, stories) + Firebase AI
+When offline → Full ride recording + map cache + mesh-ready crew chat
+```
 
 ## Configure Firebase AI Logic
 
@@ -99,7 +109,34 @@ If Firebase is not configured, AI generation will fail and the screen will show 
 
 Video rendering runs locally on the device and uses the selected timeline timestamps; it does not yet use AI to discover exact scene boundaries automatically. Review timestamps before exporting. The reel keeps the source audio and does not add generated narration or licensed music.
 
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the full motorcycle-first plan.
+
+**Near-term focus**:
+1. Real lean-angle sensor fusion + max lean badges.
+2. Stronger offline map / GPX foundation.
+3. Production-ready AI Story Studio (already advanced on this branch).
+4. Navigation Compose + better back-stack.
+5. Room persistence for rides and expeditions.
 
 ## Build verification
 
-A GitHub Actions workflow at `.github/workflows/android-build.yml` assembles the debug APK and runs unit tests on pushes and pull requests. The new timestamp/target-length tests cover the reel export planner. A green workflow is required before treating the feature as build-verified.
+A GitHub Actions workflow at `.github/workflows/android-build.yml` assembles the debug APK and runs unit tests on pushes and pull requests. The timestamp/target-length tests cover the reel export planner. A green workflow is required before treating the feature as build-verified.
+
+An additional auto-merge workflow (`.github/workflows/auto-merge.yml`) enables squash auto-merge for PRs labeled `automerge`.
+
+## Getting Started
+
+1. Clone the repo.
+2. Open in Android Studio.
+3. Add Firebase config (`google-services.json`) and/or `GEMINI_API_KEY` as needed.
+4. Build & run on a device with location + sensors (emulator works for UI).
+
+## License & Attribution
+
+Generated / evolved from AI Studio templates. Map data should respect ODbL (OpenStreetMap) when offline tiles are added. Always leave no trace on the high passes.
+
+---
+
+**Ride safe. Lean deeper. Tell better stories.**
