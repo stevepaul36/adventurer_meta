@@ -1,6 +1,7 @@
 package com.example
 
 import android.app.Application
+import android.util.Log
 import com.example.data.billing.AdventurerProBilling
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
@@ -17,7 +18,7 @@ class AdventurerApplication : Application() {
         super.onCreate()
 
         if (FirebaseApp.getApps(this).isEmpty()) {
-            AdventurerProBilling.initialize(this, null)
+            Log.w(TAG, "Firebase is not configured. Online AI and billing are disabled until setup is completed.")
             return
         }
 
@@ -30,17 +31,24 @@ class AdventurerApplication : Application() {
         )
 
         val auth = FirebaseAuth.getInstance()
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            AdventurerProBilling.initialize(this, currentUser.uid)
-        } else {
-            auth.signInAnonymously()
-                .addOnSuccessListener { result ->
-                    AdventurerProBilling.initialize(this, result.user?.uid)
-                }
-                .addOnFailureListener {
-                    AdventurerProBilling.initialize(this, null)
-                }
+
+        // Also listen for a successful sign-in after a transient network failure.
+        auth.addAuthStateListener { firebaseAuth ->
+            firebaseAuth.currentUser?.uid?.let { uid ->
+                AdventurerProBilling.initialize(this, uid)
+            }
         }
+
+        if (auth.currentUser == null) {
+            auth.signInAnonymously().addOnFailureListener { error ->
+                Log.w(TAG, "Firebase anonymous sign-in failed; billing will retry after authentication succeeds.", error)
+            }
+        } else {
+            AdventurerProBilling.initialize(this, auth.currentUser!!.uid)
+        }
+    }
+
+    private companion object {
+        const val TAG = "AdventurerApplication"
     }
 }

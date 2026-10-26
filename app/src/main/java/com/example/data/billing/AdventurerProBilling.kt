@@ -41,7 +41,6 @@ object AdventurerProBilling {
     @Synchronized
     fun initialize(context: Context, appUserId: String?) {
         if (initialized) return
-        initialized = true
 
         val apiKey = BuildConfig.REVENUECAT_API_KEY.trim()
         if (appUserId.isNullOrBlank()) {
@@ -68,6 +67,7 @@ object AdventurerProBilling {
         }
 
         try {
+            initialized = true
             Purchases.logLevel = if (BuildConfig.DEBUG) LogLevel.DEBUG else LogLevel.WARN
             Purchases.configure(
                 PurchasesConfiguration.Builder(context.applicationContext, apiKey)
@@ -83,6 +83,7 @@ object AdventurerProBilling {
             }
             refresh()
         } catch (error: Exception) {
+            initialized = false
             _state.update {
                 it.copy(
                     isConfigured = false,
