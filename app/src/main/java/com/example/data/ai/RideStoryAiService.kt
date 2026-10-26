@@ -14,6 +14,7 @@ import com.google.firebase.ai.type.content
  * enabled in Firebase AI Logic before requests can succeed.
  */
 object RideStoryAiService {
+    private const val MAX_VIDEO_BYTES = 15 * 1024 * 1024
     data class ClipContext(
         val timeRange: String,
         val title: String,
@@ -38,11 +39,21 @@ object RideStoryAiService {
         require(declaredSize <= 15L * 1024L * 1024L || declaredSize < 0L) {
             "For this demo, choose a video smaller than 15 MB."
         }
-        val bytes = resolver.openInputStream(videoUri)?.use { it.readBytes() }
-            ?: throw IllegalArgumentException("Unable to read the selected video.")
-        require(bytes.size <= 15 * 1024 * 1024) {
-            "For this demo, choose a video smaller than 15 MB."
-        }
+        val bytes = resolver.openInputStream(videoUri)?.use { stream ->
+            val buffer = ByteArray(16 * 1024)
+            val output = java.io.ByteArrayOutputStream()
+            var total = 0
+            while (true) {
+                val count = stream.read(buffer)
+                if (count < 0) break
+                total += count
+                require(total <= MAX_VIDEO_BYTES) {
+                    "For this demo, choose a video smaller than 15 MB."
+                }
+                output.write(buffer, 0, count)
+            }
+            output.toByteArray()
+        } ?: throw IllegalArgumentException("Unable to read the selected video.")
 
         val clipDetails = clips.joinToString(separator = "\n") { clip ->
             "- ${clip.timeRange}: ${clip.title} (tag: ${clip.tag}; speed metadata: ${clip.speedKmh} km/h; altitude metadata: ${clip.altitudeM} m)"
@@ -58,8 +69,8 @@ object RideStoryAiService {
             Never encourage speeding or dangerous riding. Use at most four hashtags.
             Return only the caption.
         """.trimIndent()
-        val model = Firebase.ai(backend = GenerativeBackend.googleAI())
-            .generativeModel("gemini-2.5-flash")
+        val model = Firebase.ai(backend = GenerativeBackend.googleAI(), useLimitedUseAppCheckTokens = true)
+            .generativeModel("gemini-3.8-flash")
         val request = content {
             inlineData(bytes, mimeType)
             text(prompt)
