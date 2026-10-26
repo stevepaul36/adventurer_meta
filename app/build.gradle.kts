@@ -1,13 +1,5 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
 
-plugins {
-  alias(libs.plugins.android.application)
-  alias(libs.plugins.kotlin.compose)
-  alias(libs.plugins.google.devtools.ksp)
-  alias(libs.plugins.secrets)
-  alias(libs.plugins.google.services)
-}
-
 val revenueCatTestApiKey = providers.gradleProperty("REVENUECAT_TEST_API_KEY")
   .orElse(providers.environmentVariable("REVENUECAT_TEST_API_KEY"))
   .getOrElse("")
@@ -15,6 +7,14 @@ val revenueCatProductionApiKey = providers.gradleProperty("REVENUECAT_API_KEY")
   .orElse(providers.environmentVariable("REVENUECAT_API_KEY"))
   .getOrElse("")
 fun buildConfigString(value: String): String = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+plugins {
+  alias(libs.plugins.android.application)
+  alias(libs.plugins.kotlin.compose)
+  alias(libs.plugins.google.devtools.ksp)
+  alias(libs.plugins.secrets)
+  alias(libs.plugins.google.services)
+}
 
 android {
   namespace = "com.example"
