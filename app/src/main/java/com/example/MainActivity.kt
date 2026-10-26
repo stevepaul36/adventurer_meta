@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import com.example.data.model.FeedItem
+import com.example.data.billing.AdventurerProBilling
 import com.example.ui.components.CommentsBottomSheet
 import com.example.ui.components.CreatePostDialog
 import com.example.ui.components.SafetySosDialog
@@ -47,12 +48,18 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
         setContent {
             AdventurerTheme(darkTheme = true) {
                 AdventurerApp(viewModel = viewModel)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AdventurerProBilling.refresh()
     }
 }
 
@@ -170,6 +177,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     Screen.GAMIFICATION -> GamificationScreen(viewModel = viewModel)
                     Screen.CLUBS -> ClubsScreen(viewModel = viewModel)
                     Screen.PROFILE -> ProfileScreen(viewModel = viewModel)
+                    Screen.PRO_PAYWALL -> ProPaywallScreen(viewModel = viewModel)
                 }
             }
         }
