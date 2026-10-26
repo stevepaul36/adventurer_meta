@@ -1,8 +1,8 @@
-# Adventurer — Motorcycle Adventure Social, Telemetry & Expeditions
+# Adventurer — Multi-Activity Adventure, Exploration & Storytelling
 
-**Motorcycle-first. Offline-capable. Built for the high passes.**
+**Discover a place. Plan the experience. Go explore. Bring the story home.**
 
-Adventurer is a native Android prototype for motorcycle adventure riders and explorers. It combines ride telemetry, curated expedition concepts, roadside assistance UI, AI Ride Story Studio, social/feed screens, clubs and gamification. The repository is not yet a public-launch-ready service: profile/feed data and some community behavior remain mock-backed.
+Adventurer is evolving from a motorcycle-first prototype into a multi-activity adventure companion for cycling, car road trips, overlanding, walking, trekking, camping, fishing, lawful hunting and wildlife observation, scuba/snorkelling, island trips, and discovering unfamiliar places. Its shared foundation is destination discovery, trip planning, offline-ready routes, safety planning, GPS activity records where appropriate, and AI-assisted storytelling. The current Android app remains a prototype: motorcycle telemetry is the most developed mode, and specialized route, environmental, underwater, and regulatory features described in the product blueprint are roadmap items, not all live services.
 
 ## Product features
 
@@ -11,6 +11,18 @@ Adventurer is a native Android prototype for motorcycle adventure riders and exp
 - **Roadside radar/SOS UI:** roadside service concepts and one-tap safety UI; live dispatch workflows require backend integration.
 - **AI Ride Story Studio:** select a video, ask AI for candidate highlights, edit timestamps, generate captions and export a local MP4 using Media3 Transformer or save EDL JSON.
 - **Adventurer Pro:** RevenueCat subscription paywall, store-priced purchase flow, restore purchases, and Pro gating for AI generation.
+
+## Multi-adventure product scope
+
+The app should share one trip and story system across activities instead of treating everything as a motorcycle ride. The profile's preferred mode list is being expanded, but each activity-specific workflow must still be implemented and validated before it is advertised as supported.
+
+- **Land mobility:** motorcycle touring, road/gravel/MTB cycling, car road trips, 4x4 overlanding, walking, hiking and trekking.
+- **Outdoor stays:** camping, backpacking, campsite discovery, gear and food checklists, and multi-day stages.
+- **Nature and water:** fishing, lawful hunting/wildlife tracking, wildlife watching, kayaking/boating, snorkeling and scuba logbooks.
+- **Destination exploration:** new-city discovery, hidden gems, viewpoints, food stops, national parks, coastlines and island itineraries.
+- **Creator workflow:** geotagged photos/video, cross-activity highlight reels, route overlays, multilingual narration, and shareable trip stories.
+
+The detailed capability matrix, safety boundaries, common data model and rollout plan live in [MULTI_ADVENTURE_PRODUCT_BLUEPRINT.md](MULTI_ADVENTURE_PRODUCT_BLUEPRINT.md). The current generic GPS recorder does **not** replace an underwater dive computer, certify hunting/fishing regulations, or guarantee off-grid emergency dispatch.
 
 ## Technology
 
@@ -72,6 +84,6 @@ A green CI workflow verifies compilation and automated tests only. It does not c
 
 ## Google AI Studio handoff
 
-Use [GOOGLE_AI_STUDIO_HANDOFF.md](GOOGLE_AI_STUDIO_HANDOFF.md) for the repository-aware coding prompt and exact Firebase/RevenueCat/Google Play setup steps. Do not replace this branch with a new starter.
+Use [MULTI_ADVENTURE_PRODUCT_BLUEPRINT.md](MULTI_ADVENTURE_PRODUCT_BLUEPRINT.md) for the cross-activity vision and implementation backlog. Use [GOOGLE_AI_STUDIO_HANDOFF.md](GOOGLE_AI_STUDIO_HANDOFF.md) for the repository-aware coding prompt and exact Firebase/RevenueCat/Google Play setup steps. Extend this repository in place; do not replace it with a new starter.
 
 **Ride safe. Lean deeper. Tell better stories.**

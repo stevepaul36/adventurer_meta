@@ -185,7 +185,7 @@ fun FeedScreen(
                             ) {
                                 Icon(Icons.Default.Speed, contentDescription = null, tint = Color.Black)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(Str.OPEN_HUD.get(currentLang), color = Color.Black, fontWeight = FontWeight.Bold)
+                                Text(if (telemetry.activityType == ActivityType.Motorcycling) Str.OPEN_HUD.get(currentLang) else "Open tracker", color = Color.Black, fontWeight = FontWeight.Bold)
                             }
                         }
                     } else {
@@ -195,14 +195,14 @@ fun FeedScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = Str.HERO_TITLE.get(currentLang),
+                                    text = if (activityMode == ActivityType.Motorcycling) Str.HERO_TITLE.get(currentLang) else activityMode.homeTitle,
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = Str.HERO_BODY.get(currentLang),
+                                    text = if (activityMode == ActivityType.Motorcycling) Str.HERO_BODY.get(currentLang) else activityMode.homeHint,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color(0xFF94A3B8)
                                 )

@@ -11,7 +11,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,7 +50,11 @@ fun AiStoryStudioScreen(
 
     val context = LocalContext.current
     val proBillingState by AdventurerProBilling.state.collectAsState()
-    var selectedRegion by remember { mutableStateOf("Leh-Ladakh High Passes") }
+    var selectedRegion by remember { mutableStateOf("") }
+    val selectedActivityMode by viewModel.activityMode.collectAsState()
+    val regionContext = selectedRegion.trim().take(88).ifBlank {
+        "selected adventure footage; do not invent an unverified destination"
+    }
     var targetLength by remember { mutableStateOf("60s Reel") }
     var narrationLang by remember { mutableStateOf("English (Adventure Epic)") }
     var selectedVideoUri by remember { mutableStateOf<Uri?>(null) }
@@ -67,7 +73,7 @@ fun AiStoryStudioScreen(
                     file.inputStream().use { input -> input.copyTo(output) }
                 } ?: error("Could not open the selected destination.")
             }.onSuccess {
-                Toast.makeText(context, "Ride highlight reel saved as MP4.", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Adventure highlight reel saved as MP4.", Toast.LENGTH_LONG).show()
             }.onFailure {
                 Toast.makeText(context, "Could not save the MP4. Try another location.", Toast.LENGTH_LONG).show()
             }.also {
@@ -130,8 +136,8 @@ fun AiStoryStudioScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("AI Ride Story Studio", fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("Highlight Timeline & Multilingual Narration", style = MaterialTheme.typography.labelSmall, color = Color(0xFFC084FC))
+                        Text("AI Adventure Story Studio", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Activity-aware highlights, captions & multilingual narration", style = MaterialTheme.typography.labelSmall, color = Color(0xFFC084FC))
                     }
                 },
                 navigationIcon = {
@@ -247,7 +253,8 @@ fun AiStoryStudioScreen(
                                                 context = context,
                                                 videoUri = source,
                                                 targetLength = targetLength,
-                                                narrationLanguage = narrationLang
+                                                narrationLanguage = narrationLang,
+                                                activityType = selectedActivityMode.name
                                             )
                                             if (suggestions.isEmpty()) {
                                                 highlightAnalysisError = "AI could not find reliable highlights. Try a different video."
@@ -319,14 +326,39 @@ fun AiStoryStudioScreen(
                             )
                         }
 
-                        // Target Region
-                        Text("Expedition Route:", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("Leh-Ladakh High Passes", "Spiti Valley Loop", "Western Ghats Monsoon").forEach { r ->
+                        // Destination context: user-editable and not limited to mountain rides.
+                        Text("Activity / trip context:", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
+                        Text(
+                            "Selected mode: ${selectedActivityMode.displayName}. Add any destination, route, island, city or personal trip notes.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFCBD5E1)
+                        )
+                        OutlinedTextField(
+                            value = selectedRegion,
+                            onValueChange = { selectedRegion = it },
+                            label = { Text("Destination or trip context (optional)") },
+                            placeholder = { Text("e.g., Vancouver Island coastal road trip") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(
+                                "Leh-Ladakh High Passes",
+                                "Spiti Valley Loop",
+                                "Western Ghats Monsoon",
+                                "Coastal / Island Escape",
+                                "Forest & Wildlife",
+                                "City Exploration",
+                                "Scenic Road Trip",
+                                "Camping Weekend"
+                            ).forEach { destinationPreset ->
                                 FilterChip(
-                                    selected = selectedRegion == r,
-                                    onClick = { selectedRegion = r },
-                                    label = { Text(r) },
+                                    selected = selectedRegion == destinationPreset,
+                                    onClick = { selectedRegion = destinationPreset },
+                                    label = { Text(destinationPreset) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = AdventureOrange,
                                         selectedLabelColor = Color.Black,
@@ -460,7 +492,7 @@ fun AiStoryStudioScreen(
                                                         RideStoryAiService.analyzeVideoAndGenerateCaption(
                                                             context = context,
                                                             videoUri = selectedVideoUri!!,
-                                                            region = selectedRegion,
+                                                            region = "${selectedActivityMode.displayName}: ${regionContext}",
                                                             targetLength = targetLength,
                                                             narrationLanguage = narrationLang,
                                                             clips = clipContext
@@ -603,7 +635,8 @@ fun AiStoryStudioScreen(
                             } else {
                                 pendingEdlJson = JSONObject()
                                     .put("format", "adventurer-edl-v1")
-                                    .put("region", selectedRegion)
+                                    .put("activityType", selectedActivityMode.name)
+                                    .put("region", regionContext)
                                     .put("targetLength", targetLength)
                                     .put("narrationLanguage", narrationLang)
                                     .put("sourceVideoSelected", selectedVideoUri != null)

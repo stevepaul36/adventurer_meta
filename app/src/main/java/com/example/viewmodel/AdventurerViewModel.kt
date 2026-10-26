@@ -187,7 +187,7 @@ class AdventurerViewModel(
 
     fun startRide() {
         val hasPermission = locationManager?.hasLocationPermission() == true
-        repository.startRide(demo = !hasPermission)
+        repository.startRide(demo = !hasPermission, activityType = activityMode.value)
         if (hasPermission) startGpsTracking()
         navigateTo(Screen.LIVE_TRACKER)
     }
@@ -210,13 +210,24 @@ class AdventurerViewModel(
     }
 
     fun finishRide() {
-        val wasDemo = telemetry.value.isDemo
+        val completedSession = telemetry.value
+        val completedMode = completedSession.activityType
+        val wasDemo = completedSession.isDemo
         stopGpsTracking()
         val stats = repository.stopAndSaveRide()
         val caption = if (wasDemo) {
-            "🏁 Demo ride completed. Distance, speed and lean values were simulated and are not a recorded GPS route."
-        } else {
-            "🏁 Completed ride! Distance: ${stats.distanceKm} km, Duration: ${stats.duration}, Max Lean: ${stats.maxLeanAngleDeg}°, Elevation gain: +${stats.elevationGainM}m."
+            "🏁 Demo ${completedMode.displayName.lowercase()} session completed. Movement values were simulated and are not a recorded GPS route."
+        } else when (completedMode) {
+            ActivityType.Motorcycling ->
+                "🏁 Motorcycle ride completed! Distance: ${stats.distanceKm} km · Duration: ${stats.duration} · Top speed: ${stats.topSpeedKmH.toInt()} km/h · Max lean estimate: ${stats.maxLeanAngleDeg}° · Elevation gain: +${stats.elevationGainM} m."
+            ActivityType.Cycling ->
+                "🚴 Cycling session completed! Distance: ${stats.distanceKm} km · Duration: ${stats.duration} · Elevation gain: +${stats.elevationGainM} m."
+            ActivityType.Walking, ActivityType.Trekking ->
+                "🥾 ${completedMode.displayName} session completed! Distance: ${stats.distanceKm} km · Duration: ${stats.duration} · Elevation gain: +${stats.elevationGainM} m."
+            ActivityType.CarTrips ->
+                "🚗 Road-trip session completed! Recorded distance: ${stats.distanceKm} km · Duration: ${stats.duration}. Review the stops before sharing."
+            else ->
+                "🧭 ${completedMode.displayName} session completed. Recorded distance: ${stats.distanceKm} km · Duration: ${stats.duration}. Add notes and verify activity-specific details before sharing."
         }
         repository.createPost(caption = caption, rideStats = stats)
         navigateTo(Screen.FEED)

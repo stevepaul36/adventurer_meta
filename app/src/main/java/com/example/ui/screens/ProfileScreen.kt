@@ -197,8 +197,14 @@ fun ProfileScreen(
                     )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Active Tracking Mode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Preferred Adventure Mode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
                         Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            "Choose the activity you usually do. The current GPS recorder and trip recap are being generalized; specialist features such as live trail conditions, regulations and dive-computer import are not wired yet.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF94A3B8)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         ActivityType.values().forEach { mode ->
                             Row(
                                 modifier = Modifier

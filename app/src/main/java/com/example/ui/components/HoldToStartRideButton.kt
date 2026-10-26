@@ -11,7 +11,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.TwoWheeler
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -104,9 +104,9 @@ fun HoldToStartRideButton(
             // Screen-reader users can't time a press-and-hold, so expose a long-press action instead.
             .clearAndSetSemantics {
                 role = Role.Button
-                contentDescription = "Start ride"
+                contentDescription = "Start adventure"
                 stateDescription = if (isHolding) "Starting" else "Press and hold to start"
-                onLongClick(label = "Start ride") { vibrateSuccess(); onRideStarted(); true }
+                onLongClick(label = "Start adventure") { vibrateSuccess(); onRideStarted(); true }
             },
         contentAlignment = Alignment.Center
     ) {
@@ -156,7 +156,7 @@ fun HoldToStartRideButton(
                 verticalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.TwoWheeler,
+                    imageVector = Icons.Default.Explore,
                     contentDescription = null,
                     tint = if (isHolding) Color.Black else AmberGold,
                     modifier = Modifier.size(32.dp)
