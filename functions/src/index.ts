@@ -9,6 +9,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import {
   isEntitlementActive,
   isSafeStoragePath,
+  stableQuotaOwnerKey,
   utcMonthKey,
   type RevenueCatEntitlement,
 } from "./entitlements";
@@ -75,7 +76,7 @@ function parseClips(value: unknown) {
   });
 }
 
-async function verifyProEntitlement(uid: string): Promise<{ isPro: boolean; expiresDate: string | null }> {
+async function verifyProEntitlement(uid: string): Promise<{ isPro: boolean; expiresDate: string | null; quotaOwnerKey: string }> {
   const apiKey = revenueCatSecretKey.value().trim();
   if (!apiKey) {
     throw new HttpsError("failed-precondition", "Server-side subscription verification is not configured.");
@@ -91,7 +92,7 @@ async function verifyProEntitlement(uid: string): Promise<{ isPro: boolean; expi
     throw new HttpsError("unavailable", "We could not verify your subscription. Please retry.");
   }
 
-  if (response.status === 404) return { isPro: false, expiresDate: null };
+  if (response.status === 404) return { isPro: false, expiresDate: null, quotaOwnerKey: stableQuotaOwnerKey(uid, uid) };
   if (!response.ok) {
     logger.error("RevenueCat verification returned non-success", { status: response.status, uid });
     throw new HttpsError("unavailable", "We could not verify your subscription. Please retry.");
@@ -99,6 +100,7 @@ async function verifyProEntitlement(uid: string): Promise<{ isPro: boolean; expi
 
   const payload = record(await response.json());
   const subscriber = record(payload.subscriber);
+  const stableQuotaKey = stableQuotaOwnerKey(uid, subscriber.original_app_user_id);
   const entitlementMap = record(subscriber.entitlements);
   const entitlement = entitlementMap[PRO_ENTITLEMENT] as RevenueCatEntitlement | undefined;
   const isPro = isEntitlementActive(entitlement);
@@ -112,13 +114,15 @@ async function verifyProEntitlement(uid: string): Promise<{ isPro: boolean; expi
     verifiedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
 
-  return { isPro, expiresDate };
+  return { isPro, expiresDate, quotaOwnerKey: stableQuotaKey };
 }
 
-async function requirePro(uid: string): Promise<void> {
-  if (!(await verifyProEntitlement(uid)).isPro) {
+async function requirePro(uid: string): Promise<string> {
+  const entitlement = await verifyProEntitlement(uid);
+  if (!entitlement.isPro) {
     throw new HttpsError("permission-denied", "An active Adventurer Pro subscription is required for AI generation.");
   }
+  return entitlement.quotaOwnerKey;
 }
 
 type UsageReservation = {
@@ -126,7 +130,7 @@ type UsageReservation = {
   reservationRef: DocumentReference;
 };
 
-async function reserveMonthlyUsage(uid: string): Promise<UsageReservation> {
+async function reserveMonthlyUsage(quotaOwnerKey: string): Promise<UsageReservation> {
   const month = utcMonthKey(new Date());
   const usageRef = db.doc(`aiUsage/${uid}/months/${month}`);
   const reservationRef = usageRef.collection("reservations").doc(randomUUID());
@@ -254,7 +258,10 @@ async function generateWithGemini(parts: Array<Record<string, unknown>>, jsonOut
 
 export const syncMyEntitlement = onCall({
   region: REGION, enforceAppCheck: true, secrets: [revenueCatSecretKey], maxInstances: 20,
-}, async (request) => verifyProEntitlement(requireUid(request)));
+}, async (request) => {
+  const { isPro, expiresDate } = await verifyProEntitlement(requireUid(request));
+  return { isPro, expiresDate };
+});
 
 export const analyzeRideHighlights = onCall({
   region: REGION, enforceAppCheck: true,
@@ -268,8 +275,8 @@ export const analyzeRideHighlights = onCall({
     throw new HttpsError("invalid-argument", "Choose a supported reel length.");
   }
 
-  await requirePro(uid);
-  const reservation = await reserveMonthlyUsage(uid);
+  const quotaOwnerKey = await requirePro(uid);
+  const reservation = await reserveMonthlyUsage(quotaOwnerKey);
   let succeeded = false;
   try {
     const video = await loadVideo(uid, data.storagePath);
@@ -324,8 +331,8 @@ export const generateRideCaption = onCall({
   const clips = parseClips(data.clips);
   const storagePath = optionalText(data.storagePath, 512);
 
-  await requirePro(uid);
-  const reservation = await reserveMonthlyUsage(uid);
+  const quotaOwnerKey = await requirePro(uid);
+  const reservation = await reserveMonthlyUsage(quotaOwnerKey);
   let succeeded = false;
   try {
     const parts: Array<Record<string, unknown>> = [];

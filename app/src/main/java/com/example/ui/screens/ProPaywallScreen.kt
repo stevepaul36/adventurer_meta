@@ -125,6 +125,7 @@ fun ProPaywallScreen(viewModel: AdventurerViewModel, modifier: Modifier = Modifi
             item {
                 FeatureRow("AI highlight discovery", "Find candidate moments in your actual ride footage.")
                 FeatureRow("AI story captions", "Generate grounded social captions in supported languages.")
+                FeatureRow("30 AI generations per month", "Usage resets each UTC month. Successful highlight analysis and caption generation both count.")
                 FeatureRow("Local MP4 export", "Render selected clips on-device; review AI timestamps before sharing.")
             }
 

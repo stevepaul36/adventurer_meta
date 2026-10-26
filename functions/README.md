@@ -32,7 +32,7 @@ Cloud Functions/Storage require a Firebase project with billing enabled. Review 
 
 - Callable functions require Firebase Auth plus a valid App Check token.
 - Every AI call verifies the active `adventurer_pro` entitlement against RevenueCat's subscriber API; UI state is not authoritative.
-- AI calls reserve monthly quota transactionally and count successful results only. Allowance: 30 successful generations per UTC month.
+- AI calls reserve monthly quota transactionally and count successful results only. Allowance: 30 successful generations per UTC month. Quota ownership follows RevenueCat's canonical original subscriber ID across supported aliases/restores; a SHA-256 key is used for Firestore document paths.
 - Videos may only use the caller's `ride-videos/<uid>/<filename>` path, are limited to 14 MiB and video content types, and cannot be read by clients.
 - Missing secrets, failed RevenueCat verification, and inactive entitlements fail closed.
 - The Android client deletes each uploaded video in a `finally` block. Add a scheduled object-lifecycle cleanup for uploads abandoned after force-closes.

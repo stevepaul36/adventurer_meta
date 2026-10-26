@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 export interface RevenueCatEntitlement {
   expires_date?: string | null;
   grace_period_expires_date?: string | null;
@@ -22,6 +24,12 @@ export function isEntitlementActive(
       ? Date.parse(entitlement.grace_period_expires_date)
       : Number.NaN;
   return Number.isFinite(graceMs) && graceMs > nowMs;
+}
+
+/** Stable per-subscriber quota owner, even if RevenueCat aliases an identity after restore. */
+export function stableQuotaOwnerKey(firebaseUid: string, originalAppUserId: unknown): string {
+  const canonicalId = typeof originalAppUserId === "string" ? originalAppUserId.trim() : "";
+  return createHash("sha256").update(canonicalId || firebaseUid, "utf8").digest("hex");
 }
 
 export function utcMonthKey(date: Date): string {
