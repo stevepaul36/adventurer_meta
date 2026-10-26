@@ -42,7 +42,7 @@ Adventurer is a production-grade native Android application crafted for motorcyc
 
 - **AI Ride Story Studio**:
   - Selectable ride-footage input, AI-detected candidate moments with suggested source timestamps, and an editable highlight timeline.
-  - Firebase AI Logic caption generation grounded in the selected clip metadata; when a video is selected, the model also receives the video for multimodal captioning (demo limit: 15 MB).
+  - Firebase AI Logic caption generation grounded in the selected clip metadata; when a video is selected, the model also receives the video for multimodal captioning (demo limit: 14 MB).
   - English, Hindi हिन्दी, and Marathi मराठी caption styles.
   - Share generated captions to the local community feed.
   - Export a structured EDL JSON file with selected clip metadata, target length, language, and source-video selection state.
@@ -86,7 +86,7 @@ The repository intentionally does not include a Firebase configuration file or A
 4. Confirm the Google Services Gradle plugin is configured, then build and run the app on a device with network access.
 5. Configure App Check for production. Use the debug provider only for local development, never as the production enforcement strategy.
 
-If Firebase is not configured, AI generation will fail and the screen will show an error while preserving the existing caption. The non-AI caption template remains available. Video upload is performed directly from the app to Firebase AI Logic when a video is selected; for this prototype, keep video files under 15 MB and do not select sensitive footage without consent.
+If Firebase is not configured, AI generation will fail and the screen will show an error while preserving the existing caption. The non-AI caption template remains available. Video upload is performed directly from the app to Firebase AI Logic when a video is selected; for this prototype, keep video files under 14 MB and do not select sensitive footage without consent.
 
 ## Ride Story Studio workflow
 
