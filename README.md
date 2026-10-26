@@ -46,7 +46,9 @@ Adventurer is a production-grade native Android application crafted for motorcyc
   - English, Hindi हिन्दी, and Marathi मराठी caption styles.
   - Share generated captions to the local community feed.
   - Export a structured EDL JSON file with selected clip metadata, target length, language, and source-video selection state.
-  - EDL is an editing manifest, not a rendered video file; final video rendering and audio narration are not yet included.
+  - Render selected time ranges from a chosen source video into a single local MP4 highlight reel with Android Media3 Transformer. The reel is capped to the selected 15s/30s/60s target.
+  - EDL JSON remains available as a separate editing manifest for external editors.
+  - Automatic AI narration audio, music licensing, and generated title-card overlays are not included yet.
 
 - **Gamification & 3D Trophy Showcase**:
   - Rider Level and XP progress with daily streak counter.
@@ -92,6 +94,11 @@ If Firebase is not configured, AI generation will fail and the screen will show 
 2. Choose the route, target reel length, and narration language.
 3. Select the candidate moments to include in the edit decision list.
 4. Generate a caption with Gemini. If a video was selected, the model analyzes that video together with the selected metadata.
-5. Share the caption to the app's local feed, or export the selected moments as an EDL JSON file using Android's save dialog.
+5. Share the caption to the app's local feed, render the selected moments into an MP4 reel using **Render & Export MP4 Reel**, or save the selected moments as an EDL JSON file.
 
-The EDL records proposed source time ranges and metadata. It does not trim, transcode, or stitch the video. Video rendering, scene-by-scene timestamps, soundtrack generation, and narration audio remain future work.
+Video rendering runs locally on the device and uses the selected timeline timestamps; it does not yet use AI to discover exact scene boundaries automatically. Review timestamps before exporting. The reel keeps the source audio and does not add generated narration or licensed music.
+
+
+## Build verification
+
+A GitHub Actions workflow at `.github/workflows/android-build.yml` assembles the debug APK and runs unit tests on pushes and pull requests. The new timestamp/target-length tests cover the reel export planner. A green workflow is required before treating the feature as build-verified.
