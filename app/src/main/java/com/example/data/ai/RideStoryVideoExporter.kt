@@ -27,7 +27,7 @@ object RideStoryVideoExporter {
     }
 
     fun parseTimeRange(label: String): TimeRange {
-        val match = Regex("""(\\d{1,2}):(\\d{2})\\s*[-–]\\s*(\\d{1,2}):(\\d{2})""")
+        val match = Regex("""(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})""")
             .matchEntire(label.trim())
             ?: throw IllegalArgumentException("Unsupported clip time range: $label. Use mm:ss - mm:ss.")
         val (startMin, startSec, endMin, endSec) = match.destructured
