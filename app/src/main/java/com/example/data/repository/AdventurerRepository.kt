@@ -483,7 +483,7 @@ class AdventurerRepository {
         val climb = if (current.hasGpsFix && newAltitude - current.altitudeM >= 3) {
             newAltitude - current.altitudeM
         } else 0
-        val nextLean = if (curr.activityType.supportsLeanAngle) {
+        val nextLean = if (current.activityType.supportsLeanAngle) {
             kotlin.math.round(location.leanAngleDeg).toInt()
         } else 0
         _telemetry.value = current.copy(

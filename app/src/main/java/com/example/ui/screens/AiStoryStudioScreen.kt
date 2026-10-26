@@ -52,8 +52,8 @@ fun AiStoryStudioScreen(
     val proBillingState by AdventurerProBilling.state.collectAsState()
     var selectedRegion by remember { mutableStateOf("") }
     val selectedActivityMode by viewModel.activityMode.collectAsState()
-    val regionContext = selectedRegion.trim().ifBlank {
-        "the selected adventure footage; do not invent a destination unless it can be verified from provided context"
+    val regionContext = selectedRegion.trim().take(88).ifBlank {
+        "selected adventure footage; do not invent an unverified destination"
     }
     var targetLength by remember { mutableStateOf("60s Reel") }
     var narrationLang by remember { mutableStateOf("English (Adventure Epic)") }

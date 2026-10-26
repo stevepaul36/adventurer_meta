@@ -89,6 +89,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
     val showSosAlert by viewModel.showSosAlert.collectAsState()
     val feedItems by viewModel.feed.collectAsState()
     val telemetry by viewModel.telemetry.collectAsState()
+    val activityMode by viewModel.activityMode.collectAsState()
     val lang by viewModel.currentLang.collectAsState()
 
     // Detail screens get the whole screen (they have their own back arrow); the HUD hides the
@@ -132,7 +133,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                                 },
                                 label = {
                                     Text(
-                                        if (tab.screen == Screen.LIVE_TRACKER && telemetry.activityType != ActivityType.Motorcycling) "Track"
+                                        if (tab.screen == Screen.LIVE_TRACKER && activityMode != ActivityType.Motorcycling) "Track"
                                         else tab.label.get(lang),
                                         maxLines = 1
                                     )
