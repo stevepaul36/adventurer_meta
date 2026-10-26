@@ -24,6 +24,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.model.HighlightClip
+import com.example.data.ai.RideStoryAiService
+import kotlinx.coroutines.launch
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
 import com.example.ui.theme.HighAltitudeCyan
@@ -54,16 +56,21 @@ fun AiStoryStudioScreen(
         )
     }
 
-    val generatedCaption = remember(selectedRegion, narrationLang) {
+    val fallbackCaption = remember(selectedRegion, narrationLang) {
         when {
             narrationLang.contains("Hindi") ->
-                "🏔️ लद्दाख की बर्फीली हवाओं और 19,000 फीट की ऊँचाई पर हमारी बाइकों की गूंज! उमलिंग ला और पैंगोंग के दुर्गम रास्तों पर हर एक मोड़ पर एक नई दास्तान। एडवेंचर कभी रुकता नहीं! 🏍️💨 #LehLadakh #AdventurerRider"
+                "🏔️ लद्दाख की बर्फीली हवाओं और ऊँचाई पर हमारी बाइकों की गूंज! हर मोड़ पर एक नई दास्तान। एडवेंचर कभी रुकता नहीं! 🏍️💨 #LehLadakh #AdventurerRider"
             narrationLang.contains("Marathi") ->
-                " सह्याद्री ते हिमालयाचे उत्तुंग शिखर! खार्दुंग ला आणि पँगॉन्गच्या गारठलेल्या वाटेवर दोन चाकांवरची थरारक सफर। साहसाची खरी व्याख्या म्हणजे हा प्रवास! 🏍️✨ #HimalayanOdyssey #Adventurer"
+                "सह्याद्री ते हिमालयाचे उत्तुंग शिखर! दोन चाकांवरची थरारक सफर आणि प्रत्येक वळणावर नवा अनुभव. 🏍️✨ #HimalayanOdyssey #Adventurer"
             else ->
-                "🏔️ Carving through the roof of the world! 1,240 km across glacial water crossings, sub-zero passes, and the supreme crown of Umling La at 19,024 ft. When the tarmac ends, true adventure begins! 🏍️💨 #Adventurer #RideStory #Himalayan450"
+                "🏔️ The road unfolds one turn at a time. Big skies, mountain air, and the moments that make every ride a story. 🏍️💨 #Adventurer #RideStory"
         }
     }
+    var generatedCaption by remember(selectedRegion, narrationLang) { mutableStateOf(fallbackCaption) }
+    var isGenerating by remember { mutableStateOf(false) }
+    var aiError by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
 
     Scaffold(
         topBar = {
@@ -185,6 +192,81 @@ fun AiStoryStudioScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color(0xFFE2E8F0)
                         )
+                        if (aiError != null) {
+                            Text(
+                                text = aiError!!,
+                                color = Color(0xFFFCA5A5),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = {
+                                    if (!isGenerating) {
+                                        isGenerating = true
+                                        aiError = null
+                                        coroutineScope.launch {
+                                            try {
+                                                val selected = highlightClips.filter { it.isSelected }
+                                                if (selected.isEmpty()) {
+                                                    aiError = "Select at least one highlight before generating a story."
+                                                } else {
+                                                    generatedCaption = RideStoryAiService.generateCaption(
+                                                        region = selectedRegion,
+                                                        targetLength = targetLength,
+                                                        narrationLanguage = narrationLang,
+                                                        clips = selected.map {
+                                                            RideStoryAiService.ClipContext(
+                                                                timeRange = it.timestamp,
+                                                                title = it.title,
+                                                                tag = it.tag,
+                                                                speedKmh = it.speedKmh,
+                                                                altitudeM = it.altitudeM
+                                                            )
+                                                        }
+                                                    )
+                                                }
+                                            } catch (error: Exception) {
+                                                aiError = "AI generation failed. Check Firebase AI Logic setup and App Check, then try again. Your current caption is preserved."
+                                            } finally {
+                                                isGenerating = false
+                                            }
+                                        }
+                                    }
+                                },
+                                enabled = !isGenerating,
+                                colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange)
+                            ) {
+                                if (isGenerating) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        color = Color.Black,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Generating…", color = Color.Black)
+                                } else {
+                                    Icon(Icons.Default.AutoAwesome, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Generate with AI", color = Color.Black)
+                                }
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.createPost(generatedCaption, null)
+                                    Toast.makeText(context, "Ride story shared to your feed.", Toast.LENGTH_SHORT).show()
+                                }
+                            ) {
+                                Icon(Icons.Default.Share, contentDescription = null)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Share")
+                            }
+                        }
                     }
                 }
             }
