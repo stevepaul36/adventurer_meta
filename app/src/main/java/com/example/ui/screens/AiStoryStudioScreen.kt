@@ -3,10 +3,13 @@ package com.example.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.net.Uri
 import android.widget.Toast
 import org.json.JSONArray
 import org.json.JSONObject
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -43,6 +46,10 @@ fun AiStoryStudioScreen(
     var selectedRegion by remember { mutableStateOf("Leh-Ladakh High Passes") }
     var targetLength by remember { mutableStateOf("60s Reel") }
     var narrationLang by remember { mutableStateOf("English (Adventure Epic)") }
+    var selectedVideoUri by remember { mutableStateOf<Uri?>(null) }
+    val videoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri -> selectedVideoUri = uri }
 
     var highlightClips by remember {
         mutableStateOf(
@@ -111,6 +118,31 @@ fun AiStoryStudioScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Story Configuration", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+
+                        Text("Ride Footage (optional)", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedButton(onClick = { videoPicker.launch("video/*") }) {
+                                Icon(Icons.Default.VideoLibrary, contentDescription = null)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (selectedVideoUri == null) "Choose video" else "Change video")
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    if (selectedVideoUri == null) "No video selected" else "Video selected",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    "Choose a clip from your device. Video analysis/export is not enabled in this build yet.",
+                                    color = Color(0xFF94A3B8),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
 
                         // Target Region
                         Text("Expedition Route:", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
