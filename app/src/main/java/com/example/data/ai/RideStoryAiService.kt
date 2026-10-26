@@ -2,9 +2,10 @@ package com.example.data.ai
 
 import android.content.Context
 import android.net.Uri
+import com.google.firebase.ai.ai
+import com.google.firebase.ai.type.GenerativeBackend
 import com.google.firebase.ai.type.content
 import com.google.firebase.Firebase
-import com.google.firebase.ai.GenerativeBackend
 
 /**
  * Firebase AI Logic wrapper for turning ride metadata into a social-ready story.
