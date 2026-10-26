@@ -53,12 +53,6 @@ fun AiStoryStudioScreen(
     var narrationLang by remember { mutableStateOf("English (Adventure Epic)") }
     var selectedVideoUri by remember { mutableStateOf<Uri?>(null) }
     var analyzedVideoUri by remember { mutableStateOf<Uri?>(null) }
-    val videoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) {
-        selectedVideoUri = it
-        analyzedVideoUri = null
-    }
     var pendingEdlJson by remember { mutableStateOf("") }
     var pendingVideoFile by remember { mutableStateOf<File?>(null) }
     var isExportingReel by remember { mutableStateOf(false) }
@@ -112,6 +106,17 @@ fun AiStoryStudioScreen(
     var isAnalyzingHighlights by remember { mutableStateOf(false) }
     var highlightAnalysisError by remember { mutableStateOf<String?>(null) }
 
+    val videoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        selectedVideoUri = uri
+        analyzedVideoUri = null
+        highlightClips = emptyList()
+        generatedCaption = ""
+        aiError = null
+        highlightAnalysisError = null
+        reelExportError = null
+    }
 
     Scaffold(
         topBar = {
