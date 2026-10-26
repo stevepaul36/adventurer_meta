@@ -130,6 +130,23 @@ fun AiStoryStudioScreen(
                             }
                         }
 
+                        Text("Target Length:", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                            listOf("15s Reel", "30s Reel", "60s Reel").forEach { length ->
+                                FilterChip(
+                                    selected = targetLength == length,
+                                    onClick = { targetLength = length },
+                                    label = { Text(length) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = HighAltitudeCyan,
+                                        selectedLabelColor = Color.Black,
+                                        containerColor = Color(0xFF1E293B),
+                                        labelColor = Color.White
+                                    )
+                                )
+                            }
+                        }
+
                         // Narration Language
                         Text("Narration Voice & Language:", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
