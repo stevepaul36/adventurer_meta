@@ -120,6 +120,8 @@ fun AiStoryStudioScreen(
     var isGenerating by remember { mutableStateOf(false) }
     var aiError by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    var isAnalyzingHighlights by remember { mutableStateOf(false) }
+    var highlightAnalysisError by remember { mutableStateOf<String?>(null) }
 
 
     Scaffold(
@@ -185,6 +187,75 @@ fun AiStoryStudioScreen(
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             }
+                        }
+                        Button(
+                            onClick = {
+                                val source = selectedVideoUri
+                                if (source == null) {
+                                    highlightAnalysisError = "Choose a video before asking AI to find highlights."
+                                } else if (!isAnalyzingHighlights) {
+                                    isAnalyzingHighlights = true
+                                    highlightAnalysisError = null
+                                    coroutineScope.launch {
+                                        try {
+                                            val suggestions = RideStoryAiService.analyzeVideoForHighlights(
+                                                context = context,
+                                                videoUri = source,
+                                                targetLength = targetLength,
+                                                narrationLanguage = narrationLang
+                                            )
+                                            if (suggestions.isEmpty()) {
+                                                highlightAnalysisError = "AI could not find reliable highlights. Try a different video."
+                                            } else {
+                                                highlightClips = suggestions.map { suggestion ->
+                                                    HighlightClip(
+                                                        suggestion.timeRange,
+                                                        suggestion.title,
+                                                        0,
+                                                        0,
+                                                        suggestion.tag,
+                                                        true
+                                                    )
+                                                }
+                                                Toast.makeText(
+                                                    context,
+                                                    "AI suggested ${suggestions.size} highlight clips.",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
+                                        } catch (error: Exception) {
+                                            highlightAnalysisError = error.message
+                                                ?: "AI highlight analysis failed. Check Firebase configuration and try again."
+                                        } finally {
+                                            isAnalyzingHighlights = false
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = selectedVideoUri != null && !isAnalyzingHighlights,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange)
+                        ) {
+                            if (isAnalyzingHighlights) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = Color.Black,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Analyzing footage…", color = Color.Black)
+                            } else {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.Black)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("AI Find Highlights", color = Color.Black)
+                            }
+                        }
+                        if (highlightAnalysisError != null) {
+                            Text(
+                                text = highlightAnalysisError!!,
+                                color = Color(0xFFFCA5A5),
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
 
                         // Target Region
@@ -313,8 +384,8 @@ fun AiStoryStudioScreen(
                                                             timeRange = it.timestamp,
                                                             title = it.title,
                                                             tag = it.tag,
-                                                            speedKmh = it.speedKmh,
-                                                            altitudeM = it.altitudeM
+                                                            speedKmh = it.speedKmh.takeIf { speed -> speed > 0 },
+                                                            altitudeM = it.altitudeM.takeIf { altitude -> altitude > 0 }
                                                         )
                                                     }
                                                     generatedCaption = if (selectedVideoUri != null) {
@@ -524,7 +595,7 @@ fun AiStoryStudioScreen(
                             }
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "⏱️ ${clip.timestamp} • Speed: ${clip.speedKmh} km/h • Alt: ${clip.altitudeM}m",
+                                text = if (clip.speedKmh > 0 && clip.altitudeM > 0) "⏱️ ${clip.timestamp} • Speed: ${clip.speedKmh} km/h • Alt: ${clip.altitudeM}m" else "⏱️ ${clip.timestamp} • AI-suggested moment • telemetry unavailable",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFF94A3B8)
                             )
