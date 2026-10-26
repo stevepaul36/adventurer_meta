@@ -28,7 +28,7 @@ enum class Str(val en: String, val hi: String, val mr: String, val kn: String, v
     QUICK_STUDIO("AI Story Studio", "AI स्टोरी स्टूडियो", "AI स्टोरी स्टुडिओ", "AI ಸ್ಟೋರಿ ಸ್ಟುಡಿಯೋ", "AI ஸ்டோரி ஸ்டுடியோ"),
     QUICK_CLUBS("Riding clubs", "राइडिंग क्लब", "रायडिंग क्लब", "ರೈಡಿಂಗ್ ಕ್ಲಬ್‌ಗಳು", "ரைடிங் கிளப்புகள்"),
     QUICK_TROPHIES("Trophies", "ट्रॉफ़ी", "ट्रॉफी", "ಟ್ರೋಫಿಗಳು", "கோப்பைகள்"),
-    QUICK_APEX("Apex Moto 3D", "Apex Moto 3D", "Apex Moto 3D", "Apex Moto 3D", "Apex Moto 3D"),
+    QUICK_PRO("Adventurer Pro", "एडवेंचरर प्रो", "अ‍ॅडव्हेंचरर प्रो", "ಅಡ್ವೆಂಚರರ್ ಪ್ರೊ", "அட்வென்சரர் ப்ரோ"),
     POST("Post", "पोस्ट", "पोस्ट", "ಪೋಸ್ಟ್", "பதிவிடு"),
     FEED_EMPTY(
         "No posts yet — finish a ride or tap Post to share one.",

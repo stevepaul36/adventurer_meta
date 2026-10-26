@@ -322,7 +322,7 @@ class AdventurerRepository {
             ),
             Club(
                 id = "c2",
-                name = "Sahyadri Apex Predators",
+                name = "Sahyadri Canyon Riders",
                 tagLine = "Twisty road enthusiasts and monsoon waterfall tourers",
                 badgeUrl = "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=300&q=80",
                 memberCount = 890,
@@ -567,23 +567,6 @@ class AdventurerRepository {
             totalElevationM = gamification.totalElevationM + stats.elevationGainM
         )
         return stats
-    }
-
-    fun recordApexMotoRun(score: Int, topSpeedKmH: Double, distanceKm: Double) {
-        val stats = RideStats(
-            distanceKm = distanceKm,
-            duration = "${Math.max(1, (distanceKm * 0.8).toInt())}m 12s",
-            elevationGainM = 320,
-            topSpeedKmH = topSpeedKmH,
-            maxLeanAngleDeg = 42
-        )
-        val caption = "🔥 Just carved the mountain canyon in Apex Moto 3D! Scored ${String.format("%,d", score)} pts with top speed of ${topSpeedKmH.toInt()} km/h over ${distanceKm} km! Who's taking on the challenge? 🏍️💨"
-        createPost(caption = caption, rideStats = stats)
-        val g = _gamification.value
-        _gamification.value = g.copy(
-            currentXp = g.currentXp + 350,
-            totalRides = g.totalRides + 1
-        )
     }
 }
 

@@ -42,7 +42,7 @@ fun QuickActionsStrip(
         QuickActionItem(Screen.STORY_STUDIO, Str.QUICK_STUDIO, Icons.Default.AutoAwesome, Color(0xFFC084FC)),
         QuickActionItem(Screen.CLUBS, Str.QUICK_CLUBS, Icons.Default.Groups, Color(0xFF38BDF8)),
         QuickActionItem(Screen.GAMIFICATION, Str.QUICK_TROPHIES, Icons.Default.EmojiEvents, AmberGold),
-        QuickActionItem(Screen.APEX_MOTO, Str.QUICK_APEX, Icons.Default.SportsMotorsports, Color(0xFFFB7185)),
+        QuickActionItem(Screen.PRO_PAYWALL, Str.QUICK_PRO, Icons.Default.WorkspacePremium, Color(0xFFFB7185)),
     )
 
     Column(

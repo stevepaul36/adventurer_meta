@@ -16,7 +16,6 @@ enum class Screen(val title: String, val isTopLevel: Boolean = false) {
     RADAR("Roadside Radar", isTopLevel = true),
     LIVE_TRACKER("Live Telemetry", isTopLevel = true),
     STORY_STUDIO("AI Story Studio"),
-    APEX_MOTO("Apex Moto 3D"),
     GAMIFICATION("Gamification Hub"),
     CLUBS("Riding Clubs"),
     PROFILE("Rider Profile", isTopLevel = true),
@@ -230,11 +229,6 @@ class AdventurerViewModel(
                 "🧭 ${completedMode.displayName} session completed. Recorded distance: ${stats.distanceKm} km · Duration: ${stats.duration}. Add notes and verify activity-specific details before sharing."
         }
         repository.createPost(caption = caption, rideStats = stats)
-        navigateTo(Screen.FEED)
-    }
-
-    fun recordApexRun(score: Int, topSpeed: Double, dist: Double) {
-        repository.recordApexMotoRun(score, topSpeed, dist)
         navigateTo(Screen.FEED)
     }
 }

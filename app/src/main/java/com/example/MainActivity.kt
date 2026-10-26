@@ -181,7 +181,6 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     Screen.RADAR -> RoadsideRadarScreen(viewModel = viewModel)
                     Screen.LIVE_TRACKER -> GpsTrackerScreen(viewModel = viewModel)
                     Screen.STORY_STUDIO -> AiStoryStudioScreen(viewModel = viewModel)
-                    Screen.APEX_MOTO -> ApexMotoGameScreen(viewModel = viewModel)
                     Screen.GAMIFICATION -> GamificationScreen(viewModel = viewModel)
                     Screen.CLUBS -> ClubsScreen(viewModel = viewModel)
                     Screen.PROFILE -> ProfileScreen(viewModel = viewModel)
