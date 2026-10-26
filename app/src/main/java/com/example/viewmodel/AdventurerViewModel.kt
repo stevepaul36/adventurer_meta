@@ -19,7 +19,8 @@ enum class Screen(val title: String) {
     APEX_MOTO("Apex Moto 3D"),
     GAMIFICATION("Gamification Hub"),
     CLUBS("Riding Clubs"),
-    PROFILE("Rider Profile")
+    PROFILE("Rider Profile"),
+    PRO_PAYWALL("Adventurer Pro")
 }
 
 enum class SupportedLang(val code: String, val displayName: String, val localName: String) {

@@ -126,6 +126,24 @@ A GitHub Actions workflow at `.github/workflows/android-build.yml` assembles the
 
 An additional auto-merge workflow (`.github/workflows/auto-merge.yml`) enables squash auto-merge for PRs labeled `automerge`.
 
+## Adventurer Pro subscriptions
+
+Adventurer Pro uses RevenueCat to display store-configured subscription packages, launch Google Play purchases, check the `adventurer_pro` entitlement, and restore purchases. The app intentionally does not hard-code subscription prices: localized price and period are supplied by Google Play through RevenueCat.
+
+### Configure billing before a release
+
+1. Create the Android app in RevenueCat and connect it to the matching Google Play Console app.
+2. Create a RevenueCat entitlement with the exact identifier `adventurer_pro`.
+3. Import Google Play subscription products, attach them to that entitlement, create a current offering (normally `default`), and add monthly/annual packages.
+4. Configure `REVENUECAT_TEST_API_KEY` as an environment variable or Gradle project property for debug builds. Configure `REVENUECAT_API_KEY` for release builds. Debug uses the Test Store/test key; release uses the Google Play public SDK key.
+5. Add real products in Play Console and test successful purchase, cancellation, pending payment, subscription expiry, refunds, and restore using a Play internal testing track and license tester accounts.
+
+Only RevenueCat's platform-specific **public SDK key** belongs in the Android client. Never include RevenueCat secret API keys or Google Play service-account credentials in the app or repository.
+
+### Release safety note
+
+This commit adds the client-side purchase flow and Pro gating for AI highlights/captions. Those controls improve the product UX but are not a substitute for server-side entitlement checks and AI usage limits. The current AI service still calls Firebase AI Logic from the client; before offering paid AI at scale, move AI generation behind an authenticated, App-Check-enforced backend that verifies entitlement and rate-limits usage. Also complete the Play Console privacy/Data safety declarations, public privacy policy, account/data deletion requirements for any collected user data, signed release configuration, and physical-device testing before production launch.
+
 ## Getting Started
 
 1. Clone the repo.

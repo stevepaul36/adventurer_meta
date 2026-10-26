@@ -26,6 +26,7 @@ import com.example.ui.theme.AmberGold
 import com.example.ui.theme.HighAltitudeCyan
 import com.example.viewmodel.AdventurerViewModel
 import com.example.viewmodel.SupportedLang
+import com.example.viewmodel.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,6 +122,42 @@ fun ProfileScreen(
                                 ProfileStatCol("ASCENT", "${gamification.totalElevationM} m")
                                 ProfileStatCol("STREAK", "${gamification.currentStreakDays} days")
                             }
+                        }
+                    }
+                }
+            }
+
+            // Monetization entry point. Product prices come from Google Play via RevenueCat.
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().testTag("profile_pro_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E)),
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = Brush.horizontalGradient(
+                            listOf(AdventureOrange.copy(alpha = 0.85f), AmberGold.copy(alpha = 0.65f))
+                        )
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = AmberGold, modifier = Modifier.size(28.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Adventurer Pro", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "AI highlight discovery and AI-generated ride captions. Manage or restore your subscription anytime.",
+                                color = Color(0xFFCBD5E1),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Button(
+                            onClick = { viewModel.navigateTo(Screen.PRO_PAYWALL) },
+                            colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange)
+                        ) {
+                            Text("Explore", color = Color.Black)
                         }
                     }
                 }

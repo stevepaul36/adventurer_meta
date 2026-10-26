@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.model.HighlightClip
+import com.example.data.billing.AdventurerProBilling
 import com.example.data.ai.RideStoryAiService
 import com.example.data.ai.RideStoryVideoExporter
 import java.io.File
@@ -35,6 +36,7 @@ import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
 import com.example.ui.theme.HighAltitudeCyan
 import com.example.viewmodel.AdventurerViewModel
+import com.example.viewmodel.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +47,7 @@ fun AiStoryStudioScreen(
     BackHandler { viewModel.navigateBack() }
 
     val context = LocalContext.current
+    val proBillingState by AdventurerProBilling.state.collectAsState()
     var selectedRegion by remember { mutableStateOf("Leh-Ladakh High Passes") }
     var targetLength by remember { mutableStateOf("60s Reel") }
     var narrationLang by remember { mutableStateOf("English (Adventure Epic)") }
@@ -155,6 +158,47 @@ fun AiStoryStudioScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().testTag("adventurer_pro_status"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF151C2B)),
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = androidx.compose.ui.graphics.SolidColor(
+                            if (proBillingState.isPro) AmberGold else AdventureOrange.copy(alpha = 0.75f)
+                        )
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            if (proBillingState.isPro) Icons.Default.Verified else Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = if (proBillingState.isPro) AmberGold else AdventureOrange
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                if (proBillingState.isPro) "Adventurer Pro is active" else "Unlock AI with Adventurer Pro",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                if (proBillingState.isPro) "AI highlight discovery and generated captions are unlocked."
+                                else "AI highlight discovery and generated captions require a subscription.",
+                                color = Color(0xFFCBD5E1),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        OutlinedButton(onClick = { viewModel.navigateTo(Screen.PRO_PAYWALL) }) {
+                            Text(if (proBillingState.isPro) "Manage" else "View plans")
+                        }
+                    }
+                }
+            }
+
             // Configuration Controls
             item {
                 Card(
@@ -194,8 +238,11 @@ fun AiStoryStudioScreen(
                         }
                         Button(
                             onClick = {
-                                val source = selectedVideoUri
-                                if (source == null) {
+                                if (!proBillingState.isPro) {
+                                    viewModel.navigateTo(Screen.PRO_PAYWALL)
+                                } else {
+                                    val source = selectedVideoUri
+                                    if (source == null) {
                                     highlightAnalysisError = "Choose a video before asking AI to find highlights."
                                 } else if (!isAnalyzingHighlights) {
                                     isAnalyzingHighlights = true
@@ -235,6 +282,7 @@ fun AiStoryStudioScreen(
                                             isAnalyzingHighlights = false
                                         }
                                     }
+                                }
                                 }
                             },
                             enabled = selectedVideoUri != null && !isAnalyzingHighlights,
@@ -389,7 +437,9 @@ fun AiStoryStudioScreen(
                         ) {
                             Button(
                                 onClick = {
-                                    if (!isGenerating) {
+                                    if (!proBillingState.isPro) {
+                                        viewModel.navigateTo(Screen.PRO_PAYWALL)
+                                    } else if (!isGenerating) {
                                         isGenerating = true
                                         aiError = null
                                         coroutineScope.launch {

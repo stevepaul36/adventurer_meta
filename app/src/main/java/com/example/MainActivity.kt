@@ -207,6 +207,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     Screen.GAMIFICATION -> GamificationScreen(viewModel = viewModel)
                     Screen.CLUBS -> ClubsScreen(viewModel = viewModel)
                     Screen.PROFILE -> ProfileScreen(viewModel = viewModel)
+                    Screen.PRO_PAYWALL -> ProPaywallScreen(viewModel = viewModel)
                 }
             }
         }
