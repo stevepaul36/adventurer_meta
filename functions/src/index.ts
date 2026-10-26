@@ -22,7 +22,7 @@ const MONTHLY_AI_LIMIT = 30;
 const MAX_VIDEO_BYTES = 14 * 1024 * 1024;
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 const revenueCatSecretKey = defineSecret("REVENUECAT_SECRET_API_KEY");
-const geminiModel = defineString("GEMINI_MODEL", { default: "gemini-2.5-flash" });
+const geminiModel = defineString("GEMINI_MODEL", { default: "gemini-3.8-flash" });
 
 type JsonRecord = Record<string, unknown>;
 

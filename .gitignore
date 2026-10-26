@@ -23,3 +23,6 @@ debug.keystore
 firebase-debug.*.log
 functions/node_modules/
 functions/lib/
+
+# Environment-specific Firebase client configuration
+app/google-services.json

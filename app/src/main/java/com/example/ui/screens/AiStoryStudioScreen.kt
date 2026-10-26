@@ -596,7 +596,6 @@ fun AiStoryStudioScreen(
 
                     AssistChip(
                         enabled = highlightClips.any { it.isSelected },
-                        enabled = highlightClips.any { it.isSelected },
                         onClick = {
                             val selectedClips = highlightClips.filter { it.isSelected }
                             if (selectedClips.isEmpty()) {

@@ -14,7 +14,7 @@ These functions enforce server-side Pro entitlement and AI quotas. They require 
    firebase functions:secrets:set REVENUECAT_SECRET_API_KEY
    ```
 
-   Use a Gemini Developer API key and a RevenueCat **secret** API key with subscriber read access. These are not public SDK keys. Optionally change the `GEMINI_MODEL` parameter default in `src/index.ts`.
+   Use a Gemini Developer API key and a RevenueCat **secret** API key with subscriber read access. These are not public SDK keys. Optionally change the `GEMINI_MODEL` parameter default in `src/index.ts`. The current default is `gemini-3.8-flash`; confirm model access/availability in your Google AI Studio project before deploying.
 5. Register the Android app with the exact application ID from Gradle; supply its correct `google-services.json` locally. Configure App Check with debug only for local development and Play Integrity for release.
 
 ## Deploy
