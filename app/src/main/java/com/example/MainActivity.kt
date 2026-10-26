@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import com.example.data.model.FeedItem
+import com.example.data.billing.AdventurerProBilling
 import com.example.ui.components.CommentsBottomSheet
 import com.example.ui.components.CreatePostDialog
 import com.example.ui.components.SafetySosDialog
@@ -30,10 +31,6 @@ import com.example.ui.theme.AdventurerTheme
 import com.example.ui.theme.AmberGold
 import com.example.viewmodel.AdventurerViewModel
 import com.example.viewmodel.Screen
-import com.google.firebase.FirebaseApp
-import com.google.firebase.appcheck.FirebaseAppCheck
-import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
-import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 
 class MainActivity : ComponentActivity() {
 
@@ -42,24 +39,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Install App Check before the first Firebase AI Logic request. Firebase is optional
-        // for local UI previews; live AI requires a configured google-services.json.
-        if (FirebaseApp.getApps(this).isNotEmpty()) {
-            FirebaseAppCheck.getInstance().installAppCheckProviderFactory(
-                if (BuildConfig.DEBUG) {
-                    DebugAppCheckProviderFactory.getInstance()
-                } else {
-                    PlayIntegrityAppCheckProviderFactory.getInstance()
-                }
-            )
-        }
-
         enableEdgeToEdge()
         setContent {
             AdventurerTheme(darkTheme = true) {
                 AdventurerApp(viewModel = viewModel)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AdventurerProBilling.refresh()
     }
 }
 
@@ -207,6 +197,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     Screen.GAMIFICATION -> GamificationScreen(viewModel = viewModel)
                     Screen.CLUBS -> ClubsScreen(viewModel = viewModel)
                     Screen.PROFILE -> ProfileScreen(viewModel = viewModel)
+                    Screen.PRO_PAYWALL -> ProPaywallScreen(viewModel = viewModel)
                 }
             }
         }

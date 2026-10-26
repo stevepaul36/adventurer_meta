@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.model.HighlightClip
+import com.example.data.billing.AdventurerProBilling
 import com.example.data.ai.RideStoryAiService
 import com.example.data.ai.RideStoryVideoExporter
 import java.io.File
@@ -35,6 +36,7 @@ import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
 import com.example.ui.theme.HighAltitudeCyan
 import com.example.viewmodel.AdventurerViewModel
+import com.example.viewmodel.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,17 +47,12 @@ fun AiStoryStudioScreen(
     BackHandler { viewModel.navigateBack() }
 
     val context = LocalContext.current
+    val proBillingState by AdventurerProBilling.state.collectAsState()
     var selectedRegion by remember { mutableStateOf("Leh-Ladakh High Passes") }
     var targetLength by remember { mutableStateOf("60s Reel") }
     var narrationLang by remember { mutableStateOf("English (Adventure Epic)") }
     var selectedVideoUri by remember { mutableStateOf<Uri?>(null) }
     var analyzedVideoUri by remember { mutableStateOf<Uri?>(null) }
-    val videoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) {
-        selectedVideoUri = it
-        analyzedVideoUri = null
-    }
     var pendingEdlJson by remember { mutableStateOf("") }
     var pendingVideoFile by remember { mutableStateOf<File?>(null) }
     var isExportingReel by remember { mutableStateOf(false) }
@@ -98,35 +95,35 @@ fun AiStoryStudioScreen(
         }
     }
 
+    // Populate the timeline only with moments found in the user's selected video.
     var highlightClips by remember {
-        mutableStateOf(
-            listOf(
-                HighlightClip("00:14 - 00:22", "Khardung La Summit Ascent", 48, 5359, "Hairpin Carve", true),
-                HighlightClip("01:05 - 01:18", "Pangong Tso Turquoise Shoreline", 64, 4270, "High Speed Drift", true),
-                HighlightClip("02:40 - 02:52", "Nubra Sand Dunes Golden Sunset", 52, 3048, "Scenic Panorama", true),
-                HighlightClip("04:12 - 04:26", "Baralacha Glacial Water Crossing", 24, 4890, "River Splashdown", true),
-                HighlightClip("06:30 - 06:44", "Umling La 19,024 ft Finish Flag", 42, 5798, "Summit Victory", true)
-            )
-        )
+        mutableStateOf<List<HighlightClip>>(emptyList())
     }
-
-    val fallbackCaption = remember(selectedRegion, narrationLang) {
-        when {
-            narrationLang.contains("Hindi") ->
-                "🏔️ लद्दाख की बर्फीली हवाओं और ऊँचाई पर हमारी बाइकों की गूंज! हर मोड़ पर एक नई दास्तान। एडवेंचर कभी रुकता नहीं! 🏍️💨 #LehLadakh #AdventurerRider"
-            narrationLang.contains("Marathi") ->
-                "सह्याद्री ते हिमालयाचे उत्तुंग शिखर! दोन चाकांवरची थरारक सफर आणि प्रत्येक वळणावर नवा अनुभव. 🏍️✨ #HimalayanOdyssey #Adventurer"
-            else ->
-                "🏔️ The road unfolds one turn at a time. Big skies, mountain air, and the moments that make every ride a story. 🏍️💨 #Adventurer #RideStory"
-        }
-    }
-    var generatedCaption by remember(selectedRegion, narrationLang) { mutableStateOf(fallbackCaption) }
+    var generatedCaption by remember { mutableStateOf("") }
     var isGenerating by remember { mutableStateOf(false) }
     var aiError by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     var isAnalyzingHighlights by remember { mutableStateOf(false) }
     var highlightAnalysisError by remember { mutableStateOf<String?>(null) }
 
+    val videoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        selectedVideoUri = uri
+        analyzedVideoUri = null
+        highlightClips = emptyList()
+        generatedCaption = ""
+        aiError = null
+        highlightAnalysisError = null
+        reelExportError = null
+    }
+
+    // Settings are inputs to a caption. Clear output when the inputs change so the
+    // UI never implies a previous caption was generated for a new configuration.
+    LaunchedEffect(selectedRegion, targetLength, narrationLang) {
+        generatedCaption = ""
+        aiError = null
+    }
 
     Scaffold(
         topBar = {
@@ -155,6 +152,47 @@ fun AiStoryStudioScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().testTag("adventurer_pro_status"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF151C2B)),
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = androidx.compose.ui.graphics.SolidColor(
+                            if (proBillingState.isPro) AmberGold else AdventureOrange.copy(alpha = 0.75f)
+                        )
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            if (proBillingState.isPro) Icons.Default.Verified else Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = if (proBillingState.isPro) AmberGold else AdventureOrange
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                if (proBillingState.isPro) "Adventurer Pro is active" else "Unlock AI with Adventurer Pro",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                if (proBillingState.isPro) "AI highlight discovery and generated captions are unlocked."
+                                else "AI highlight discovery and generated captions require a subscription.",
+                                color = Color(0xFFCBD5E1),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        OutlinedButton(onClick = { viewModel.navigateTo(Screen.PRO_PAYWALL) }) {
+                            Text(if (proBillingState.isPro) "Manage" else "View plans")
+                        }
+                    }
+                }
+            }
+
             // Configuration Controls
             item {
                 Card(
@@ -168,7 +206,7 @@ fun AiStoryStudioScreen(
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Story Configuration", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
 
-                        Text("Ride Footage (optional)", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
+                        Text("Ride Footage (required for AI highlights)", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -186,7 +224,7 @@ fun AiStoryStudioScreen(
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    "Selected video is analyzed by Firebase AI Logic when you generate a caption (14 MB demo limit).",
+                                    "For AI analysis, your selected video is uploaded temporarily to our private backend (14 MiB limit) and deleted after processing.",
                                     color = Color(0xFF94A3B8),
                                     style = MaterialTheme.typography.labelSmall
                                 )
@@ -194,8 +232,11 @@ fun AiStoryStudioScreen(
                         }
                         Button(
                             onClick = {
-                                val source = selectedVideoUri
-                                if (source == null) {
+                                if (!proBillingState.isPro) {
+                                    viewModel.navigateTo(Screen.PRO_PAYWALL)
+                                } else {
+                                    val source = selectedVideoUri
+                                    if (source == null) {
                                     highlightAnalysisError = "Choose a video before asking AI to find highlights."
                                 } else if (!isAnalyzingHighlights) {
                                     isAnalyzingHighlights = true
@@ -235,6 +276,7 @@ fun AiStoryStudioScreen(
                                             isAnalyzingHighlights = false
                                         }
                                     }
+                                }
                                 }
                             },
                             enabled = selectedVideoUri != null && !isAnalyzingHighlights,
@@ -358,6 +400,7 @@ fun AiStoryStudioScreen(
                             }
 
                             IconButton(
+                                enabled = generatedCaption.isNotBlank(),
                                 onClick = {
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     clipboard.setPrimaryClip(ClipData.newPlainText("Ride Caption", generatedCaption))
@@ -370,9 +413,11 @@ fun AiStoryStudioScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = generatedCaption,
+                            text = generatedCaption.ifBlank {
+                                "Your AI caption will appear here after you analyze your actual ride footage."
+                            },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFFE2E8F0)
+                            color = if (generatedCaption.isBlank()) Color(0xFF94A3B8) else Color(0xFFE2E8F0)
                         )
                         if (aiError != null) {
                             Text(
@@ -389,14 +434,18 @@ fun AiStoryStudioScreen(
                         ) {
                             Button(
                                 onClick = {
-                                    if (!isGenerating) {
+                                    if (!proBillingState.isPro) {
+                                        viewModel.navigateTo(Screen.PRO_PAYWALL)
+                                    } else if (!isGenerating) {
                                         isGenerating = true
                                         aiError = null
                                         coroutineScope.launch {
                                             try {
                                                 val selected = highlightClips.filter { it.isSelected }
-                                                if (selected.isEmpty()) {
-                                                    aiError = "Select at least one highlight before generating a story."
+                                                if (selectedVideoUri != null && analyzedVideoUri != selectedVideoUri) {
+                                                    aiError = "Run AI Find Highlights for the selected video before generating its caption."
+                                                } else if (selected.isEmpty()) {
+                                                    aiError = "Choose a video and run AI Find Highlights before generating a story."
                                                 } else {
                                                     val clipContext = selected.map {
                                                         RideStoryAiService.ClipContext(
@@ -428,7 +477,7 @@ fun AiStoryStudioScreen(
                                             } catch (error: Exception) {
                                                 aiError = when (error) {
                                                     is IllegalArgumentException -> error.message ?: "Check the selected video and highlights."
-                                                    else -> "AI generation failed. Check Firebase AI Logic setup and App Check, then try again. Your current caption is preserved."
+                                                    else -> "AI generation failed. Check Firebase Auth, App Check, deployed Cloud Functions and server secrets, then try again."
                                                 }
                                             } finally {
                                                 isGenerating = false
@@ -454,6 +503,7 @@ fun AiStoryStudioScreen(
                                 }
                             }
                             OutlinedButton(
+                                enabled = generatedCaption.isNotBlank(),
                                 onClick = {
                                     viewModel.createPost(generatedCaption, null)
                                     Toast.makeText(context, "Ride story shared to your feed.", Toast.LENGTH_SHORT).show()
@@ -545,6 +595,7 @@ fun AiStoryStudioScreen(
                     )
 
                     AssistChip(
+                        enabled = highlightClips.any { it.isSelected },
                         onClick = {
                             val selectedClips = highlightClips.filter { it.isSelected }
                             if (selectedClips.isEmpty()) {
@@ -577,6 +628,28 @@ fun AiStoryStudioScreen(
                             Icon(Icons.Default.FileDownload, contentDescription = null, tint = HighAltitudeCyan, modifier = Modifier.size(14.dp))
                         },
                         colors = AssistChipDefaults.assistChipColors(containerColor = Color(0xFF1E293B))
+                    )
+                }
+            }
+
+            if (highlightClips.isEmpty()) {
+                item {
+                    Text(
+                        "No highlights yet. Choose a real ride video and tap AI Find Highlights to build an editable timeline from that footage.",
+                        color = Color(0xFF94A3B8),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                    )
+                }
+            }
+
+            if (highlightClips.isEmpty()) {
+                item {
+                    Text(
+                        "No highlights yet. Choose real ride footage and tap AI Find Highlights to build an editable timeline from that video.",
+                        color = Color(0xFF94A3B8),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                     )
                 }
             }

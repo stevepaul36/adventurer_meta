@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Private temporary input for server-side AI analysis. No client reads.
+    match /ride-videos/{uid}/{fileName} {
+      allow read: if false;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 14 * 1024 * 1024
+        && request.resource.contentType.matches('video/.*');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
