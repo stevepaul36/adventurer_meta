@@ -309,7 +309,10 @@ fun AiStoryStudioScreen(
                                                     }
                                                 }
                                             } catch (error: Exception) {
-                                                aiError = "AI generation failed. Check Firebase AI Logic setup and App Check, then try again. Your current caption is preserved."
+                                                aiError = when (error) {
+                                                    is IllegalArgumentException -> error.message ?: "Check the selected video and highlights."
+                                                    else -> "AI generation failed. Check Firebase AI Logic setup and App Check, then try again. Your current caption is preserved."
+                                                }
                                             } finally {
                                                 isGenerating = false
                                             }
