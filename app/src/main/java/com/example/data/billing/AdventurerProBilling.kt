@@ -39,11 +39,22 @@ object AdventurerProBilling {
     @Volatile private var initialized = false
 
     @Synchronized
-    fun initialize(context: Context) {
+    fun initialize(context: Context, appUserId: String?) {
         if (initialized) return
         initialized = true
 
         val apiKey = BuildConfig.REVENUECAT_API_KEY.trim()
+        if (appUserId.isNullOrBlank()) {
+            _state.update {
+                it.copy(
+                    isConfigured = false,
+                    isLoading = false,
+                    errorMessage = "Secure sign-in is unavailable. Configure Firebase Authentication and try again.",
+                    statusMessage = null
+                )
+            }
+            return
+        }
         if (apiKey.isEmpty()) {
             _state.update {
                 it.copy(
@@ -59,7 +70,9 @@ object AdventurerProBilling {
         try {
             Purchases.logLevel = if (BuildConfig.DEBUG) LogLevel.DEBUG else LogLevel.WARN
             Purchases.configure(
-                PurchasesConfiguration.Builder(context.applicationContext, apiKey).build()
+                PurchasesConfiguration.Builder(context.applicationContext, apiKey)
+                    .appUserID(appUserId)
+                    .build()
             )
             _state.update {
                 it.copy(

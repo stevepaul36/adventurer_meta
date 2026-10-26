@@ -117,7 +117,10 @@ dependencies {
   implementation(libs.androidx.room.runtime)
   implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
-  implementation(libs.firebase.ai)
+  implementation(libs.firebase.auth)
+  implementation(libs.firebase.functions)
+  implementation(libs.firebase.storage)
+  implementation(libs.kotlinx.coroutines.play.services)
   implementation("androidx.media3:media3-transformer:1.8.0")
   implementation("androidx.media3:media3-common:1.8.0")
   // Uncomment to use Firestore:
