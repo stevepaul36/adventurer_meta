@@ -22,9 +22,11 @@ Built with modern Kotlin and Jetpack Compose.
 - High-contrast outdoor heads-up display.
 - Analog + digital speedometer, top/average speed.
 - **Real Motorcycle Corner Lean Angle Gauge** (accelerometer + gyroscope fusion foundation).
-- Barometric altitude, elapsed timer, distance, calories.
-- One-tap waypoints (Photo, Chai, Fuel, Scenic Pass).
-- Hold-to-Start with progressive haptics + auto-publish on finish.
+- Altitude, climb, ride timer and distance; ready / recording / paused / demo states.
+- Large glove-friendly Pause · Waypoint · Finish bar; Finish asks to save, discard or keep riding.
+- Screen stays on while recording; tab bar hides mid-ride; "ride in progress" banner elsewhere.
+- One-tap waypoints (Photo, Chai, Fuel, Pass).
+- Hold-to-Start with progressive haptics (and a TalkBack long-press action).
 
 ### Indian High-Pass Expeditions
 - Curated routes:
@@ -37,15 +39,24 @@ Built with modern Kotlin and Jetpack Compose.
 - Expedition Budget Calculator (INR) — fuel, lodging, meals, wildlife permits, emergency spares.
 
 ### Roadside Assistance Radar & SOS
-- Nearby certified mechanics, puncture hubs, high-altitude fuel stashes, oxygen clinics.
-- One-tap SOS broadcasting GPS, altitude, battery, and medical profile (when configured).
+- SOS sheet: call 112 / 108 through the dialer and share your real location via WhatsApp/SMS. The app never claims to alert anyone on its own.
+- "Find help near you": mechanics, puncture repair, fuel, hospitals and dhabas via your maps app.
+- Example station listings are sample data (clearly labelled) until a live places source is wired in.
 - Trans-Himalayan protocols for AMS, glacial river crossings (mallams), sub-zero cold starts.
 
-### AI Ride Story Studio
-- Highlight reel timeline + Edit Decision List (EDL) generator.
-- Multilingual narration (English, Hindi, Marathi + more).
-- 1-click copy + JSON EDL export.
-- Designed for real Gemini multimodal calls (photos + telemetry + voice notes).
+### RideStory AI Studio (Meta Global AI Developer Hackathon)
+- **Record** a ride with the phone camera or **pick** a long video from the gallery.
+- **On-device moment scoring**: samples up to ~320 frames and scores colour, motion, sharpness, open sky, greenery and golden-hour light. It detects scene cuts, skips dark/idle/shaky footage and picks the best clips for a 30 s – 3 min reel. The video never leaves the phone.
+- **Enhance with Meta AI**: sends only small keyframes to Muse Spark (vision) to name, re-rank and privacy-check moments (faces / licence plates).
+- **Real MP4 export** with Media3 Transformer: H.264/AAC, 16:9 or 9:16 crop, title and lower-third labels; save to *Movies/Adventurer* or share.
+- **Travel story**: caption, hashtags, diary, chapters and voice-over in English, Hindi, Marathi, Kannada or Tamil, read aloud with on-device TTS; post to the feed with the reel's cover frame. Works offline with a template built only from detected moments.
+
+#### Setting up Meta AI
+1. Copy `.env.example` to `.env` (never commit `.env`) and set `MODEL_API_KEY`.
+2. Defaults: `MODEL_API_BASE_URL=https://api.meta.ai/v1`, `MODEL_TEXT` / `MODEL_VISION=muse-spark-1.3` (check the hackathon docs for current IDs). Any OpenAI-compatible host serving Meta open-weights models also works.
+3. Without a key the Studio still scores, renders and writes template stories on-device.
+
+The key is compiled into the APK for the hackathon demo; move `MetaAiClient` calls behind a server before a public release.
 
 ### Social, Clubs & Gamification
 - Telemetry-rich posts, route sharing, GPX export.

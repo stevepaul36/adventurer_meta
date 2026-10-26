@@ -5,13 +5,23 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.example.data.repository.formatRideDuration
+import com.example.ui.Str
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -46,6 +56,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private data class NavTab(val screen: Screen, val label: Str, val selected: ImageVector, val unselected: ImageVector, val accent: Color)
+
+private val NavTabs = listOf(
+    NavTab(Screen.FEED, Str.NAV_FEED, Icons.Filled.Home, Icons.Outlined.Home, AdventureOrange),
+    NavTab(Screen.EXPEDITIONS, Str.NAV_PASSES, Icons.Filled.Terrain, Icons.Outlined.Terrain, AdventureOrange),
+    NavTab(Screen.LIVE_TRACKER, Str.NAV_RIDE, Icons.Filled.Speed, Icons.Outlined.Speed, AdventureOrange),
+    NavTab(Screen.RADAR, Str.NAV_SOS, Icons.Filled.Emergency, Icons.Outlined.Emergency, Color(0xFFEF4444)),
+    NavTab(Screen.PROFILE, Str.NAV_RIDER, Icons.Filled.Person, Icons.Outlined.Person, AmberGold),
+)
+
 @Composable
 fun AdventurerApp(viewModel: AdventurerViewModel) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -60,116 +80,61 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
     val activeCommentIndex by viewModel.activeCommentPostIndex.collectAsState()
     val showSosAlert by viewModel.showSosAlert.collectAsState()
     val feedItems by viewModel.feed.collectAsState()
+    val telemetry by viewModel.telemetry.collectAsState()
+    val lang by viewModel.currentLang.collectAsState()
+
+    // Detail screens get the whole screen (they have their own back arrow); the HUD hides the
+    // tab bar while a ride is recording so a stray tap can't navigate away mid-corner.
+    val ridingOnHud = currentScreen == Screen.LIVE_TRACKER && telemetry.isRecording
+    val showBottomBar = currentScreen.isTopLevel && !ridingOnHud
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            // Main bottom navigation bar for top-level tabs
-            NavigationBar(
-                containerColor = Color(0xFF0F172A),
-                contentColor = Color.White,
-                modifier = Modifier
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-                    .testTag("main_bottom_nav")
-            ) {
-                NavigationBarItem(
-                    selected = currentScreen == Screen.FEED,
-                    onClick = { viewModel.navigateTo(Screen.FEED) },
-                    icon = {
-                        Icon(
-                            imageVector = if (currentScreen == Screen.FEED) Icons.Filled.Home else Icons.Outlined.Home,
-                            contentDescription = "Feed"
-                        )
-                    },
-                    label = { Text("Feed") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = AdventureOrange,
-                        indicatorColor = AdventureOrange,
-                        unselectedIconColor = Color(0xFF94A3B8),
-                        unselectedTextColor = Color(0xFF94A3B8)
-                    ),
-                    modifier = Modifier.testTag("nav_feed")
-                )
-
-                NavigationBarItem(
-                    selected = currentScreen == Screen.EXPEDITIONS,
-                    onClick = { viewModel.navigateTo(Screen.EXPEDITIONS) },
-                    icon = {
-                        Icon(
-                            imageVector = if (currentScreen == Screen.EXPEDITIONS) Icons.Filled.Terrain else Icons.Outlined.Terrain,
-                            contentDescription = "Passes"
-                        )
-                    },
-                    label = { Text("Passes") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = AdventureOrange,
-                        indicatorColor = AdventureOrange,
-                        unselectedIconColor = Color(0xFF94A3B8),
-                        unselectedTextColor = Color(0xFF94A3B8)
-                    ),
-                    modifier = Modifier.testTag("nav_expeditions")
-                )
-
-                NavigationBarItem(
-                    selected = currentScreen == Screen.LIVE_TRACKER,
-                    onClick = { viewModel.navigateTo(Screen.LIVE_TRACKER) },
-                    icon = {
-                        Icon(
-                            imageVector = if (currentScreen == Screen.LIVE_TRACKER) Icons.Filled.Speed else Icons.Outlined.Speed,
-                            contentDescription = "HUD"
-                        )
-                    },
-                    label = { Text("HUD") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = AdventureOrange,
-                        indicatorColor = AdventureOrange,
-                        unselectedIconColor = Color(0xFF94A3B8),
-                        unselectedTextColor = Color(0xFF94A3B8)
-                    ),
-                    modifier = Modifier.testTag("nav_telemetry")
-                )
-
-                NavigationBarItem(
-                    selected = currentScreen == Screen.RADAR,
-                    onClick = { viewModel.navigateTo(Screen.RADAR) },
-                    icon = {
-                        Icon(
-                            imageVector = if (currentScreen == Screen.RADAR) Icons.Filled.Emergency else Icons.Outlined.Emergency,
-                            contentDescription = "Radar"
-                        )
-                    },
-                    label = { Text("Radar") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = Color(0xFFEF4444),
-                        indicatorColor = Color(0xFFEF4444),
-                        unselectedIconColor = Color(0xFF94A3B8),
-                        unselectedTextColor = Color(0xFF94A3B8)
-                    ),
-                    modifier = Modifier.testTag("nav_radar")
-                )
-
-                NavigationBarItem(
-                    selected = currentScreen == Screen.PROFILE,
-                    onClick = { viewModel.navigateTo(Screen.PROFILE) },
-                    icon = {
-                        Icon(
-                            imageVector = if (currentScreen == Screen.PROFILE) Icons.Filled.Person else Icons.Outlined.Person,
-                            contentDescription = "Rider"
-                        )
-                    },
-                    label = { Text("Rider") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = AmberGold,
-                        indicatorColor = AmberGold,
-                        unselectedIconColor = Color(0xFF94A3B8),
-                        unselectedTextColor = Color(0xFF94A3B8)
-                    ),
-                    modifier = Modifier.testTag("nav_profile")
-                )
+            Column {
+                AnimatedVisibility(visible = telemetry.isRecording && currentScreen != Screen.LIVE_TRACKER) {
+                    ActiveRideBanner(
+                        distanceKm = telemetry.distanceKm,
+                        elapsed = formatRideDuration(telemetry.elapsedSeconds),
+                        paused = telemetry.isPaused,
+                        title = Str.RIDE_ACTIVE.get(lang),
+                        action = Str.OPEN_HUD.get(lang),
+                        padForSystemBar = !showBottomBar,
+                        onOpen = { viewModel.navigateTo(Screen.LIVE_TRACKER) }
+                    )
+                }
+                AnimatedVisibility(visible = showBottomBar, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+                    NavigationBar(
+                        containerColor = Color(0xFF0F172A),
+                        contentColor = Color.White,
+                        modifier = Modifier.testTag("main_bottom_nav")
+                    ) {
+                        NavTabs.forEach { tab ->
+                            val selected = currentScreen == tab.screen
+                            NavigationBarItem(
+                                selected = selected,
+                                onClick = { viewModel.navigateTo(tab.screen) },
+                                icon = {
+                                    BadgedBox(badge = {
+                                        if (tab.screen == Screen.LIVE_TRACKER && telemetry.isRecording) Badge(containerColor = Color(0xFFEF4444))
+                                    }) {
+                                        // The label below already names the tab, so the icon is decorative.
+                                        Icon(if (selected) tab.selected else tab.unselected, contentDescription = null)
+                                    }
+                                },
+                                label = { Text(tab.label.get(lang), maxLines = 1) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = Color.Black,
+                                    selectedTextColor = tab.accent,
+                                    indicatorColor = tab.accent,
+                                    unselectedIconColor = Color(0xFF94A3B8),
+                                    unselectedTextColor = Color(0xFF94A3B8)
+                                ),
+                                modifier = Modifier.testTag("nav_${tab.screen.name.lowercase()}")
+                            )
+                        }
+                    }
+                }
             }
         },
         containerColor = Color(0xFF0B0F17)
@@ -178,8 +143,23 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
         ) {
-            Crossfade(targetState = currentScreen, label = "screen_crossfade") { screen ->
+            AnimatedContent(
+                targetState = currentScreen,
+                transitionSpec = {
+                    when {
+                        // Opening a detail screen: slide in from the right.
+                        !targetState.isTopLevel && initialState.isTopLevel ->
+                            (slideInHorizontally { it / 4 } + fadeIn()) togetherWith fadeOut()
+                        // Closing a detail screen: slide it away to the right.
+                        targetState.isTopLevel && !initialState.isTopLevel ->
+                            fadeIn() togetherWith (slideOutHorizontally { it / 4 } + fadeOut())
+                        else -> fadeIn(tween(180)) togetherWith fadeOut(tween(120))
+                    }
+                },
+                label = "screen_transition"
+            ) { screen ->
                 when (screen) {
                     Screen.FEED -> FeedScreen(viewModel = viewModel)
                     Screen.EXPEDITIONS -> ExpeditionsScreen(viewModel = viewModel)
@@ -219,6 +199,38 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
     }
 
     if (showSosAlert) {
-        SafetySosDialog(onDismiss = { viewModel.setShowSosAlert(false) })
+        SafetySosDialog(
+            onDismiss = { viewModel.setShowSosAlert(false) },
+            locationManager = viewModel.locationManager,
+            liveLatitude = telemetry.latitude.takeIf { telemetry.hasGpsFix },
+            liveLongitude = telemetry.longitude.takeIf { telemetry.hasGpsFix },
+        )
+    }
+}
+
+/** Shown above the tab bar whenever a ride is recording and the rider is on another screen. */
+@Composable
+private fun ActiveRideBanner(distanceKm: Double, elapsed: String, paused: Boolean, title: String, action: String, padForSystemBar: Boolean, onOpen: () -> Unit) {
+    Surface(
+        onClick = onOpen,
+        color = if (paused) AmberGold else AdventureOrange,
+        modifier = Modifier.fillMaxWidth().testTag("active_ride_banner")
+    ) {
+        Row(
+            modifier = Modifier
+                .then(if (padForSystemBar) Modifier.navigationBarsPadding() else Modifier)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(if (paused) Icons.Filled.Pause else Icons.Filled.FiberManualRecord, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = (if (paused) "⏸ " else "") + title + " · %.1f km · %s".format(distanceKm, elapsed),
+                color = Color.Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Text(action, color = Color.Black, style = MaterialTheme.typography.labelLarge)
+            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color.Black)
+        }
     }
 }

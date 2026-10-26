@@ -23,6 +23,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
@@ -94,7 +100,14 @@ fun HoldToStartRideButton(
     Box(
         modifier = modifier
             .size(96.dp)
-            .testTag("hold_to_start_ride_button"),
+            .testTag("hold_to_start_ride_button")
+            // Screen-reader users can't time a press-and-hold, so expose a long-press action instead.
+            .clearAndSetSemantics {
+                role = Role.Button
+                contentDescription = "Start ride"
+                stateDescription = if (isHolding) "Starting" else "Press and hold to start"
+                onLongClick(label = "Start ride") { vibrateSuccess(); onRideStarted(); true }
+            },
         contentAlignment = Alignment.Center
     ) {
         // Outer progress ring canvas
@@ -144,12 +157,12 @@ fun HoldToStartRideButton(
             ) {
                 Icon(
                     imageVector = Icons.Default.TwoWheeler,
-                    contentDescription = "Start Ride",
+                    contentDescription = null,
                     tint = if (isHolding) Color.Black else AmberGold,
                     modifier = Modifier.size(32.dp)
                 )
                 Text(
-                    text = if (isHolding) "HOLD..." else "HOLD RIDE",
+                    text = if (isHolding) "HOLDING" else "HOLD",
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isHolding) Color.Black else Color.White
                 )

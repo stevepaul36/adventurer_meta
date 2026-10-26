@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -302,67 +303,88 @@ fun TripBudgetModal(
     )
 }
 
+/**
+ * Emergency sheet. Honest by design: the app does not alert anyone by itself, so every action
+ * hands off to the dialer or share sheet, and the rider's real location is shown when known.
+ */
 @Composable
 fun SafetySosDialog(
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    locationManager: com.example.data.location.LocationManager? = null,
+    liveLatitude: Double? = null,
+    liveLongitude: Double? = null,
 ) {
+    val context = LocalContext.current
+    var lat by remember { mutableStateOf(liveLatitude) }
+    var lon by remember { mutableStateOf(liveLongitude) }
+    var locating by remember { mutableStateOf(lat == null && locationManager?.hasLocationPermission() == true) }
+    LaunchedEffect(Unit) {
+        if (lat == null && locationManager?.hasLocationPermission() == true) {
+            locationManager.getLastKnownLocation { loc ->
+                if (loc != null && (loc.latitude != 0.0 || loc.longitude != 0.0)) { lat = loc.latitude; lon = loc.longitude }
+                locating = false
+            }
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Warning, contentDescription = null, tint = DangerRed)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("EMERGENCY SOS TRANSMITTER", fontWeight = FontWeight.Bold, color = DangerRed)
-            }
-        },
+        icon = { Icon(Icons.Default.Sos, contentDescription = null, tint = DangerRed, modifier = Modifier.size(36.dp)) },
+        title = { Text("Emergency help", fontWeight = FontWeight.Bold, color = Color.White) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = DangerRed.copy(alpha = 0.15f),
-                    border = CardDefaults.outlinedCardBorder().copy(
-                        brush = androidx.compose.ui.graphics.SolidColor(DangerRed)
-                    )
+                Text(
+                    "Adventurer can't contact anyone for you. Call for help or send your location to someone you trust.",
+                    style = MaterialTheme.typography.bodySmall, color = Color(0xFFCBD5E1)
+                )
+                Button(
+                    onClick = { EmergencyActions.dial(context, "112") },
+                    colors = ButtonDefaults.buttonColors(containerColor = DangerRed),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth().height(56.dp).testTag("sos_call_112")
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                    Icon(Icons.Default.Call, contentDescription = null, tint = Color.White)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Call 112 · Emergency", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+                OutlinedButton(
+                    onClick = { EmergencyActions.dial(context, "108") },
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                ) {
+                    Icon(Icons.Default.LocalHospital, contentDescription = null, tint = DangerRed)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Call 108 · Ambulance", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+                OutlinedButton(
+                    onClick = { EmergencyActions.shareLocation(context, lat, lon) },
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp).testTag("sos_share_location")
+                ) {
+                    Icon(Icons.Default.ShareLocation, contentDescription = null, tint = AmberGold)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Share my location", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+                Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFF1E293B), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(if (lat != null) Icons.Default.GpsFixed else Icons.Default.LocationOff, contentDescription = null, tint = if (lat != null) Color(0xFF10B981) else Color(0xFF94A3B8), modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "BROADCASTING DISTRESS COORDINATES",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = DangerRed
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "📍 Lat: 32.5512° N, Long: 77.1724° E\nAltitude: 14,280 ft (Near Sarchu Plains)\nBattery: 82% | GPS Fix: High Accuracy",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White
+                            when {
+                                lat != null && lon != null -> "Your location: %.5f, %.5f".format(lat, lon)
+                                locating -> "Finding your location…"
+                                else -> "Location unavailable — turn on location to include it."
+                            },
+                            style = MaterialTheme.typography.labelMedium, color = Color.White
                         )
                     }
                 }
-
-                Text(
-                    text = "High-Pass Emergency Contacts:",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "• BRO / Police Control: 112\n• ITBP Mountain Rescue: 1982-252111\n• Jispa Mechanic SOS: +91 94180 12345",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFCBD5E1)
-                )
+                Text("112 and 108 work in India. Elsewhere, dial your local emergency number.", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
             }
         },
-        confirmButton = {
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
-            ) {
-                Text("Stop SOS Broadcast", color = Color.White, fontWeight = FontWeight.Bold)
-            }
-        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close", color = Color(0xFF94A3B8)) } },
         containerColor = Color(0xFF131B2A),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp)
     )
 }
 

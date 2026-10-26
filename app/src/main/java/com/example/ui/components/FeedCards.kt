@@ -1,5 +1,7 @@
 package com.example.ui.components
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -21,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -137,13 +140,10 @@ fun PostCard(
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = onLikeClick,
-                        modifier = Modifier.size(36.dp)
-                    ) {
+                    IconButton(onClick = onLikeClick) {
                         Icon(
                             imageVector = if (post.isLikedByMe) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                            contentDescription = "Like",
+                            contentDescription = if (post.isLikedByMe) "Unlike, ${post.likes} likes" else "Like, ${post.likes} likes",
                             tint = heartTint,
                             modifier = Modifier.size(20.dp)
                         )
@@ -156,10 +156,7 @@ fun PostCard(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    IconButton(
-                        onClick = onCommentClick,
-                        modifier = Modifier.size(36.dp)
-                    ) {
+                    IconButton(onClick = onCommentClick) {
                         Icon(
                             imageVector = Icons.Outlined.ChatBubbleOutline,
                             contentDescription = "Comments",
@@ -174,10 +171,14 @@ fun PostCard(
                     )
                 }
 
-                IconButton(
-                    onClick = { /* Share */ },
-                    modifier = Modifier.size(36.dp)
-                ) {
+                val context = LocalContext.current
+                IconButton(onClick = {
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, "${post.user.name} on Adventurer:\n\n${post.caption}")
+                    }
+                    try { context.startActivity(Intent.createChooser(send, "Share post")) } catch (_: ActivityNotFoundException) {}
+                }) {
                     Icon(
                         imageVector = Icons.Outlined.Share,
                         contentDescription = "Share",
@@ -298,10 +299,10 @@ fun RideShareCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onLikeClick, modifier = Modifier.size(36.dp)) {
+                    IconButton(onClick = onLikeClick) {
                         Icon(
                             imageVector = if (rideShare.isLikedByMe) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                            contentDescription = "Like",
+                            contentDescription = if (rideShare.isLikedByMe) "Unlike, ${rideShare.likes} likes" else "Like, ${rideShare.likes} likes",
                             tint = if (rideShare.isLikedByMe) Color(0xFFEF4444) else Color(0xFF94A3B8),
                             modifier = Modifier.size(20.dp)
                         )
@@ -310,7 +311,7 @@ fun RideShareCard(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    IconButton(onClick = onCommentClick, modifier = Modifier.size(36.dp)) {
+                    IconButton(onClick = onCommentClick) {
                         Icon(
                             imageVector = Icons.Outlined.ChatBubbleOutline,
                             contentDescription = "Comments",

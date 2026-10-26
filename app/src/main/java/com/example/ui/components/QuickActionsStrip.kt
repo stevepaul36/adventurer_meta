@@ -1,8 +1,6 @@
 package com.example.ui.components
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -11,76 +9,81 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.ui.theme.AdventureOrange
+import com.example.ui.Str
 import com.example.ui.theme.AmberGold
-import com.example.ui.theme.HighAltitudeCyan
 import com.example.viewmodel.Screen
+import com.example.viewmodel.SupportedLang
 
 data class QuickActionItem(
     val screen: Screen,
-    val label: String,
+    val label: Str,
     val icon: ImageVector,
     val accentColor: Color
 )
 
+/**
+ * Shortcuts to the screens that aren't bottom-bar tabs (the tabs are already one tap away),
+ * laid out as a 2×2 grid of large, easy-to-hit tiles.
+ */
 @Composable
 fun QuickActionsStrip(
     currentScreen: Screen,
     onNavigate: (Screen) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    lang: SupportedLang = SupportedLang.ENGLISH,
 ) {
     val items = listOf(
-        QuickActionItem(Screen.EXPEDITIONS, "Expeditions", Icons.Default.Terrain, AdventureOrange),
-        QuickActionItem(Screen.RADAR, "Roadside Radar", Icons.Default.Emergency, Color(0xFFEF4444)),
-        QuickActionItem(Screen.LIVE_TRACKER, "Telemetry HUD", Icons.Default.Speed, HighAltitudeCyan),
-        QuickActionItem(Screen.APEX_MOTO, "Apex Moto 3D", Icons.Default.SportsMotorsports, AmberGold),
-        QuickActionItem(Screen.STORY_STUDIO, "AI Story Studio", Icons.Default.AutoAwesome, Color(0xFFC084FC)),
-        QuickActionItem(Screen.GAMIFICATION, "Trophy Hub", Icons.Default.EmojiEvents, AmberGold),
-        QuickActionItem(Screen.CLUBS, "Riding Clubs", Icons.Default.Groups, Color(0xFF38BDF8))
+        QuickActionItem(Screen.STORY_STUDIO, Str.QUICK_STUDIO, Icons.Default.AutoAwesome, Color(0xFFC084FC)),
+        QuickActionItem(Screen.CLUBS, Str.QUICK_CLUBS, Icons.Default.Groups, Color(0xFF38BDF8)),
+        QuickActionItem(Screen.GAMIFICATION, Str.QUICK_TROPHIES, Icons.Default.EmojiEvents, AmberGold),
+        QuickActionItem(Screen.APEX_MOTO, Str.QUICK_APEX, Icons.Default.SportsMotorsports, Color(0xFFFB7185)),
     )
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        items.forEach { item ->
-            val isSelected = currentScreen == item.screen
-            Surface(
-                onClick = { onNavigate(item.screen) },
-                shape = RoundedCornerShape(20.dp),
-                color = if (isSelected) item.accentColor.copy(alpha = 0.25f) else Color(0xFF1E293B),
-                border = ButtonDefaults.outlinedButtonBorder.copy(
-                    brush = androidx.compose.ui.graphics.SolidColor(
-                        if (isSelected) item.accentColor else Color(0xFF334155)
-                    )
-                ),
-                modifier = Modifier
-                    .height(38.dp)
-                    .testTag("quick_action_${item.screen.name.lowercase()}")
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = item.label,
-                        tint = if (isSelected) item.accentColor else Color(0xFF94A3B8),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = item.label,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (isSelected) Color.White else Color(0xFFCBD5E1)
-                    )
+        items.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { item ->
+                    Surface(
+                        onClick = { onNavigate(item.screen) },
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFF131B2A),
+                        border = ButtonDefaults.outlinedButtonBorder.copy(
+                            brush = SolidColor(if (currentScreen == item.screen) item.accentColor else Color(0xFF1E293B))
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 64.dp)
+                            .testTag("quick_action_${item.screen.name.lowercase()}")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(shape = RoundedCornerShape(10.dp), color = item.accentColor.copy(alpha = 0.18f), modifier = Modifier.size(36.dp)) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(item.icon, contentDescription = null, tint = item.accentColor, modifier = Modifier.size(20.dp))
+                                }
+                            }
+                            Text(
+                                text = item.label.get(lang),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
             }
         }

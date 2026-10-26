@@ -10,16 +10,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-enum class Screen(val title: String) {
-    FEED("Feed"),
-    EXPEDITIONS("Expeditions"),
-    RADAR("Roadside Radar"),
-    LIVE_TRACKER("Live Telemetry"),
+enum class Screen(val title: String, val isTopLevel: Boolean = false) {
+    FEED("Feed", isTopLevel = true),
+    EXPEDITIONS("Expeditions", isTopLevel = true),
+    RADAR("Roadside Radar", isTopLevel = true),
+    LIVE_TRACKER("Live Telemetry", isTopLevel = true),
     STORY_STUDIO("AI Story Studio"),
     APEX_MOTO("Apex Moto 3D"),
     GAMIFICATION("Gamification Hub"),
     CLUBS("Riding Clubs"),
-    PROFILE("Rider Profile")
+    PROFILE("Rider Profile", isTopLevel = true)
 }
 
 enum class SupportedLang(val code: String, val displayName: String, val localName: String) {
@@ -70,22 +70,30 @@ class AdventurerViewModel(
     val currentUser = repository.currentUser
 
     init {
-        // Background ticker for live telemetry when active
+        // Ride clock (1 s) and demo-mode simulation (2 s) while a ride is recording.
         viewModelScope.launch {
+            var tick = 0
             while (true) {
-                delay(2000)
-                if (telemetry.value.isRecording && !telemetry.value.isPaused) {
-                    repository.updateTelemetryTick()
-                }
+                delay(1000)
+                repository.tickClock()
+                if (++tick % 2 == 0) repository.updateTelemetryTick()
             }
         }
     }
 
+    /**
+     * Bottom-bar tabs replace each other (back from any tab returns to the Feed);
+     * detail screens (Studio, Clubs, Trophies, Apex Moto) stack on top of the current tab.
+     */
     fun navigateTo(screen: Screen) {
-        if (_currentScreen.value != screen) {
-            screenStack.add(_currentScreen.value)
-            _currentScreen.value = screen
+        val current = _currentScreen.value
+        if (current == screen) return
+        if (screen.isTopLevel) {
+            screenStack.clear()
+        } else {
+            screenStack.add(current)
         }
+        _currentScreen.value = screen
     }
 
     fun navigateBack(): Boolean {
@@ -187,9 +195,24 @@ class AdventurerViewModel(
     }
 
     fun startRide() {
-        repository.startRide()
+        val hasLocation = locationManager?.hasLocationPermission() == true
+        repository.startRide(demo = !hasLocation)
         startGpsTracking()
         navigateTo(Screen.LIVE_TRACKER)
+    }
+
+    /** Called when the rider grants location permission from the HUD. */
+    fun onLocationPermissionGranted() {
+        repository.leaveDemoMode()
+        if (telemetry.value.isRecording) startGpsTracking()
+    }
+
+    fun pauseRide() = repository.setPaused(true)
+    fun resumeRide() = repository.setPaused(false)
+
+    fun discardRide() {
+        stopGpsTracking()
+        repository.discardRide()
     }
 
     fun addWaypoint(label: String, type: String) {
@@ -200,7 +223,7 @@ class AdventurerViewModel(
         stopGpsTracking()
         val stats = repository.stopAndSaveRide()
         repository.createPost(
-            caption = "🏁 Completed ride! Distance: ${stats.distanceKm} km, Duration: ${stats.duration}, Max Lean: ${stats.maxLeanAngleDeg}°, Elevation: +${stats.elevationGainM}m.",
+            caption = "🏁 Completed ride! ${stats.distanceKm} km in ${stats.duration} · top ${stats.topSpeedKmH.toInt()} km/h · max lean ${stats.maxLeanAngleDeg}° · +${stats.elevationGainM} m climbed.",
             rideStats = stats
         )
         navigateTo(Screen.FEED)

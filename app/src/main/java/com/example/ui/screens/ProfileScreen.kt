@@ -49,11 +49,6 @@ fun ProfileScreen(
                         Text("Motorcycle Specs & Telemetry History", style = MaterialTheme.typography.labelSmall, color = AmberGold)
                     }
                 },
-                navigationIcon = {
-                    IconButton(onClick = { viewModel.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B0F17))
             )
         },

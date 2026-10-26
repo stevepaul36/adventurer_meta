@@ -1,7 +1,5 @@
 package com.example.ui.screens
 
-import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -23,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.model.EmergencyStation
 import com.example.data.model.StationType
-import com.example.ui.components.SafetySosDialog
+import com.example.ui.components.EmergencyActions
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
 import com.example.ui.theme.DangerRed
@@ -40,7 +38,6 @@ fun RoadsideRadarScreen(
 
     val stations by viewModel.emergencyStations.collectAsState()
     val safetyTips = viewModel.safetyTips
-    val showSosAlert by viewModel.showSosAlert.collectAsState()
     val context = LocalContext.current
 
     var selectedType by remember { mutableStateOf<StationType?>(null) }
@@ -54,13 +51,8 @@ fun RoadsideRadarScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Roadside Assistance Radar", fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("Mechanics, Puncture, Fuel & High-Pass Medical", style = MaterialTheme.typography.labelSmall, color = DangerRed)
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { viewModel.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Text("SOS & Roadside Help", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Emergency calls · mechanics · fuel · medical", style = MaterialTheme.typography.labelSmall, color = DangerRed)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B0F17))
@@ -99,11 +91,11 @@ fun RoadsideRadarScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Warning, contentDescription = null, tint = DangerRed, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("EMERGENCY RADAR ACTIVE", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = DangerRed)
+                                Text("In trouble?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = DangerRed)
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Stranded or facing high-altitude emergency? Tap to transmit GPS fix to nearby riders & ITBP rescue.",
+                                text = "Call 112 or 108, or send your exact location to someone you trust.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFFCBD5E1)
                             )
@@ -114,9 +106,51 @@ fun RoadsideRadarScreen(
                         Button(
                             onClick = { viewModel.setShowSosAlert(true) },
                             colors = ButtonDefaults.buttonColors(containerColor = DangerRed),
-                            shape = RoundedCornerShape(10.dp)
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.height(56.dp).testTag("open_sos_button")
                         ) {
-                            Text("TRIGGER SOS", color = Color.White, fontWeight = FontWeight.Bold)
+                            Icon(Icons.Default.Sos, contentDescription = null, tint = Color.White)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("SOS", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            // Real nearby help via the maps app (works anywhere, unlike the sample list below)
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().testTag("find_nearby_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Find help near you", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Opens your maps app with real places around your current location.", style = MaterialTheme.typography.bodySmall, color = Color(0xFF94A3B8))
+                        val options = listOf(
+                            Triple(StationType.MECHANIC, "Mechanic", Icons.Default.Build),
+                            Triple(StationType.PUNCTURE, "Puncture", Icons.Default.TireRepair),
+                            Triple(StationType.FUEL_STASH, "Fuel", Icons.Default.LocalGasStation),
+                            Triple(StationType.HOSPITAL, "Hospital", Icons.Default.LocalHospital),
+                            Triple(StationType.DHABA, "Food & stay", Icons.Default.Restaurant),
+                        )
+                        options.chunked(3).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                row.forEach { (type, label, icon) ->
+                                    OutlinedButton(
+                                        onClick = { EmergencyActions.findNearby(context, EmergencyActions.searchQuery(type)) },
+                                        shape = RoundedCornerShape(12.dp),
+                                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 10.dp),
+                                        modifier = Modifier.weight(1f).heightIn(min = 52.dp)
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Icon(icon, contentDescription = null, tint = AmberGold, modifier = Modifier.size(20.dp))
+                                            Text(label, color = Color.White, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                                        }
+                                    }
+                                }
+                                repeat(3 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
+                            }
                         }
                     }
                 }
@@ -160,24 +194,25 @@ fun RoadsideRadarScreen(
             // Station list
             item {
                 Text(
-                    text = "Nearby Verified Stations",
+                    text = "Example stations (sample data)",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
             }
 
+            item {
+                Text(
+                    text = "Placeholder listings for the prototype. “Find nearby” searches your maps app for the real thing.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF94A3B8)
+                )
+            }
+
             items(filteredStations) { station ->
                 StationCard(
                     station = station,
-                    onCallClick = {
-                        try {
-                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${station.phone.replace(" ", "")}"))
-                            context.startActivity(intent)
-                        } catch (_: Exception) {
-                            // Fallback simulation
-                        }
-                    }
+                    onCallClick = { EmergencyActions.findNearby(context, EmergencyActions.searchQuery(station.type)) }
                 )
             }
 
@@ -196,10 +231,6 @@ fun RoadsideRadarScreen(
                 SafetyTipCard(tip = tip)
             }
         }
-    }
-
-    if (showSosAlert) {
-        SafetySosDialog(onDismiss = { viewModel.setShowSosAlert(false) })
     }
 }
 
@@ -293,7 +324,7 @@ fun StationCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "★ ${station.rating} User Verified",
+                    text = "★ ${station.rating} · sample",
                     style = MaterialTheme.typography.labelMedium,
                     color = AmberGold
                 )
@@ -304,9 +335,9 @@ fun StationCard(
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                 ) {
-                    Icon(Icons.Default.Phone, contentDescription = "Call", tint = Color.Black, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Map, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(station.phone, color = Color.Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                    Text("Find nearby", color = Color.Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
                 }
             }
         }
