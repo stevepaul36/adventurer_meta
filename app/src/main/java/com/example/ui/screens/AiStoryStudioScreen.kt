@@ -596,6 +596,7 @@ fun AiStoryStudioScreen(
 
                     AssistChip(
                         enabled = highlightClips.any { it.isSelected },
+                        enabled = highlightClips.any { it.isSelected },
                         onClick = {
                             val selectedClips = highlightClips.filter { it.isSelected }
                             if (selectedClips.isEmpty()) {
@@ -636,6 +637,17 @@ fun AiStoryStudioScreen(
                 item {
                     Text(
                         "No highlights yet. Choose a real ride video and tap AI Find Highlights to build an editable timeline from that footage.",
+                        color = Color(0xFF94A3B8),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                    )
+                }
+            }
+
+            if (highlightClips.isEmpty()) {
+                item {
+                    Text(
+                        "No highlights yet. Choose real ride footage and tap AI Find Highlights to build an editable timeline from that video.",
                         color = Color(0xFF94A3B8),
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)

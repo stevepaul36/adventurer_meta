@@ -46,11 +46,18 @@ data class LiveRideTelemetry(
     val topSpeedKmH: Double = 0.0,
     val distanceKm: Double = 0.0,
     val elapsedSeconds: Long = 0,
-    val altitudeM: Int = 940,
+    val altitudeM: Int = 0,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val bearingDeg: Float = 0f,
+    val hasGpsFix: Boolean = false,
     val leanAngleDeg: Int = 0, // Negative for left, positive for right
     val maxLeanAngleDeg: Int = 0,
     val caloriesBurned: Int = 0,
-    val markedWaypoints: List<TelemetryWaypoint> = emptyList()
+    val markedWaypoints: List<TelemetryWaypoint> = emptyList(),
+    /** True when location permission is off and the HUD is showing simulated demo data. */
+    val isDemo: Boolean = false,
+    val elevationGainM: Int = 0
 )
 
 data class TelemetryWaypoint(

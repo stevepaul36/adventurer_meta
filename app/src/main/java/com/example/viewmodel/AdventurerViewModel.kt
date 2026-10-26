@@ -71,13 +71,13 @@ class AdventurerViewModel(
     val currentUser = repository.currentUser
 
     init {
-        // Background ticker for live telemetry when active
+        // Wall-clock time runs independently of GPS cadence. Simulation is demo-only.
         viewModelScope.launch {
+            var tick = 0
             while (true) {
-                delay(2000)
-                if (telemetry.value.isRecording && !telemetry.value.isPaused) {
-                    repository.updateTelemetryTick()
-                }
+                delay(1000)
+                repository.tickClock()
+                if (++tick % 2 == 0) repository.updateTelemetryTick()
             }
         }
     }
@@ -154,9 +154,55 @@ class AdventurerViewModel(
         repository.sendClubMessage(id, text)
     }
 
+    var locationManager: com.example.data.location.LocationManager? = null
+        private set
+
+    private var locationJob: kotlinx.coroutines.Job? = null
+
+    fun attachLocationManager(manager: com.example.data.location.LocationManager) {
+        locationManager = manager
+        if (telemetry.value.isRecording) startGpsTracking()
+    }
+
+    fun startGpsTracking() {
+        val manager = locationManager ?: return
+        if (!manager.hasLocationPermission()) return
+        locationJob?.cancel()
+        locationJob = viewModelScope.launch {
+            try {
+                manager.getLocationUpdates().collect { rideLocation ->
+                    repository.updateFromGpsLocation(rideLocation)
+                }
+            } catch (_: Exception) {
+                // The HUD remains available if permission is revoked or GPS is unavailable.
+            }
+        }
+    }
+
+    fun stopGpsTracking() {
+        locationJob?.cancel()
+        locationJob = null
+        locationManager?.stopTracking()
+    }
+
     fun startRide() {
-        repository.startRide()
+        val hasPermission = locationManager?.hasLocationPermission() == true
+        repository.startRide(demo = !hasPermission)
+        if (hasPermission) startGpsTracking()
         navigateTo(Screen.LIVE_TRACKER)
+    }
+
+    fun onLocationPermissionGranted() {
+        repository.leaveDemoMode()
+        if (telemetry.value.isRecording) startGpsTracking()
+    }
+
+    fun pauseRide() = repository.setPaused(true)
+    fun resumeRide() = repository.setPaused(false)
+
+    fun discardRide() {
+        stopGpsTracking()
+        repository.discardRide()
     }
 
     fun addWaypoint(label: String, type: String) {
@@ -164,11 +210,15 @@ class AdventurerViewModel(
     }
 
     fun finishRide() {
+        val wasDemo = telemetry.value.isDemo
+        stopGpsTracking()
         val stats = repository.stopAndSaveRide()
-        repository.createPost(
-            caption = "🏁 Completed ride! Distance: ${stats.distanceKm} km, Duration: ${stats.duration}, Max Lean: ${stats.maxLeanAngleDeg}°, Elevation: +${stats.elevationGainM}m.",
-            rideStats = stats
-        )
+        val caption = if (wasDemo) {
+            "🏁 Demo ride completed. Distance, speed and lean values were simulated and are not a recorded GPS route."
+        } else {
+            "🏁 Completed ride! Distance: ${stats.distanceKm} km, Duration: ${stats.duration}, Max Lean: ${stats.maxLeanAngleDeg}°, Elevation gain: +${stats.elevationGainM}m."
+        }
+        repository.createPost(caption = caption, rideStats = stats)
         navigateTo(Screen.FEED)
     }
 

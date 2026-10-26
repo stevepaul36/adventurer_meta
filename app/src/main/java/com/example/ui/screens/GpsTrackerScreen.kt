@@ -1,6 +1,9 @@
 package com.example.ui.screens
 
+import android.Manifest
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -40,6 +43,19 @@ fun GpsTrackerScreen(
     BackHandler { viewModel.navigateBack() }
 
     val telemetry by viewModel.telemetry.collectAsState()
+    var hasLocationPermission by remember { mutableStateOf(viewModel.locationManager?.hasLocationPermission() == true) }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        hasLocationPermission = result[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (hasLocationPermission) viewModel.onLocationPermissionGranted()
+    }
+    val requestLocationPermission = {
+        locationPermissionLauncher.launch(
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+        )
+    }
 
     var showWaypointDialog by remember { mutableStateOf(false) }
     var waypointLabel by remember { mutableStateOf("") }
@@ -88,6 +104,45 @@ fun GpsTrackerScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (!hasLocationPermission) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2637))
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Enable location for real ride telemetry", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Without location permission, the app can show demo motion. Demo speed/distance/lean are simulated, not GPS-recorded.",
+                                color = Color(0xFFCBD5E1), style = MaterialTheme.typography.bodySmall
+                            )
+                            Button(onClick = requestLocationPermission, colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange)) {
+                                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Black)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Enable GPS", color = Color.Black)
+                            }
+                        }
+                    }
+                }
+            }
+            if (telemetry.isDemo && telemetry.isRecording) {
+                item {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF3A2A17))) {
+                        Text(
+                            "DEMO MODE — movement and telemetry are simulated. Grant location permission to record actual GPS data.",
+                            color = Color(0xFFFDE68A), modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+            if (telemetry.isRecording && !telemetry.isDemo && !telemetry.hasGpsFix) {
+                item {
+                    Text("Waiting for the first accurate GPS fix…", color = AmberGold, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
             // Speedometer HUD Card
             item {
                 Card(
@@ -297,32 +352,66 @@ fun GpsTrackerScreen(
                 }
             }
 
-            // Quick Waypoint Tagging & Actions
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
+            if (!telemetry.isRecording) {
+                item {
                     Button(
-                        onClick = { showWaypointDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.AddLocation, contentDescription = null, tint = HighAltitudeCyan, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Drop Waypoint", color = Color.White)
-                    }
-
-                    Button(
-                        onClick = { viewModel.finishRide() },
+                        onClick = { viewModel.startRide() },
+                        modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Default.Flag, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Finish & Post", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Start ride", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                }
+            } else {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Button(
+                                onClick = { showWaypointDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.AddLocation, contentDescription = null, tint = HighAltitudeCyan, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Drop waypoint", color = Color.White)
+                            }
+                            Button(
+                                onClick = { if (telemetry.isPaused) viewModel.resumeRide() else viewModel.pauseRide() },
+                                colors = ButtonDefaults.buttonColors(containerColor = AmberGold),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(if (telemetry.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (telemetry.isPaused) "Resume" else "Pause", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Button(
+                            onClick = { viewModel.finishRide() },
+                            colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Flag, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Finish & Post", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.discardRide() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Discard ride")
+                        }
                     }
                 }
             }
