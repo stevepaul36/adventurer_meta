@@ -1,0 +1,8 @@
+{
+  "name": "Adventurer",
+  "description": "Motorcycle adventure social network, live ride telemetry, India expeditions, roadside assistance radar, and AI ride story studio.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
