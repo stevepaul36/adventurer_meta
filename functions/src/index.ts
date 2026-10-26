@@ -1,5 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { initializeApp } from "firebase-admin/app";
-import { FieldValue, getFirestore, type DocumentReference } from "firebase-admin/firestore";
+import { FieldValue, getFirestore, Timestamp, type DocumentReference } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { logger } from "firebase-functions";
 import { defineSecret, defineString } from "firebase-functions/params";
@@ -120,36 +121,69 @@ async function requirePro(uid: string): Promise<void> {
   }
 }
 
-async function reserveMonthlyUsage(uid: string): Promise<DocumentReference> {
+type UsageReservation = {
+  usageRef: DocumentReference;
+  reservationRef: DocumentReference;
+};
+
+async function reserveMonthlyUsage(uid: string): Promise<UsageReservation> {
   const month = utcMonthKey(new Date());
-  const ref = db.doc(`aiUsage/${uid}/months/${month}`);
+  const usageRef = db.doc(`aiUsage/${uid}/months/${month}`);
+  const reservationRef = usageRef.collection("reservations").doc(randomUUID());
 
-  await db.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(ref);
-    const used = Number(snapshot.get("used") ?? 0);
-    const reserved = Number(snapshot.get("reserved") ?? 0);
+  const isFull = await db.runTransaction(async (transaction) => {
+    const now = Date.now();
+    const usageSnapshot = await transaction.get(usageRef);
+    const reservations = usageRef.collection("reservations");
+    const expiredSnapshot = await transaction.get(
+      reservations.where("expiresAt", "<=", Timestamp.fromMillis(now)).limit(100),
+    );
+    const activeSnapshot = await transaction.get(
+      reservations.where("expiresAt", ">", Timestamp.fromMillis(now)),
+    );
 
-    if (used + reserved >= MONTHLY_AI_LIMIT) {
-      throw new HttpsError(
-        "resource-exhausted",
-        `You've reached the ${MONTHLY_AI_LIMIT}-generation monthly Adventurer Pro allowance.`,
-      );
+    const used = Number(usageSnapshot.get("used") ?? 0);
+    for (const expired of expiredSnapshot.docs) transaction.delete(expired.ref);
+
+    if (used + activeSnapshot.size >= MONTHLY_AI_LIMIT) {
+      return true;
     }
 
-    transaction.set(ref, {
-      uid, month, used, reserved: reserved + 1, updatedAt: FieldValue.serverTimestamp(),
+    transaction.set(usageRef, {
+      uid,
+      month,
+      used,
+      updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
+    // Reservations expire automatically from the quota calculation after three minutes.
+    // A hard function timeout therefore cannot permanently consume a quota slot.
+    transaction.create(reservationRef, {
+      createdAt: FieldValue.serverTimestamp(),
+      expiresAt: Timestamp.fromMillis(now + 3 * 60 * 1000),
+    });
+    return false;
   });
-  return ref;
+
+  if (isFull) {
+    throw new HttpsError(
+      "resource-exhausted",
+      `You've reached the ${MONTHLY_AI_LIMIT}-generation monthly Adventurer Pro allowance.`,
+    );
+  }
+  return { usageRef, reservationRef };
 }
 
-async function settleMonthlyUsage(ref: DocumentReference, succeeded: boolean): Promise<void> {
+async function settleMonthlyUsage(reservation: UsageReservation, succeeded: boolean): Promise<void> {
   await db.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(ref);
-    if (!snapshot.exists) return;
-    transaction.set(ref, {
-      reserved: Math.max(0, Number(snapshot.get("reserved") ?? 0) - 1),
-      used: Number(snapshot.get("used") ?? 0) + (succeeded ? 1 : 0),
+    const reservationSnapshot = await transaction.get(reservation.reservationRef);
+    if (!reservationSnapshot.exists) return;
+
+    const usageSnapshot = await transaction.get(reservation.usageRef);
+    transaction.delete(reservation.reservationRef);
+    if (!succeeded) return;
+
+    transaction.set(reservation.usageRef, {
+      used: Number(usageSnapshot.get("used") ?? 0) + 1,
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
   });
@@ -235,7 +269,7 @@ export const analyzeRideHighlights = onCall({
   }
 
   await requirePro(uid);
-  const usageRef = await reserveMonthlyUsage(uid);
+  const reservation = await reserveMonthlyUsage(uid);
   let succeeded = false;
   try {
     const video = await loadVideo(uid, data.storagePath);
@@ -274,7 +308,7 @@ export const analyzeRideHighlights = onCall({
     succeeded = true;
     return { highlights };
   } finally {
-    await settleMonthlyUsage(usageRef, succeeded);
+    await settleMonthlyUsage(reservation, succeeded);
   }
 });
 
@@ -291,7 +325,7 @@ export const generateRideCaption = onCall({
   const storagePath = optionalText(data.storagePath, 512);
 
   await requirePro(uid);
-  const usageRef = await reserveMonthlyUsage(uid);
+  const reservation = await reserveMonthlyUsage(uid);
   let succeeded = false;
   try {
     const parts: Array<Record<string, unknown>> = [];
@@ -317,7 +351,7 @@ export const generateRideCaption = onCall({
     succeeded = true;
     return { caption };
   } finally {
-    await settleMonthlyUsage(usageRef, succeeded);
+    await settleMonthlyUsage(reservation, succeeded);
   }
 });
 
