@@ -1,6 +1,6 @@
 package com.example.data.ai
 
-import com.google.firebase.ai.FirebaseAI
+import com.google.firebase.Firebase
 import com.google.firebase.ai.GenerativeBackend
 
 /**
@@ -48,7 +48,7 @@ object RideStoryAiService {
             - Return only the caption, without a heading or explanation.
         """.trimIndent()
 
-        val model = FirebaseAI.getInstance(GenerativeBackend.googleAI())
+        val model = Firebase.ai(backend = GenerativeBackend.googleAI())
             .generativeModel("gemini-2.5-flash")
         val response = model.generateContent(prompt)
         return response.text?.trim()?.takeIf { it.isNotEmpty() }
