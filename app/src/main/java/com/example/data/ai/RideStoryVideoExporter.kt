@@ -11,7 +11,6 @@ import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
 import java.io.File
-import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -88,7 +87,7 @@ object RideStoryVideoExporter {
             EditedMediaItem.Builder(mediaItem).build()
         }
         val sequence = EditedMediaItemSequence.withAudioAndVideoFrom(items)
-        val composition = Composition.Builder(sequence).build()
+        val composition = Composition.Builder(listOf(sequence)).build()
         val transformer = Transformer.Builder(context)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
