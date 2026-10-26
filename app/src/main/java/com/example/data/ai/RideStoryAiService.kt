@@ -16,7 +16,7 @@ import org.json.JSONObject
  * enabled in Firebase AI Logic before requests can succeed.
  */
 object RideStoryAiService {
-    private const val MAX_VIDEO_BYTES = 15 * 1024 * 1024
+    private const val MAX_VIDEO_BYTES = 14 * 1024 * 1024
     data class ClipContext(
         val timeRange: String,
         val title: String,
@@ -38,8 +38,8 @@ object RideStoryAiService {
         val mimeType = resolver.getType(videoUri)?.takeIf { it.startsWith("video/") }
             ?: "video/mp4"
         val declaredSize = resolver.openAssetFileDescriptor(videoUri, "r")?.use { it.length } ?: -1L
-        require(declaredSize <= 15L * 1024L * 1024L || declaredSize < 0L) {
-            "For this demo, choose a video smaller than 15 MB."
+        require(declaredSize <= MAX_VIDEO_BYTES || declaredSize < 0L) {
+            "For this demo, choose a video smaller than 14 MB."
         }
         val bytes = resolver.openInputStream(videoUri)?.use { stream ->
             val buffer = ByteArray(16 * 1024)
@@ -50,7 +50,7 @@ object RideStoryAiService {
                 if (count < 0) break
                 total += count
                 require(total <= MAX_VIDEO_BYTES) {
-                    "For this demo, choose a video smaller than 15 MB."
+                    "For this demo, choose a video smaller than 14 MB."
                 }
                 output.write(buffer, 0, count)
             }
@@ -108,7 +108,7 @@ object RideStoryAiService {
             ?: "video/mp4"
         val declaredSize = resolver.openAssetFileDescriptor(videoUri, "r")?.use { it.length } ?: -1L
         require(declaredSize <= MAX_VIDEO_BYTES || declaredSize < 0L) {
-            "For this demo, choose a video smaller than 15 MB."
+            "For this demo, choose a video smaller than 14 MB."
         }
         val bytes = resolver.openInputStream(videoUri)?.use { stream ->
             val buffer = ByteArray(16 * 1024)
@@ -119,7 +119,7 @@ object RideStoryAiService {
                 if (count < 0) break
                 total += count
                 require(total <= MAX_VIDEO_BYTES) {
-                    "For this demo, choose a video smaller than 15 MB."
+                    "For this demo, choose a video smaller than 14 MB."
                 }
                 output.write(buffer, 0, count)
             }
