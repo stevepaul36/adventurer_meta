@@ -4,6 +4,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import org.json.JSONArray
+import org.json.JSONObject
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -203,7 +205,36 @@ fun AiStoryStudioScreen(
 
                     AssistChip(
                         onClick = {
-                            Toast.makeText(context, "Exported EDL JSON timeline file!", Toast.LENGTH_SHORT).show()
+                            val selectedClips = highlightClips.filter { it.isSelected }
+                            if (selectedClips.isEmpty()) {
+                                Toast.makeText(context, "Select at least one highlight to export.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                val edlJson = JSONObject()
+                                    .put("format", "adventurer-edl-v1")
+                                    .put("region", selectedRegion)
+                                    .put("targetLength", targetLength)
+                                    .put("narrationLanguage", narrationLang)
+                                    .put("clips", JSONArray().apply {
+                                        selectedClips.forEach { clip ->
+                                            put(
+                                                JSONObject()
+                                                    .put("timeRange", clip.timestamp)
+                                                    .put("title", clip.title)
+                                                    .put("tag", clip.tag)
+                                                    .put("speedKmh", clip.speedKmh)
+                                                    .put("altitudeM", clip.altitudeM)
+                                            )
+                                        }
+                                    })
+                                    .toString(2)
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Adventurer Ride Story EDL", edlJson))
+                                Toast.makeText(
+                                    context,
+                                    "Copied ${selectedClips.size} highlight${if (selectedClips.size == 1) "" else "s"} as EDL JSON.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         },
                         label = { Text("Export EDL JSON", color = HighAltitudeCyan) },
                         leadingIcon = {
