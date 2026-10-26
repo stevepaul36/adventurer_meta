@@ -217,7 +217,7 @@ fun AiStoryStudioScreen(
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    "Selected video is analyzed by Firebase AI Logic when you generate a caption (14 MB demo limit).",
+                                    "For AI analysis, your selected video is uploaded temporarily to our private backend (14 MiB limit) and deleted after processing.",
                                     color = Color(0xFF94A3B8),
                                     style = MaterialTheme.typography.labelSmall
                                 )
