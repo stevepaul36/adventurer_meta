@@ -2,14 +2,15 @@
 
 Use this document when continuing the current repository in Google AI Studio or Android Studio. Do not regenerate the app from scratch or discard this branch.
 
-- Branch: feat/adventurer-pro-release-foundation
-- Draft PR: https://github.com/stevepaul36/adventurer_meta/pull/4
+- Branch: feat/multi-adventure-platform
+- Product blueprint: MULTI_ADVENTURE_PRODUCT_BLUEPRINT.md
+- Base branch: main
 - Android app: app/
 - Cloud Functions backend: functions/
 
 ## Preserve these decisions
 
-1. Keep the existing Kotlin + Jetpack Compose app and local Media3 ride-story exporter.
+1. Keep the existing Kotlin + Jetpack Compose app and local Media3 adventure-story exporter.
 2. Keep RevenueCat for Google Play subscriptions and the entitlement identifier exactly adventurer_pro.
 3. Keep Gemini requests on the server in functions/src/index.ts. Never embed a Gemini API key or RevenueCat secret API key in Android.
 4. Keep Firebase Authentication + App Check on callable Functions; server-side entitlement verification and the monthly AI quota remain authoritative.
@@ -18,9 +19,9 @@ Use this document when continuing the current repository in Google AI Studio or 
 
 ## Copy/paste prompt for Google AI Studio
 
-Continue the existing Adventurer Android application from branch feat/adventurer-pro-release-foundation. Do not regenerate it or replace files wholesale. Inspect the repository and current Git diff first.
+Continue the existing Adventurer Android application from branch feat/multi-adventure-platform. Do not regenerate it or replace files wholesale. Inspect the repository, MULTI_ADVENTURE_PRODUCT_BLUEPRINT.md, ROADMAP.md and current Git diff first.
 
-Finish the current code integration in place. Preserve the Kotlin/Jetpack Compose app, Media3 video exporter, RevenueCat purchase/restore flow, Firebase Auth/App Check setup, private Storage rules, server-side Firebase Cloud Functions, server-only Gemini and RevenueCat secrets, server-side entitlement validation, monthly AI quota and temporary-video cleanup.
+Finish the current code integration in place. Preserve the Kotlin/Jetpack Compose app, Media3 video exporter, RevenueCat purchase/restore flow, Firebase Auth/App Check setup, private Storage rules, server-side Firebase Cloud Functions, server-only Gemini and RevenueCat secrets, server-side entitlement validation, monthly AI quota and temporary-video cleanup. Extend the product to multi-activity adventures: motorcycling, cycling, car road trips, walking, trekking, camping/overlanding, fishing, lawful hunting/wildlife watching, scuba/snorkelling, paddling/boating, island/coastal trips and discovering unfamiliar places. Keep one shared trip/story foundation and activity-specific metrics/safeguards.
 
 Do not add real credentials or commit google-services.json, .env, secret API keys, service-account JSON, keystores or signing passwords. Production secrets belong in Firebase Functions secrets. Only the public RevenueCat Android SDK key may be supplied to the Android build.
 
@@ -28,10 +29,10 @@ Required checks:
 1. Run ./gradlew :app:assembleDebug and ./gradlew :app:testDebugUnitTest (or equivalent Gradle tasks from the project root).
 2. From functions/, run npm install and npm test.
 3. Fix compile/import/lint/test failures and lifecycle or UI-state problems you can actually verify. Do not disable tests or claim a failed check passed.
-4. Verify selecting a new source video clears previous highlights/captions. Do not ship sample route names, timestamps or telemetry as genuine user data; export only AI-suggested timestamps for the selected source video.
+4. Verify selecting a new source video clears previous highlights/captions. Do not ship sample route names, timestamps or telemetry as genuine user data; export only AI-suggested timestamps for the selected source video. Make story generation activity-aware and allow custom city/island/destination context instead of assuming every story is a motorcycle ride in Ladakh.
 5. Verify AI callables reject unauthenticated, invalid-App-Check, non-Pro and quota-exhausted callers.
 6. Verify the Google Play paywall uses store-localized prices, supports purchase restoration, and never hard-codes fake prices.
-7. Push code fixes to feat/adventurer-pro-release-foundation. Keep PR #4 as a draft until the latest Android CI passes and Firebase/RevenueCat/Play Console have been configured. Do not merge into main.
+7. Keep work on feat/multi-adventure-platform and open a PR against main after the changes compile. Do not merge until the latest Android CI and Functions checks pass.
 
 Report the exact commands run and their exit statuses. If a check is blocked by credentials, Firebase setup or store configuration, say so clearly.
 

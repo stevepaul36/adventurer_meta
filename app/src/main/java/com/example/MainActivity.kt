@@ -30,6 +30,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import com.example.data.model.ActivityType
 import com.example.data.model.FeedItem
 import com.example.data.billing.AdventurerProBilling
 import com.example.ui.components.CommentsBottomSheet
@@ -104,8 +105,8 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                         distanceKm = telemetry.distanceKm,
                         elapsed = formatRideDuration(telemetry.elapsedSeconds),
                         paused = telemetry.isPaused,
-                        title = Str.RIDE_ACTIVE.get(lang),
-                        action = Str.OPEN_HUD.get(lang),
+                        title = if (telemetry.activityType == ActivityType.Motorcycling) Str.RIDE_ACTIVE.get(lang) else "${telemetry.activityType.displayName} in progress",
+                        action = if (telemetry.activityType == ActivityType.Motorcycling) Str.OPEN_HUD.get(lang) else "Open tracker",
                         padForSystemBar = !showBottomBar,
                         onOpen = { viewModel.navigateTo(Screen.LIVE_TRACKER) }
                     )
@@ -129,7 +130,13 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                                         Icon(if (selected) tab.selected else tab.unselected, contentDescription = null)
                                     }
                                 },
-                                label = { Text(tab.label.get(lang), maxLines = 1) },
+                                label = {
+                                    Text(
+                                        if (tab.screen == Screen.LIVE_TRACKER && telemetry.activityType != ActivityType.Motorcycling) "Track"
+                                        else tab.label.get(lang),
+                                        maxLines = 1
+                                    )
+                                },
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = Color.Black,
                                     selectedTextColor = tab.accent,

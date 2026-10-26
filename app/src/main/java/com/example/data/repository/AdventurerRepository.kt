@@ -425,8 +425,16 @@ class AdventurerRepository {
         }
     }
 
-    fun startRide(demo: Boolean = false) {
-        _telemetry.value = LiveRideTelemetry(isRecording = true, isPaused = false, isDemo = demo)
+    fun startRide(
+        demo: Boolean = false,
+        activityType: ActivityType = ActivityType.Motorcycling
+    ) {
+        _telemetry.value = LiveRideTelemetry(
+            isRecording = true,
+            isPaused = false,
+            isDemo = demo,
+            activityType = activityType
+        )
     }
 
     fun discardRide() {
@@ -475,7 +483,9 @@ class AdventurerRepository {
         val climb = if (current.hasGpsFix && newAltitude - current.altitudeM >= 3) {
             newAltitude - current.altitudeM
         } else 0
-        val nextLean = kotlin.math.round(location.leanAngleDeg).toInt()
+        val nextLean = if (curr.activityType.supportsLeanAngle) {
+            kotlin.math.round(location.leanAngleDeg).toInt()
+        } else 0
         _telemetry.value = current.copy(
             distanceKm = kotlin.math.round(nextDistance * 100.0) / 100.0,
             currentSpeedKmH = if (usableFix) location.speedKmH else current.currentSpeedKmH,
@@ -487,7 +497,9 @@ class AdventurerRepository {
             bearingDeg = location.bearingDeg,
             hasGpsFix = true,
             leanAngleDeg = nextLean,
-            maxLeanAngleDeg = maxOf(current.maxLeanAngleDeg, kotlin.math.abs(nextLean))
+            maxLeanAngleDeg = if (current.activityType.supportsLeanAngle) {
+                maxOf(current.maxLeanAngleDeg, kotlin.math.abs(nextLean))
+            } else 0
         )
     }
 
@@ -495,9 +507,25 @@ class AdventurerRepository {
     fun updateTelemetryTick() {
         val current = _telemetry.value
         if (!current.isRecording || current.isPaused || !current.isDemo) return
-        val nextDistance = current.distanceKm + 0.01
-        val nextSpeed = (15 + (System.currentTimeMillis() % 35)).toDouble()
-        val nextLean = ((System.currentTimeMillis() % 25) - 12).toInt()
+        val nextDistance = current.distanceKm + if (
+            current.activityType in setOf(
+                ActivityType.Motorcycling,
+                ActivityType.Cycling,
+                ActivityType.Walking,
+                ActivityType.Trekking,
+                ActivityType.CarTrips
+            )
+        ) 0.01 else 0.0
+        val nextSpeed = when (current.activityType) {
+            ActivityType.Motorcycling -> (15 + (System.currentTimeMillis() % 35)).toDouble()
+            ActivityType.Cycling -> (8 + (System.currentTimeMillis() % 18)).toDouble()
+            ActivityType.CarTrips -> (20 + (System.currentTimeMillis() % 35)).toDouble()
+            ActivityType.Walking, ActivityType.Trekking -> (1 + (System.currentTimeMillis() % 5)).toDouble()
+            else -> 0.0
+        }
+        val nextLean = if (current.activityType.supportsLeanAngle) {
+            ((System.currentTimeMillis() % 25) - 12).toInt()
+        } else 0
         _telemetry.value = current.copy(
             distanceKm = kotlin.math.round(nextDistance * 100.0) / 100.0,
             currentSpeedKmH = nextSpeed,

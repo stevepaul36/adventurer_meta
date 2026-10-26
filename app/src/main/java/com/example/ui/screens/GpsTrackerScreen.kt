@@ -43,6 +43,8 @@ fun GpsTrackerScreen(
     BackHandler { viewModel.navigateBack() }
 
     val telemetry by viewModel.telemetry.collectAsState()
+    val selectedActivityMode by viewModel.activityMode.collectAsState()
+    val activityType = if (telemetry.isRecording) telemetry.activityType else selectedActivityMode
     var hasLocationPermission by remember { mutableStateOf(viewModel.locationManager?.hasLocationPermission() == true) }
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -74,12 +76,12 @@ fun GpsTrackerScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = if (telemetry.isRecording) "LIVE TELEMETRY HUD" else "GPS RIDE RECORDER",
+                                text = if (telemetry.isRecording) "LIVE ${activityType.displayName.uppercase()} TRACKER" else "START ${activityType.displayName.uppercase()} SESSION",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
                             Text(
-                                text = "High-Pass Speed, Lean Angle & Barometric Altitude",
+                                text = activityType.trackerSubtitle,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = AmberGold
                             )
@@ -112,7 +114,7 @@ fun GpsTrackerScreen(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2637))
                     ) {
                         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Enable location for real ride telemetry", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("Enable location for activity tracking", color = Color.White, fontWeight = FontWeight.Bold)
                             Text(
                                 "Without location permission, the app can show demo motion. Demo speed/distance/lean are simulated, not GPS-recorded.",
                                 color = Color(0xFFCBD5E1), style = MaterialTheme.typography.bodySmall
@@ -237,8 +239,9 @@ fun GpsTrackerScreen(
                 }
             }
 
-            // Real-Time Motorcycle Lean Angle Gauge
-            item {
+            // Lean-angle telemetry is a motorcycle-only sensor estimate.
+            if (activityType.supportsLeanAngle) {
+                item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -351,6 +354,23 @@ fun GpsTrackerScreen(
                     }
                 }
             }
+            }
+
+            if (activityType.usesSurfaceLocationOnly) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF3A2A17))
+                    ) {
+                        Text(
+                            "Surface GPS only: this prototype cannot track your underwater position and is not a dive computer. Use certified dive equipment and training for depth, gas, ascent and decompression decisions.",
+                            color = Color(0xFFFDE68A),
+                            modifier = Modifier.padding(14.dp),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
 
             if (!telemetry.isRecording) {
                 item {
@@ -362,7 +382,7 @@ fun GpsTrackerScreen(
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Start ride", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text("Start ${activityType.displayName.lowercase()}", color = Color.Black, fontWeight = FontWeight.Bold)
                     }
                 }
             } else {
@@ -410,7 +430,7 @@ fun GpsTrackerScreen(
                         ) {
                             Icon(Icons.Default.Delete, contentDescription = null)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Discard ride")
+                            Text("Discard session")
                         }
                     }
                 }
@@ -420,7 +440,7 @@ fun GpsTrackerScreen(
             if (telemetry.markedWaypoints.isNotEmpty()) {
                 item {
                     Text(
-                        text = "Marked Trail Waypoints (${telemetry.markedWaypoints.size})",
+                        text = "Session Waypoints (${telemetry.markedWaypoints.size})",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White

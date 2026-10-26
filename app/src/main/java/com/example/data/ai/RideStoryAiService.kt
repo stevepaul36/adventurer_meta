@@ -69,7 +69,8 @@ object RideStoryAiService {
         context: Context,
         videoUri: Uri,
         targetLength: String,
-        narrationLanguage: String
+        narrationLanguage: String,
+        activityType: String = "Motorcycling"
     ): List<SuggestedHighlight> {
         val storagePath = uploadTemporaryVideo(context, videoUri)
         return try {
@@ -78,7 +79,8 @@ object RideStoryAiService {
                 mapOf(
                     "storagePath" to storagePath,
                     "targetLength" to targetLength,
-                    "narrationLanguage" to narrationLanguage
+                    "narrationLanguage" to narrationLanguage,
+                    "activityType" to activityType.take(64)
                 )
             )
             val items = result["highlights"] as? List<*> ?: emptyList<Any>()
