@@ -86,7 +86,8 @@ object RideStoryVideoExporter {
                 .build()
             EditedMediaItem.Builder(mediaItem).build()
         }
-        val sequence = EditedMediaItemSequence.withAudioAndVideoFrom(items)
+        // Media3 Transformer 1.8.0 exposes the sequence through its Builder API.
+        val sequence = EditedMediaItemSequence.Builder(items).build()
         val composition = Composition.Builder(listOf(sequence)).build()
         val transformer = Transformer.Builder(context)
             .addListener(object : Transformer.Listener {
