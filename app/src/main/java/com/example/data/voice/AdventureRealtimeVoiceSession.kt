@@ -62,7 +62,13 @@ data class RealtimeAdventureState(
     val isListening: Boolean = false,
     val isSpeaking: Boolean = false,
     val status: String = "Live Guide is stopped.",
+    /** Complete assistant response transcript. */
     val latestTranscript: String = "",
+    /** Complete user speech transcript, identified by unique input item ID. */
+    val latestUserTranscript: String = "",
+    val latestUserTranscriptItemId: String = "",
+    /** Partial user speech while realtime transcription is arriving. */
+    val interimUserTranscript: String = "",
     val lastError: String? = null,
 )
 
@@ -86,6 +92,31 @@ internal class PendingTextTurnQueue(private val capacity: Int = 3) {
     }
 
     fun clear() = synchronized(lock) { turns.clear() }
+}
+
+/** Keeps partial transcripts separate by input item so overlapping async events do not blend turns. */
+internal class RealtimeUserTranscriptBuffer(private val maxItems: Int = 8, private val maxCharacters: Int = 500) {
+    private val partials = linkedMapOf<String, StringBuilder>()
+
+    @Synchronized
+    fun append(itemId: String, delta: String): String? {
+        if (itemId.isBlank() || delta.isBlank()) return null
+        val buffer = partials.getOrPut(itemId) { StringBuilder() }
+        buffer.append(delta)
+        if (buffer.length > maxCharacters) buffer.delete(0, buffer.length - maxCharacters)
+        while (partials.size > maxItems) partials.remove(partials.keys.first())
+        return buffer.toString()
+    }
+
+    @Synchronized
+    fun complete(itemId: String, transcript: String): String? {
+        val partial = if (itemId.isBlank()) null else partials.remove(itemId)?.toString()
+        val finalText = transcript.trim().ifBlank { partial.orEmpty().trim() }
+        return finalText.take(maxCharacters).takeIf { it.isNotBlank() }
+    }
+
+    @Synchronized
+    fun clear() = partials.clear()
 }
 
 internal object RealtimeVoiceInterruptionPolicy {
@@ -134,6 +165,7 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
     private val cancelledResponseIds = mutableSetOf<String>()
     private val pendingContextNotes = ArrayDeque<String>()
     private val pendingTextTurns = PendingTextTurnQueue()
+    private val userTranscriptBuffer = RealtimeUserTranscriptBuffer()
     @Volatile private var pendingSessionUpdate: RealtimeAdventureContext? = null
     @Volatile private var playbackStartHeadPosition: Int = -1
     @Volatile private var playbackResponseId: String? = null
@@ -348,6 +380,7 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
         playbackResponseId = null
         synchronized(pendingContextNotes) { pendingContextNotes.clear() }
         pendingTextTurns.clear()
+        userTranscriptBuffer.clear()
         pendingSessionUpdate = null
         synchronized(cancelledResponseIds) { cancelledResponseIds.clear() }
         runCatching { audioRecord?.stop() }
@@ -540,7 +573,30 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
                     _state.update { it.copy(latestTranscript = transcript) }
                 }
             }
-            "input_audio_buffer.speech_started" -> handleBargeIn()
+            "conversation.item.input_audio_transcription.delta" -> {
+                val itemId = event.optString("item_id")
+                val delta = event.optString("delta")
+                userTranscriptBuffer.append(itemId, delta)?.let { partial ->
+                    _state.update { it.copy(interimUserTranscript = partial) }
+                }
+            }
+            "conversation.item.input_audio_transcription.completed" -> {
+                val itemId = event.optString("item_id").ifBlank { event.optString("event_id") }
+                val transcript = userTranscriptBuffer.complete(itemId, event.optString("transcript"))
+                if (!transcript.isNullOrBlank()) {
+                    _state.update {
+                        it.copy(
+                            latestUserTranscript = transcript,
+                            latestUserTranscriptItemId = itemId.ifBlank { java.util.UUID.randomUUID().toString() },
+                            interimUserTranscript = "",
+                        )
+                    }
+                }
+            }
+            "input_audio_buffer.speech_started" -> {
+                _state.update { it.copy(interimUserTranscript = "") }
+                handleBargeIn()
+            }
             "response.done" -> {
                 val response = event.optJSONObject("response")
                 val responseId = response?.optString("id").orEmpty()
