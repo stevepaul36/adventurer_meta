@@ -80,6 +80,16 @@ class AdventureVoiceCommandTest {
     }
 
     @Test
+    fun acceptsPoliteNaturalCommandsAndCommonDestinations() {
+        assertEquals(AdventureVoiceAction.OPEN_EXPLORE, AdventureVoiceCommandParser.parse("Could you take me to Explore?").action)
+        assertEquals(AdventureVoiceAction.OPEN_STORY_STUDIO, AdventureVoiceCommandParser.parse("please show my stories").action)
+        assertEquals(AdventureVoiceAction.OPEN_STORY_STUDIO, AdventureVoiceCommandParser.parse("Hey Adventurer, could you open Story Studio", requireWakePhrase = true).action)
+        val place = AdventureVoiceCommandParser.parse("can you find the CN Tower")
+        assertEquals(AdventureVoiceAction.SEARCH_PLACE, place.action)
+        assertEquals("the cn tower", place.query)
+    }
+
+    @Test
     fun directPushToTalkAcceptsCommandsWithoutWakePhrase() {
         assertEquals(AdventureVoiceAction.OPEN_STORY_STUDIO, AdventureVoiceCommandParser.parse("create a story").action)
     }
