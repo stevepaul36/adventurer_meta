@@ -60,7 +60,7 @@ Explore & Plan now includes an explicit India/Canada service selector, category 
 
 The current catalogue includes examples such as Google Maps/Mappls, Swiggy/Zomato, IRCTC/redBus and MakeMyTrip for India, plus Google Maps, Uber Eats/DoorDash/Skip, Parks Canada, AllTrails, VIA Rail and PlugShare for Canada. It is a starting catalogue, not a signed partnership or a promise of market-wide availability. See [India + Canada Market Playbook](INDIA_CANADA_MARKET_PLAYBOOK.md) for the integration ladder, user preference model, privacy guardrails, roadmap and research sources.
 
-**Known localization gap:** the existing trip planner stores its budget in a CAD-named field. The regional selector does not migrate this schema; INR-native budget persistence and locale-aware formatting must be completed with a versioned Room migration before advertising fully localized money support.
+**Currency handling:** trip budgets and creator-draft suggested prices now store an explicit amount plus ISO currency code (INR or CAD). Room migration v1→v2 preserves legacy amounts as CAD without conversion; the planner lets users choose budget currency and formats totals accordingly. This is currency-aware storage and formatting, not live FX conversion or full translation/localization.
 
 ## Technology
 
