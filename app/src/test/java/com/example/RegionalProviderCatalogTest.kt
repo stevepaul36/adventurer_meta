@@ -45,10 +45,7 @@ class RegionalProviderCatalogTest {
         assertTrue(india.any { it.id == "irctc" })
         assertFalse(canada.any { it.id == "irctc" })
         assertTrue(india.none { it.id == "parks-canada" })
-        assertEquals(
-            RegionalProviderCatalog.forMarket(AdventureMarket.INDIA).map { it.id }.size,
-            (india + canada).map { it.id }.distinct().size - canada.count { it.id in india.map(Provider::id) },
-        )
+        assertEquals((india + canada).size, (india + canada).map { it.id }.distinct().size)
         assertNotNull(RegionalProviderCatalog.find("parks-reservations-ca"))
     }
 
@@ -82,5 +79,4 @@ class RegionalProviderCatalogTest {
         }
     }
 
-    private data class Provider(val id: String)
 }
