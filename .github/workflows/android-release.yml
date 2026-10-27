@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      KEYSTORE_PATH: ${{ runner.temp }}/adventurer-upload.jks
       STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -69,8 +68,8 @@ jobs:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
           set -euo pipefail
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
-          chmod 600 "$KEYSTORE_PATH"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/adventurer-upload.jks"
+          chmod 600 "$RUNNER_TEMP/adventurer-upload.jks"
           printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
           chmod 600 app/google-services.json
           python3 - <<'PY'
@@ -99,7 +98,7 @@ jobs:
               sys.exit("google-services.json is missing project_info.project_id.")
           print(f"Firebase config validated for applicationId={application_id}, project={project_id}.")
           PY
-          test -s "$KEYSTORE_PATH"
+          test -s "$RUNNER_TEMP/adventurer-upload.jks"
 
       - name: Generate CI-only debug signing key
         shell: bash
@@ -113,6 +112,8 @@ jobs:
             -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Run unit tests and build the signed Android App Bundle
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/adventurer-upload.jks
         run: gradle --no-daemon :app:testDebugUnitTest :app:bundleRelease
 
       - name: Verify release artifact exists and calculate checksum
