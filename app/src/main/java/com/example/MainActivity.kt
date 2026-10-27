@@ -555,16 +555,71 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     viewModel.navigateTo(Screen.RADAR)
                     VoiceCommandReply("Opening Safety and Help. I will not trigger an SOS from speech alone; confirm emergency actions on screen.")
                 }
-                AdventureVoiceAction.NEARBY_CONTEXT -> VoiceCommandReply("I don't have a verified live nearby-place feed connected yet, so I can't identify an object reliably from “what's that”. Say “search for” and a place name to open a map search.")
+                AdventureVoiceAction.NEARBY_CONTEXT -> {
+                    if (vehicleIsMoving()) {
+                        VoiceCommandReply("I'll avoid a long spoken briefing while your vehicle is moving. Please pull over safely before asking about nearby places.")
+                    } else {
+                        val cachedAt = lastNearbyResearchAtMillis.get()
+                        val fix = lastNearbyResearchFix.get()
+                        val cacheFresh = cachedAt > 0L && System.currentTimeMillis() - cachedAt in 0L..(10 * 60 * 1000L) && fix != null
+                        if (cacheFresh) {
+                            appScope.launch {
+                                val currentFix = getFreshVoicePlaceFix()
+                                val stillNearby = currentFix != null && fix != null &&
+                                    currentFix.timestampMillis >= fix.timestampMillis &&
+                                    distanceBetweenMeters(fix, currentFix) <= 400.0
+                                val result = if (stillNearby) {
+                                    requestNearbyContext(currentFix)
+                                } else {
+                                    mapOf("ok" to false, "message" to "Your location changed or the GPS fix is no longer fresh. I'll refresh the nearby results.")
+                                }
+                                val spoken = if (result["ok"] == true) {
+                                    val places = result["places"] as? List<*>
+                                    val names = places.orEmpty().take(4).joinToString("; ") { raw ->
+                                        val place = raw as? Map<*, *> ?: return@joinToString ""
+                                        val name = place["name"] as? String ?: "unnamed place"
+                                        val distance = (place["distance_meters"] as? Number)?.toInt()
+                                        if (distance != null) "$name, about $distance metres away" else name
+                                    }.ifBlank { "No named places were found within the nearby search radius." }
+                                    "Nearby map candidates from OpenStreetMap: $names. These are map labels, not visual identification, access verification, or current safety conditions."
+                                } else (result["message"] as? String).orEmpty().ifBlank { "Nearby place research is unavailable, so I won't guess." }
+                                liveGuideSession.sendContextNote("[USER_REQUESTED_NEARBY_RESULTS] $spoken")
+                            }
+                            VoiceCommandReply("I'll refresh the nearby map results and then answer using the map's source data.")
+                        } else {
+                            appScope.launch {
+                                val result = requestNearbyContext()
+                                val spoken = if (result["ok"] == true) {
+                                    val places = result["places"] as? List<*>
+                                    val names = places.orEmpty().take(4).joinToString("; ") { raw ->
+                                        val place = raw as? Map<*, *> ?: return@joinToString ""
+                                        val name = place["name"] as? String ?: "unnamed place"
+                                        val distance = (place["distance_meters"] as? Number)?.toInt()
+                                        if (distance != null) "$name, about $distance metres away" else name
+                                    }.ifBlank { "No named places were found within the nearby search radius." }
+                                    "Nearby map candidates from OpenStreetMap: $names. These are community map records and are not verified for opening hours, safety, access or current conditions."
+                                } else (result["message"] as? String).orEmpty().ifBlank { "Nearby place research is unavailable, so I won't guess." }
+                                if (liveGuideSession.state.value.isConnected) {
+                                    liveGuideSession.sendContextNote("[USER_REQUESTED_NEARBY_RESULTS] $spoken")
+                                } else {
+                                    voiceController.say(spoken)
+                                }
+                            }
+                            VoiceCommandReply("Checking nearby map data now. I won't claim visual recognition or current conditions.")
+                        }
+                    }
+                }
                 AdventureVoiceAction.SEARCH_PLACE -> {
-                    val query = command.query.orEmpty().trim()
+                    val query = command.query.orEmpty().trim().take(120)
                     if (vehicleIsMoving()) {
                         VoiceCommandReply("I won't switch apps while your vehicle is moving. Please pull over safely, then ask me to search again.")
                     } else if (query.isBlank()) VoiceCommandReply("Please say the place name after “search for”.")
                     else {
                         val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encode(query)}"))
-                        VoiceCommandReply("Opening an external map search for $query. Adventurer hasn't verified these results or current conditions.", afterSpeech = {
-                            runCatching { context.startActivity(mapIntent) }
+                        VoiceCommandReply("Opening Google Maps search for $query. Results and current conditions must be verified in Maps.", afterSpeech = {
+                            runCatching { context.startActivity(mapIntent) }.onFailure {
+                                voiceController.say("I couldn't open Google Maps. Check that a browser is available and try again.")
+                            }
                         })
                     }
                 }
