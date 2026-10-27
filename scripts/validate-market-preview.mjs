@@ -10,7 +10,7 @@ const fail = (message) => {
 };
 const pass = (message) => console.log("PASS:", message);
 
-const scriptMatch = html.match(/<script>([\\s\\S]*?)<\\/script>/i);
+const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/i);
 if (!scriptMatch) {
   fail("An inline JavaScript block exists.");
 } else {
@@ -22,7 +22,7 @@ if (!scriptMatch) {
   }
 }
 
-const ids = [...html.matchAll(/\\bid=["']([^"']+)["']/g)].map((match) => match[1]);
+const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map((match) => match[1]);
 const duplicated = [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
 if (duplicated.length) fail("Static HTML IDs are unique: duplicate " + duplicated.join(", "));
 else pass("Static HTML IDs are unique.");
