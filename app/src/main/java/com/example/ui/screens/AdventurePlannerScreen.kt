@@ -1255,7 +1255,6 @@ fun AdventurePlannerScreen(
     }
 }
 
-@Composable
 private fun formatCurrencyAmount(amount: Double, currencyCode: String): String {
     val code = if (currencyCode == "INR") "INR" else "CAD"
     val locale = if (code == "INR") Locale.forLanguageTag("en-IN") else Locale.CANADA
@@ -1268,6 +1267,7 @@ private fun formatCurrencyAmount(amount: Double, currencyCode: String): String {
     }.getOrDefault(code + " " + "%.2f".format(Locale.US, amount))
 }
 
+@Composable
 private fun BudgetPill(title: String, amount: Double, accent: Color, currencyCode: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(title, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
