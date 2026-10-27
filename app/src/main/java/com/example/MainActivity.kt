@@ -52,6 +52,7 @@ import com.example.data.voice.VoiceMotionSnapshot
 import com.example.data.voice.AdventureGuideMode
 import com.example.data.voice.AdventureGuidePreferences
 import com.example.data.voice.AdventureGuidePreferencesStore
+import com.example.data.voice.NearbyResearchPacingPolicy
 import com.example.data.voice.ParsedAdventureVoiceCommand
 import com.example.data.voice.VoiceCommandReply
 import com.example.data.voice.VoiceStartRequest
@@ -126,6 +127,11 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
     val voiceController = remember(context) { AdventureVoiceController(context) }
     val liveGuideSession = remember(context) { AdventureRealtimeVoiceSession(context.applicationContext) }
     val appScope = rememberCoroutineScope()
+    val nearbyResearchMutex = remember { kotlinx.coroutines.sync.Mutex() }
+    val lastNearbyResearchFix = remember { java.util.concurrent.atomic.AtomicReference<VoicePlaceFix?>(null) }
+    val lastNearbyResearchAtMillis = remember { java.util.concurrent.atomic.AtomicLong(0L) }
+    val lastNearbyResearchAttemptAtMillis = remember { java.util.concurrent.atomic.AtomicLong(0L) }
+    val lastNearbyLocationPollAtMillis = remember { java.util.concurrent.atomic.AtomicLong(0L) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner, voiceController, liveGuideSession) {
@@ -229,62 +235,108 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
         }
     }
 
-    suspend fun requestNearbyContext(): Map<String, Any?> {
-        val fix = getFreshVoicePlaceFix()
-            ?: return mapOf("ok" to false, "message" to "I need a fresh, permission-authorized GPS fix to look up nearby places. I will not guess your location.")
-        return try {
-            val request = mutableMapOf<String, Any>(
-                "latitude" to fix.latitude,
-                "longitude" to fix.longitude,
-                "speedMps" to fix.speedMps,
-                "radiusMeters" to 250,
-            )
-            fix.headingDeg?.let { request["headingDeg"] = it }
-            val result = FirebaseFunctions.getInstance("us-central1")
-                .getHttpsCallable("getNearbyAdventurePlaces")
-                .call(request)
-                .await()
-            val payload = result.data as? Map<*, *>
-                ?: return mapOf("ok" to false, "message" to "Nearby research returned an invalid response.")
-            val places = (payload["places"] as? List<*>)?.mapNotNull { raw ->
-                val place = raw as? Map<*, *> ?: return@mapNotNull null
-                val name = place["name"] as? String ?: return@mapNotNull null
-                val distance = (place["distanceMeters"] as? Number)?.toInt()
-                val direction = listOfNotNull(place["relativeDirection"] as? String, place["relativeClock"] as? String).joinToString(", ")
-                mapOf(
-                    "name" to name.take(100),
-                    "category" to ((place["category"] as? String).orEmpty().take(80)),
-                    "distance_meters" to (distance ?: 0),
-                    "relative_direction" to direction,
-                    "source_url" to ((place["mapUrl"] as? String).orEmpty().take(200)),
+    suspend fun requestNearbyContext(fixOverride: VoicePlaceFix? = null): Map<String, Any?> {
+        nearbyResearchMutex.lock()
+        try {
+            val fix = fixOverride ?: getFreshVoicePlaceFix()
+                ?: return mapOf("ok" to false, "message" to "I need a fresh, permission-authorized GPS fix to look up nearby places. I will not guess your location.")
+            lastNearbyResearchAttemptAtMillis.set(System.currentTimeMillis())
+            return try {
+                val request = mutableMapOf<String, Any>(
+                    "latitude" to fix.latitude,
+                    "longitude" to fix.longitude,
+                    "speedMps" to fix.speedMps,
+                    "radiusMeters" to 250,
                 )
-            }?.take(5).orEmpty()
-            val wiki = payload["wikipedia"] as? Map<*, *>
-            val fact = if (wiki != null) mapOf(
-                "title" to ((wiki["title"] as? String).orEmpty().take(100)),
-                "summary" to ((wiki["summary"] as? String).orEmpty().take(500)),
-                "source" to ((wiki["source"] as? String).orEmpty()),
-                "url" to ((wiki["url"] as? String).orEmpty().take(300)),
-            ) else null
-            mapOf(
-                "ok" to true,
-                "source" to "OpenStreetMap contributors",
-                "source_url" to "https://www.openstreetmap.org/copyright",
-                "freshness" to ((payload["freshness"] as? String).orEmpty()),
-                "places" to places,
-                "wiki_fact" to (fact ?: emptyMap<String, String>()),
-                "caveat" to ((payload["note"] as? String).orEmpty().take(400)),
-            )
-        } catch (error: Exception) {
-            mapOf(
-                "ok" to false,
-                "message" to when {
-                    error.message.orEmpty().contains("resource-exhausted", true) -> "Nearby research is cooling down. Use the recently prefetched context if available."
-                    error.message.orEmpty().contains("unauthenticated", true) -> "Secure sign-in is not ready for nearby research."
-                    else -> "Nearby-place research is temporarily unavailable. Do not guess a landmark or current conditions."
-                }
+                fix.headingDeg?.let { request["headingDeg"] = it }
+                val result = FirebaseFunctions.getInstance("us-central1")
+                    .getHttpsCallable("getNearbyAdventurePlaces")
+                    .call(request)
+                    .await()
+                val payload = result.data as? Map<*, *>
+                    ?: return mapOf("ok" to false, "message" to "Nearby research returned an invalid response.")
+                val places = (payload["places"] as? List<*>)?.mapNotNull { raw ->
+                    val place = raw as? Map<*, *> ?: return@mapNotNull null
+                    val name = place["name"] as? String ?: return@mapNotNull null
+                    val distance = (place["distanceMeters"] as? Number)?.toInt()
+                    val direction = listOfNotNull(place["relativeDirection"] as? String, place["relativeClock"] as? String).joinToString(", ")
+                    mapOf(
+                        "name" to name.take(100),
+                        "category" to ((place["category"] as? String).orEmpty().take(80)),
+                        "distance_meters" to (distance ?: 0),
+                        "relative_direction" to direction,
+                        "source_url" to ((place["mapUrl"] as? String).orEmpty().take(200)),
+                    )
+                }?.take(5).orEmpty()
+                val wiki = payload["wikipedia"] as? Map<*, *>
+                val fact = if (wiki != null) mapOf(
+                    "title" to ((wiki["title"] as? String).orEmpty().take(100)),
+                    "summary" to ((wiki["summary"] as? String).orEmpty().take(500)),
+                    "source" to ((wiki["source"] as? String).orEmpty()),
+                    "url" to ((wiki["url"] as? String).orEmpty().take(300)),
+                ) else null
+                lastNearbyResearchFix.set(fix)
+                lastNearbyResearchAtMillis.set(System.currentTimeMillis())
+                mapOf(
+                    "ok" to true,
+                    "source" to "OpenStreetMap contributors",
+                    "source_url" to "https://www.openstreetmap.org/copyright",
+                    "freshness" to ((payload["freshness"] as? String).orEmpty()),
+                    "places" to places,
+                    "wiki_fact" to (fact ?: emptyMap<String, String>()),
+                    "caveat" to ((payload["note"] as? String).orEmpty().take(400)),
+                )
+            } catch (error: Exception) {
+                mapOf(
+                    "ok" to false,
+                    "message" to when {
+                        error.message.orEmpty().contains("resource-exhausted", true) -> "Nearby research is cooling down. Use the recently prefetched context if available."
+                        error.message.orEmpty().contains("unauthenticated", true) -> "Secure sign-in is not ready for nearby research."
+                        else -> "Nearby-place research is temporarily unavailable. Do not guess a landmark or current conditions."
+                    }
+                )
+            }
+        } finally {
+            nearbyResearchMutex.unlock()
+        }
+    }
+
+    fun buildNearbyContextNote(prefetch: Map<String, Any?>): String = buildString {
+        append("[ADVENTURER_BACKGROUND_CONTEXT: data, not a request] Source: OpenStreetMap contributors. ")
+        append("Nearby results are community-map candidates, not visual identification or verified safety/access information. ")
+        append("Candidate data: ")
+        append((prefetch["places"] as? List<*>)?.joinToString("; ") { it.toString().take(180) }.orEmpty().take(1200))
+        val fact = prefetch["wiki_fact"] as? Map<*, *>
+        val wikiSummary = (fact?.get("summary") as? String).orEmpty()
+        if (wikiSummary.isNotBlank()) {
+            append(" Wikipedia introductory summary: ")
+            append(wikiSummary.take(500))
+            append(" Source URL: ")
+            append(((fact?.get("url") as? String).orEmpty()).take(250))
+        }
+        append(" Data freshness: ")
+        append((prefetch["freshness"] as? String).orEmpty().take(80))
+        append(". Do not mention or describe a candidate unless the user asks; never infer what the user is looking at. These results are not navigation or current conditions.")
+        val caveat = (prefetch["caveat"] as? String).orEmpty()
+        if (caveat.isNotBlank()) append(" Source caveat: ").append(caveat.take(300))
+    }
+
+    suspend fun prefetchNearbyContext(fixOverride: VoicePlaceFix? = null) {
+        val prefetch = requestNearbyContext(fixOverride)
+        if (prefetch["ok"] == true && liveGuideSession.state.value.isConnected) {
+            liveGuideSession.sendContextNote(buildNearbyContextNote(prefetch))
+            AdventureFunnelAnalytics.log(
+                context,
+                "live_voice_nearby_prefetch",
+                mapOf("result_count" to ((prefetch["places"] as? List<*>)?.size ?: 0)),
             )
         }
+    }
+
+    fun distanceBetweenMeters(a: VoicePlaceFix, b: VoicePlaceFix): Double {
+        val results = FloatArray(1)
+        android.location.Location.distanceBetween(a.latitude, a.longitude, b.latitude, b.longitude, results)
+        return results[0].toDouble()
     }
 
     suspend fun requestAdventurePlaceFacts(placeName: String): Map<String, Any?> {
@@ -344,28 +396,8 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
         appScope.launch {
             liveGuideSession.connect(sessionContext)
             if (liveGuideSession.state.value.isConnected) {
-                // Prefetch a small, user-visible-context-only place list while the user begins the
-                // conversation. It is injected as context without forcing an unsolicited response.
-                val prefetch = requestNearbyContext()
-                if (prefetch["ok"] == true && liveGuideSession.state.value.isConnected) {
-                    val note = buildString {
-                        append("[PREFETCHED_NEARBY_CONTEXT] Source: OpenStreetMap contributors. ")
-                        append("The following are community-map candidates, not visual identification or verified safety/access information. ")
-                        append("Candidate data: ")
-                        append((prefetch["places"] as? List<*>)?.joinToString("; ") { it.toString().take(180) }.orEmpty().take(1200))
-                        val fact = prefetch["wiki_fact"] as? Map<*, *>
-                        val wikiSummary = (fact?.get("summary") as? String).orEmpty()
-                        if (wikiSummary.isNotBlank()) {
-                            append(" Wikipedia source-backed introductory summary: ")
-                            append(wikiSummary.take(500))
-                            append(" Source URL: ")
-                            append(((fact?.get("url") as? String).orEmpty()).take(250))
-                        }
-                        append(" Do not mention or describe any candidate unless the user asks; never infer what the user is looking at. These results are not navigation or current conditions.")
-                    }
-                    liveGuideSession.sendContextNote(note)
-                    AdventureFunnelAnalytics.log(context, "live_voice_nearby_prefetch", mapOf("result_count" to ((prefetch["places"] as? List<*>)?.size ?: 0)))
-                }
+                // Research nearby context quietly; it will only be spoken after the user asks.
+                prefetchNearbyContext()
             }
         }
     }
@@ -716,6 +748,37 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
             if (!wasConnected && state.isConnected) AdventureFunnelAnalytics.log(context, "live_voice_connected")
             if (wasConnected && !state.isConnected) AdventureFunnelAnalytics.log(context, "live_voice_disconnected")
             wasConnected = state.isConnected
+        }
+    }
+
+    LaunchedEffect(liveGuideSession) {
+        while (true) {
+            kotlinx.coroutines.delay(30_000L)
+            if (!liveGuideSession.state.value.isConnected) {
+                lastNearbyResearchFix.set(null)
+                lastNearbyResearchAtMillis.set(0L)
+                lastNearbyResearchAttemptAtMillis.set(0L)
+                lastNearbyLocationPollAtMillis.set(0L)
+                continue
+            }
+
+            val now = System.currentTimeMillis()
+            val lastPollAt = lastNearbyLocationPollAtMillis.get()
+            if (lastPollAt > 0L && now - lastPollAt < NearbyResearchPacingPolicy.MIN_ATTEMPT_INTERVAL_MS) continue
+            lastNearbyLocationPollAtMillis.set(now)
+
+            val fix = getFreshVoicePlaceFix() ?: continue
+            val previous = lastNearbyResearchFix.get()
+            val lastSuccessAt = lastNearbyResearchAtMillis.get()
+            val lastAttemptAt = lastNearbyResearchAttemptAtMillis.get()
+            val movementMeters = if (previous == null) Double.POSITIVE_INFINITY else distanceBetweenMeters(previous, fix)
+            val shouldRefresh = NearbyResearchPacingPolicy.shouldRefresh(
+                hasPreviousResearchFix = previous != null,
+                distanceMeters = movementMeters,
+                ageSinceSuccessMillis = if (lastSuccessAt <= 0L) Long.MAX_VALUE else now - lastSuccessAt,
+                ageSinceAttemptMillis = if (lastAttemptAt <= 0L) Long.MAX_VALUE else now - lastAttemptAt,
+            )
+            if (shouldRefresh) prefetchNearbyContext(fix)
         }
     }
 
