@@ -8,10 +8,11 @@ import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.ai.RideStoryAiService
 import com.example.data.model.ActivityType
 import com.example.data.story.AdventureStoryTemplates
 import com.example.data.story.AnalysisResult
-import com.example.data.story.MetaAiClient
+import com.example.data.story.MomentPicker
 import com.example.data.story.MomentPicker
 import com.example.data.story.ReelExporter
 import com.example.data.story.StoryCopy
@@ -28,6 +29,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.math.abs
+import com.google.firebase.FirebaseApp
 
 enum class StudioBusy { ANALYZING, AI_LABELING, EXPORTING, WRITING }
 
@@ -50,24 +53,23 @@ data class StudioState(
     val error: String? = null,
     val reel: File? = null,
     val story: StoryCopy? = null,
-    val aiConfigured: Boolean = false,
-    val aiModel: String = "",
+    val firebaseConfigured: Boolean = false,
 ) {
     val selected: List<StudioMoment> get() = moments.filter { it.selected }.sortedBy { it.startSec }
     val reelSec: Double get() = selected.sumOf { it.durationSec }
 }
 
 /**
- * RideStory AI Studio: ride video → on-device moment scoring → optional Meta AI labelling →
- * Media3 MP4 export → AI (or template) travel story.
+ * Adventure Story Studio: on-device video scoring/export → optional secure cloud highlight suggestions →
+ * server-generated editable copy (with a local template fallback).
  */
 class StoryStudioViewModel(app: Application) : AndroidViewModel(app) {
 
     private val analyzer = VideoAnalyzer(app)
     private val exporter = ReelExporter(app)
-    private val ai = MetaAiClient()
-
-    private val _state = MutableStateFlow(StudioState(aiConfigured = ai.isConfigured, aiModel = ai.visionModel))
+    private val _state = MutableStateFlow(
+        StudioState(firebaseConfigured = runCatching { FirebaseApp.getApps(app).isNotEmpty() }.getOrDefault(false))
+    )
     val state: StateFlow<StudioState> = _state.asStateFlow()
 
     private var job: Job? = null
@@ -128,42 +130,94 @@ class StoryStudioViewModel(app: Application) : AndroidViewModel(app) {
 
     fun analyze() {
         val s = _state.value
-        val uri = s.sourceUri ?: return
-        launchTask(StudioBusy.ANALYZING, "Reading footage") {
+        val uri = s.sourceUri
+        if (uri == null) {
+            _state.update { it.copy(error = "Choose or record a video first. Nothing has been changed.") }
+            return
+        }
+        launchTask(StudioBusy.ANALYZING, "Reading footage on this phone") {
             val result = analyzer.analyze(uri, s.targetSec.toDouble()) { p, stage -> progress(p, stage) }
             _state.update { it.copy(analysis = result, moments = result.moments, reel = null, story = null) }
         }
     }
 
+    /** Explicitly uploads the chosen video for server-side highlight suggestions. Local moments stay if cloud AI fails. */
     fun enhanceWithAi(activityType: ActivityType? = null) {
         val current = _state.value
         val s = if (activityType != null) current.copy(activityType = activityType) else current
         if (s.activityType != current.activityType) _state.value = s
-        if (!ai.isConfigured || s.moments.isEmpty()) return
-        launchTask(StudioBusy.AI_LABELING, "Asking ${ai.visionModel} to review ${minOf(12, s.moments.size)} keyframes") {
-            progress(0.3f, "Asking ${ai.visionModel} to review keyframes")
-            val labels = ai.labelMoments(s.moments, s.location, s.activityType.displayName).associateBy { it.id }
-            val merged = s.moments.map { m ->
-                val l = labels[m.id] ?: return@map m
-                m.copy(
-                    label = l.label.ifBlank { m.label },
-                    description = l.description.ifBlank { m.description },
-                    tags = (l.tags + m.tags.filter { it == "bookmarked" }).distinct(),
-                    score = 0.55 * m.score + 0.45 * (l.score / 10.0),
+        val uri = s.sourceUri
+        if (uri == null || s.moments.isEmpty()) {
+            _state.update { it.copy(error = "Choose a video and run local analysis before requesting cloud highlights.") }
+            return
+        }
+        val sizeBytes = s.info?.sizeBytes
+        if (sizeBytes != null && sizeBytes > 14L * 1024 * 1024) {
+            _state.update { it.copy(error = "Cloud highlight review supports videos up to 14 MB. Your on-device highlights are unchanged.") }
+            return
+        }
+        launchTask(StudioBusy.AI_LABELING, "Securely requesting cloud highlight suggestions") {
+            progress(0.12f, "Uploading the selected video to the secure backend")
+            val targetLength = when {
+                s.targetSec <= 15 -> "15s Reel"
+                s.targetSec <= 30 -> "30s Reel"
+                else -> "60s Reel"
+            }
+            val suggestions = RideStoryAiService.analyzeVideoForHighlights(
+                context = getApplication(),
+                videoUri = uri,
+                targetLength = targetLength,
+                narrationLanguage = s.language.displayName,
+                activityType = s.activityType.displayName,
+            )
+            if (suggestions.isEmpty()) {
+                _state.update { it.copy(error = "Cloud AI did not return reliable highlights. Your on-device moments are unchanged.") }
+                return@launchTask
+            }
+            val usedIds = mutableSetOf<String>()
+            val replacements = linkedMapOf<String, StudioMoment>()
+            suggestions.forEach { suggestion ->
+                val midpoint = (suggestion.startSeconds + suggestion.endSeconds) / 2.0
+                val nearest = s.moments
+                    .filterNot { it.id in usedIds }
+                    .minByOrNull { abs(it.peakSec - midpoint) }
+                    ?: return@forEach
+                usedIds += nearest.id
+                replacements[nearest.id] = nearest.copy(
+                    label = suggestion.title.ifBlank { nearest.label },
+                    description = "Cloud AI suggested a highlight around ${suggestion.timeRange}. Review the clip before exporting.",
+                    tags = (nearest.tags + suggestion.tag.lowercase()).distinct().take(6),
+                    score = maxOf(nearest.score, 0.85),
                     aiLabeled = true,
-                    privacyFaces = l.faces,
-                    privacyPlates = l.plates,
                 )
             }
-            _state.update { it.copy(moments = MomentPicker.reselect(merged, it.targetSec.toDouble()), reel = null) }
+            if (replacements.isEmpty()) {
+                _state.update { it.copy(error = "Cloud AI returned highlights, but they could not be matched to local moments. Your local analysis is unchanged.") }
+                return@launchTask
+            }
+            _state.update { latest ->
+                latest.copy(
+                    moments = latest.moments.map { replacements[it.id] ?: it },
+                    reel = null,
+                    story = null,
+                    error = "Cloud suggestions added to ${replacements.size} moments. Review your selections before exporting.",
+                )
+            }
         }
     }
 
     fun exportReel() {
         val s = _state.value
-        val uri = s.sourceUri ?: return
+        val uri = s.sourceUri
+        if (uri == null) {
+            _state.update { it.copy(error = "Choose or record a video before exporting.") }
+            return
+        }
         val clips = s.selected
-        if (clips.isEmpty()) return
+        if (clips.isEmpty()) {
+            _state.update { it.copy(error = "Select at least one highlight before exporting.") }
+            return
+        }
         val labels = s.story?.chapterTitles?.takeIf { it.size == clips.size } ?: clips.map { it.label }
         launchTask(StudioBusy.EXPORTING, "Rendering ${clips.size} clips") {
             val file = exporter.export(uri, clips, labels, s.title, s.location, s.aspect) { p ->
@@ -178,20 +232,37 @@ class StoryStudioViewModel(app: Application) : AndroidViewModel(app) {
         val s = if (activityType != null) current.copy(activityType = activityType) else current
         if (s.activityType != current.activityType) _state.value = s
         val clips = s.selected
-        if (clips.isEmpty()) return
-        val sourceSec = s.analysis?.durationSec ?: 0.0
+        if (clips.isEmpty()) {
+            _state.update { it.copy(error = "Select at least one moment in Highlights before writing your story.") }
+            return
+        }
+        val sourceSec = s.analysis?.durationSec ?: s.info?.durationSec ?: 0.0
         val template = AdventureStoryTemplates.byId(s.templateId)
         launchTask(StudioBusy.WRITING, "Writing your ${s.activityType.displayName.lowercase()} story") {
-            val story = if (ai.isConfigured) {
-                try {
-                    ai.writeStory(s.title, s.location, s.language.displayName, s.activityType.displayName, template, clips, sourceSec)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    _state.update { it.copy(error = "AI story failed, used the offline template: ${e.message}") }
-                    StoryTemplate.build(s.title, s.location, clips, sourceSec, s.activityType, template)
+            val story = try {
+                RideStoryAiService.generateAdventureStory(
+                    title = s.title,
+                    location = s.location,
+                    language = s.language.displayName,
+                    activityName = s.activityType.displayName,
+                    template = template,
+                    moments = clips,
+                    sourceDurationSec = sourceSec,
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val reason = when {
+                    e.message.orEmpty().contains("permission-denied", ignoreCase = true) ||
+                        e.message.orEmpty().contains("Pro subscription", ignoreCase = true) ->
+                        "Cloud AI needs an eligible Adventurer Pro account."
+                    e.message.orEmpty().contains("failed-precondition", ignoreCase = true) ||
+                        e.message.orEmpty().contains("Firebase", ignoreCase = true) ||
+                        e.message.orEmpty().contains("unauthenticated", ignoreCase = true) ->
+                        "Firebase sign-in or server AI is not configured yet."
+                    else -> "The cloud story request failed."
                 }
-            } else {
+                _state.update { it.copy(error = "$reason Your editable offline story template is ready instead.") }
                 StoryTemplate.build(s.title, s.location, clips, sourceSec, s.activityType, template)
             }
             _state.update { it.copy(story = story) }
