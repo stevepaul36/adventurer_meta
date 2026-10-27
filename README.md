@@ -88,7 +88,7 @@ More detail: [functions/README.md](functions/README.md) and [RELEASE_CHECKLIST.m
 
 ## Build and tests
 
-- Android: GitHub Actions workflow `.github/workflows/android-build.yml` assembles the debug APK and runs unit tests.
+- Android: GitHub Actions workflow `.github/workflows/android-build.yml` assembles the debug APK, runs unit tests, and uploads `adventurer-debug-apk` as a 14-day CI artifact when tests pass. Download it from the successful [Android build workflow](https://github.com/stevepaul36/adventurer_meta/actions/workflows/android-build.yml); this is a debug/test build, not a Play Store release.
 - Functions: `cd functions && npm install && npm test` runs TypeScript compilation and entitlement/path unit tests.
 - Local MP4 rendering happens on device; server-side Gemini requests need network access, deployed Functions, valid secrets, Auth and App Check.
 
