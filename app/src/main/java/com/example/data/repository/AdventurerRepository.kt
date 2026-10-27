@@ -165,7 +165,6 @@ class AdventurerRepository {
             specialNotes = "Warm Rajma Chawal, beds, mountain rescue satellite phone link"
         )
     )
-
     private val initialSafetyTips = listOf(
         MountainSafetyTip(
             id = "tip1",
@@ -187,6 +186,165 @@ class AdventurerRepository {
             category = "Cold Weather",
             shortAdvice = "Keep battery warm overnight; turn ignition on 3 times to prime EFI pump.",
             fullInstructions = "Freezing temperatures sap 40% of lead-acid and lithium battery cranking power. Disconnect battery negative terminal overnight if camping in sub-zero Jispa/Sarchu. Let bike idle for 3 minutes before hitting throttle."
+        )
+    )
+
+    private val initialDistressSignals = listOf(
+        RiderDistressSignal(
+            id = "sig-1",
+            riderName = "Karan 'Apex' Malhotra",
+            bikeModel = "KTM 390 Adventure 2024",
+            distressType = DistressType.PUNCTURE_BLOWOUT,
+            status = DistressStatus.ACTIVE_SOS,
+            latitude = 32.5710,
+            longitude = 77.1950,
+            distanceKm = 3.2,
+            bearingDeg = 45f,
+            altitudeM = 3380,
+            batteryPercent = 42,
+            timeAgo = "12m ago",
+            description = "Rear tubeless tyre bead popped on sharp scree 3km past Jispa bridge. Have mini pump, need mushroom plug or 17-inch tube!",
+            phoneNumber = "+91 98765 43210",
+            responderCount = 1
+        ),
+        RiderDistressSignal(
+            id = "sig-2",
+            riderName = "Rohit & Priya (Two-up)",
+            bikeModel = "Royal Enfield Himalayan 450",
+            distressType = DistressType.MECHANICAL_BREAKDOWN,
+            status = DistressStatus.ACTIVE_SOS,
+            latitude = 32.4920,
+            longitude = 77.1650,
+            distanceKm = 6.8,
+            bearingDeg = 190f,
+            altitudeM = 3520,
+            batteryPercent = 68,
+            timeAgo = "24m ago",
+            description = "Drive chain link gave out climbing towards Deepak Taal. Have a spare master link but no chain riveting tool.",
+            phoneNumber = "+91 98111 22334",
+            responderCount = 0
+        ),
+        RiderDistressSignal(
+            id = "sig-3",
+            riderName = "Deepak 'Ghost' Rawat",
+            bikeModel = "BMW F850 GS Adventure",
+            distressType = DistressType.OUT_OF_FUEL,
+            status = DistressStatus.RESPONDER_EN_ROUTE,
+            latitude = 32.6100,
+            longitude = 77.0850,
+            distanceKm = 11.5,
+            bearingDeg = 310f,
+            altitudeM = 4050,
+            batteryPercent = 21,
+            timeAgo = "45m ago",
+            description = "Misjudged altitude consumption climbing towards Zingzingbar. Tank dry 4km before checkpost. Need 3-5L petrol.",
+            phoneNumber = "+91 94191 55667",
+            responderCount = 2
+        ),
+        RiderDistressSignal(
+            id = "sig-4",
+            riderName = "Vikram Sengupta",
+            bikeModel = "Triumph Scrambler 400X",
+            distressType = DistressType.CRASH_ALERT,
+            status = DistressStatus.ACTIVE_SOS,
+            latitude = 32.5350,
+            longitude = 77.2210,
+            distanceKm = 4.9,
+            bearingDeg = 110f,
+            altitudeM = 3290,
+            batteryPercent = 88,
+            timeAgo = "6m ago",
+            description = "Low-side slip on mossy morning water crossing. Rider unhurt, but clutch lever snapped flush and handlebar tweaked. Need assistance straightening.",
+            phoneNumber = "+91 99200 88776",
+            responderCount = 1
+        )
+    )
+
+    private val initialRoadsideServices = listOf(
+        RoadsideServiceEntity(
+            id = "srv-1",
+            name = "Jispa High Pass Bullet Works & Recovery",
+            type = StationType.MECHANIC,
+            latitude = 32.5512,
+            longitude = 77.1724,
+            distanceKm = 3.8,
+            bearingDeg = 15f,
+            locationName = "NH-3 Leh-Manali Highway, Jispa",
+            phone = "+91 94180 12345",
+            rating = 4.9,
+            reviewCount = 148,
+            isOpen24x7 = true,
+            etaMinutes = 15,
+            specialties = listOf("RE 450/411 Spares", "KTM Diagnostics", "Mobile Recovery Van", "TIG Welding"),
+            description = "Certified alpine motorcycle rescue station with flatbed winch truck, heavy duty tubes, brake pads, and chain links."
+        ),
+        RoadsideServiceEntity(
+            id = "srv-2",
+            name = "South Pullu Military Clinic & Oxygen Depot",
+            type = StationType.HOSPITAL,
+            latitude = 32.5950,
+            longitude = 77.2450,
+            distanceKm = 8.2,
+            bearingDeg = 60f,
+            locationName = "Below Khardung La, 15,300 ft",
+            phone = "+91 1982 252111",
+            rating = 5.0,
+            reviewCount = 312,
+            isOpen24x7 = true,
+            etaMinutes = 25,
+            specialties = listOf("Hyperbaric Chamber", "Wilderness Paramedics", "Emergency O2 Cylinders", "AMS Meds"),
+            description = "Transit medical emergency center equipped for hypothermia, acute mountain sickness, fracture splinting, and high-altitude evacuation."
+        ),
+        RoadsideServiceEntity(
+            id = "srv-3",
+            name = "Kaza 24/7 Heavy Duty Tyre & Vulcanizing Hub",
+            type = StationType.PUNCTURE,
+            latitude = 32.5420,
+            longitude = 77.1550,
+            distanceKm = 1.4,
+            bearingDeg = 235f,
+            locationName = "Opposite Main Kaza Helipad",
+            phone = "+91 98160 54321",
+            rating = 4.8,
+            reviewCount = 94,
+            isOpen24x7 = true,
+            etaMinutes = 8,
+            specialties = listOf("Tubeless Mushroom Plugs", "Heavy Duty 17/19/21 Tubes", "Pneumatic Bead Seater"),
+            description = "Specialized in trailside puncture recovery, sidewall vulcanizing, spoke tightening, and rapid tyre replacement."
+        ),
+        RoadsideServiceEntity(
+            id = "srv-4",
+            name = "Gramphu Junction Emergency Fuel & Tow Service",
+            type = StationType.FUEL_STASH,
+            latitude = 32.4450,
+            longitude = 77.1250,
+            distanceKm = 14.5,
+            bearingDeg = 195f,
+            locationName = "Gramphu-Kaza Diversion Point",
+            phone = "+91 94182 99887",
+            rating = 4.7,
+            reviewCount = 67,
+            isOpen24x7 = true,
+            etaMinutes = 35,
+            specialties = listOf("Sealed 5L/10L Petrol Cans", "Jumper Starter Packs", "Heavy Tow Straps"),
+            description = "Critical transit junction outpost stocking sealed petrol cans, booster cables, and winching service."
+        ),
+        RoadsideServiceEntity(
+            id = "srv-5",
+            name = "Chacha-Chachi Chandra Taal Rescue Dhaba",
+            type = StationType.DHABA,
+            latitude = 32.6450,
+            longitude = 77.2950,
+            distanceKm = 19.0,
+            bearingDeg = 35f,
+            locationName = "Batal Bridge, Lahaul-Spiti",
+            phone = "+91 94189 44332",
+            rating = 5.0,
+            reviewCount = 580,
+            isOpen24x7 = true,
+            etaMinutes = 45,
+            specialties = listOf("Warm Heated Shelter", "Hot Rajma Chawal & Tea", "Satellite Rescue Link"),
+            description = "World-famous alpine refuge providing emergency shelter, hot food, and mountain guide coordination."
         )
     )
 
@@ -266,6 +424,12 @@ class AdventurerRepository {
 
     private val _emergencyStations = MutableStateFlow(initialEmergencyStations)
     val emergencyStations: StateFlow<List<EmergencyStation>> = _emergencyStations.asStateFlow()
+
+    private val _distressSignals = MutableStateFlow(initialDistressSignals)
+    val distressSignals: StateFlow<List<RiderDistressSignal>> = _distressSignals.asStateFlow()
+
+    private val _roadsideServices = MutableStateFlow(initialRoadsideServices)
+    val roadsideServices: StateFlow<List<RoadsideServiceEntity>> = _roadsideServices.asStateFlow()
 
     val safetyTips = initialSafetyTips
 
@@ -567,6 +731,48 @@ class AdventurerRepository {
             totalElevationM = gamification.totalElevationM + stats.elevationGainM
         )
         return stats
+    }
+
+    fun toggleRespondToDistress(signalId: String) {
+        val current = _distressSignals.value
+        _distressSignals.value = current.map { sig ->
+            if (sig.id == signalId) {
+                val nextAck = !sig.isAcknowledgedByMe
+                val nextCount = if (nextAck) sig.responderCount + 1 else maxOf(0, sig.responderCount - 1)
+                val nextStatus = if (nextCount > 0) DistressStatus.RESPONDER_EN_ROUTE else DistressStatus.ACTIVE_SOS
+                sig.copy(
+                    isAcknowledgedByMe = nextAck,
+                    responderCount = nextCount,
+                    status = nextStatus
+                )
+            } else sig
+        }
+    }
+
+    fun broadcastMySos(distressType: DistressType, description: String, phone: String) {
+        val mySignal = RiderDistressSignal(
+            id = "my-sos-${UUID.randomUUID().toString().take(6)}",
+            riderName = "${currentUser.name} (YOU)",
+            bikeModel = currentUser.bikeModel,
+            distressType = distressType,
+            status = DistressStatus.ACTIVE_SOS,
+            latitude = 32.5512,
+            longitude = 77.1724,
+            distanceKm = 0.0,
+            bearingDeg = 0f,
+            altitudeM = 3350,
+            batteryPercent = 95,
+            timeAgo = "Just now",
+            description = if (description.isNotBlank()) description else "Emergency SOS beacon active! Immediate assistance needed on route.",
+            phoneNumber = if (phone.isNotBlank()) phone else "+91 99999 11222",
+            responderCount = 0,
+            isMySignal = true
+        )
+        _distressSignals.value = listOf(mySignal) + _distressSignals.value.filterNot { it.isMySignal }
+    }
+
+    fun cancelMySos() {
+        _distressSignals.value = _distressSignals.value.filterNot { it.isMySignal }
     }
 }
 

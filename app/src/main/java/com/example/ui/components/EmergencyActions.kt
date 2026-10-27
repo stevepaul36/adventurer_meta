@@ -44,6 +44,18 @@ object EmergencyActions {
         }
     }
 
+    /** Opens maps app navigating directly to exact latitude & longitude coordinates. */
+    fun navigateToCoordinates(context: Context, latitude: Double, longitude: Double, label: String) {
+        val uri = Uri.parse("geo:$latitude,$longitude?q=$latitude,$longitude(" + Uri.encode(label) + ")")
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+        try {
+            context.startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
+            val web = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=$latitude,$longitude")
+            launch(context, Intent(Intent.ACTION_VIEW, web), "No navigation app available")
+        }
+    }
+
     fun searchQuery(type: StationType): String = when (type) {
         StationType.MECHANIC -> "motorcycle mechanic"
         StationType.PUNCTURE -> "tyre puncture repair"

@@ -63,11 +63,22 @@ class AdventurerViewModel(
     val feed = repository.feed
     val expeditions = repository.expeditions
     val emergencyStations = repository.emergencyStations
+    val distressSignals = repository.distressSignals
+    val roadsideServices = repository.roadsideServices
     val safetyTips = repository.safetyTips
     val gamification = repository.gamification
     val clubs = repository.clubs
     val telemetry = repository.telemetry
     val currentUser = repository.currentUser
+
+    private val _radarFilter = MutableStateFlow(RadarFilter.ALL)
+    val radarFilter: StateFlow<RadarFilter> = _radarFilter.asStateFlow()
+
+    private val _selectedMarker = MutableStateFlow<MapMarkerItem?>(null)
+    val selectedMarker: StateFlow<MapMarkerItem?> = _selectedMarker.asStateFlow()
+
+    private val _showBroadcastModal = MutableStateFlow(false)
+    val showBroadcastModal: StateFlow<Boolean> = _showBroadcastModal.asStateFlow()
 
     init {
         // Wall-clock time runs independently of GPS cadence. Simulation is demo-only.
@@ -230,5 +241,46 @@ class AdventurerViewModel(
         }
         repository.createPost(caption = caption, rideStats = stats)
         navigateTo(Screen.FEED)
+    }
+
+    fun setRadarFilter(filter: RadarFilter) {
+        _radarFilter.value = filter
+    }
+
+    fun selectMarker(marker: MapMarkerItem?) {
+        _selectedMarker.value = marker
+    }
+
+    fun setShowBroadcastModal(show: Boolean) {
+        _showBroadcastModal.value = show
+    }
+
+    fun toggleRespondToDistress(signalId: String) {
+        repository.toggleRespondToDistress(signalId)
+        // Keep selected marker updated if it's the one being toggled
+        val currentSelected = _selectedMarker.value
+        if (currentSelected is MapMarkerItem.RiderDistress && currentSelected.id == signalId) {
+            val updatedSignal = repository.distressSignals.value.find { it.id == signalId }
+            if (updatedSignal != null) {
+                _selectedMarker.value = MapMarkerItem.RiderDistress(updatedSignal)
+            }
+        }
+    }
+
+    fun broadcastMySos(distressType: DistressType, description: String, phone: String) {
+        repository.broadcastMySos(distressType, description, phone)
+        _showBroadcastModal.value = false
+        // Automatically select own broadcast marker
+        val mySignal = repository.distressSignals.value.firstOrNull { it.isMySignal }
+        if (mySignal != null) {
+            _selectedMarker.value = MapMarkerItem.RiderDistress(mySignal)
+        }
+    }
+
+    fun cancelMySos() {
+        repository.cancelMySos()
+        if (_selectedMarker.value is MapMarkerItem.RiderDistress && (_selectedMarker.value as MapMarkerItem.RiderDistress).signal.isMySignal) {
+            _selectedMarker.value = null
+        }
     }
 }

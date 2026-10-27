@@ -93,6 +93,14 @@ fun GpsTrackerScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
+                actions = {
+                    IconButton(
+                        onClick = { viewModel.navigateTo(com.example.viewmodel.Screen.RADAR) },
+                        modifier = Modifier.testTag("gps_radar_sos_shortcut")
+                    ) {
+                        Icon(Icons.Default.Emergency, contentDescription = "SOS & Roadside Radar", tint = DangerRed)
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B0F17))
             )
         },
