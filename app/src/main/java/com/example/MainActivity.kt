@@ -359,7 +359,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                             append(" Wikipedia source-backed introductory summary: ")
                             append(wikiSummary.take(500))
                             append(" Source URL: ")
-                            append(fact["url"].toString().take(250))
+                            append(((fact?.get("url") as? String).orEmpty()).take(250))
                         }
                         append(" Do not mention or describe any candidate unless the user asks; never infer what the user is looking at. These results are not navigation or current conditions.")
                     }
