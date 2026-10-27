@@ -150,6 +150,10 @@ class StoryStudioViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(error = "Choose a video and run local analysis before requesting cloud highlights.") }
             return
         }
+        if (!s.firebaseConfigured) {
+            _state.update { it.copy(error = "Cloud highlight review is not configured. Your local analysis is still available; connect Firebase and the server AI key to try cloud review.") }
+            return
+        }
         val sizeBytes = s.info?.sizeBytes
         if (sizeBytes != null && sizeBytes > 14L * 1024 * 1024) {
             _state.update { it.copy(error = "Cloud highlight review supports videos up to 14 MB. Your on-device highlights are unchanged.") }
@@ -237,6 +241,13 @@ class StoryStudioViewModel(app: Application) : AndroidViewModel(app) {
         }
         val sourceSec = s.analysis?.durationSec ?: s.info?.durationSec ?: 0.0
         val template = AdventureStoryTemplates.byId(s.templateId)
+        if (!s.firebaseConfigured) {
+            val offlineStory = StoryTemplate.build(s.title, s.location, clips, sourceSec, s.activityType, template)
+            _state.update {
+                it.copy(story = offlineStory, error = "Generated an editable offline story. Secure cloud AI is not configured on this build; your selected moments were kept.")
+            }
+            return
+        }
         launchTask(StudioBusy.WRITING, "Writing your ${s.activityType.displayName.lowercase()} story") {
             val story = try {
                 RideStoryAiService.generateAdventureStory(
