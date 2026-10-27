@@ -524,13 +524,13 @@ fun AdventureVoiceCompanionScreen(
     }
 }
 
-@Composable
 private data class VoiceChatLine(
     val isUser: Boolean,
     val text: String,
     val id: String = java.util.UUID.randomUUID().toString(),
 )
 
+@Composable
 private fun VoiceCommandExample(command: String, description: String) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(command, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
