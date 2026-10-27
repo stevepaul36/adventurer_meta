@@ -11,6 +11,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -271,10 +275,6 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
         }
     }
 
-    LaunchedEffect(lang) {
-        voiceController.updateLanguage(lang.code)
-    }
-
     LaunchedEffect(locationManager) {
         viewModel.attachLocationManager(locationManager)
     }
@@ -287,6 +287,10 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
     val telemetry by viewModel.telemetry.collectAsState()
     val activityMode by viewModel.activityMode.collectAsState()
     val lang by viewModel.currentLang.collectAsState()
+
+    LaunchedEffect(lang) {
+        voiceController.updateLanguage(lang.code)
+    }
 
     // Detail screens get the whole screen (they have their own back arrow); the HUD hides the
     // tab bar while a ride is recording so a stray tap can't navigate away mid-corner.
