@@ -495,10 +495,12 @@ class AdventureVoiceController(private val context: Context) {
     }
 
     private fun stopRecognizer() {
-        val wasListening = _state.value.isListening
+        val recognizer = speechRecognizer
         _state.value = _state.value.copy(isListening = false)
-        if (wasListening) ignoreCancelErrorUntilMillis = SystemClock.uptimeMillis() + 700L
-        runCatching { speechRecognizer?.cancel() }
+        // Android may deliver ERROR_CLIENT asynchronously after cancel(); don't let that old
+        // callback clear a newer one-shot request (notably the Hey Adventurer follow-up turn).
+        if (recognizer != null) ignoreCancelErrorUntilMillis = SystemClock.uptimeMillis() + 700L
+        runCatching { recognizer?.cancel() }
     }
 
     private fun processTranscript(rawText: String) {
