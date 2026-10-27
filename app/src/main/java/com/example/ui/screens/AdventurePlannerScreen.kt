@@ -477,7 +477,7 @@ fun AdventurePlannerScreen(
                                         }
                                     ) {
                                         Icon(
-                                            if (preferredProviderId == provider.id) Icons.Default.Star else Icons.Default.StarOutline,
+                                            Icons.Default.Star,
                                             contentDescription = null,
                                             modifier = Modifier.size(18.dp)
                                         )
