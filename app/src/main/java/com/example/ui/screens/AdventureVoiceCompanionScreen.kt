@@ -77,11 +77,33 @@ fun AdventureVoiceCompanionScreen(
     var lastLiveUserTranscriptItemId by remember { mutableStateOf("") }
     val chatLines = remember { mutableStateListOf<VoiceChatLine>() }
 
+    LaunchedEffect(liveState.incomingSpeechTurnSequence) {
+        val sequence = liveState.incomingSpeechTurnSequence
+        val id = "voice-$sequence"
+        if (sequence > 0 && chatLines.none { it.id == id }) {
+            chatLines.add(VoiceChatLine(isUser = true, text = "Listening…", id = id))
+            while (chatLines.size > 12) chatLines.removeAt(0)
+        }
+    }
+
+    LaunchedEffect(liveState.interimUserTranscriptSequence, liveState.interimUserTranscript) {
+        val sequence = liveState.interimUserTranscriptSequence
+        val partial = liveState.interimUserTranscript.trim()
+        val id = "voice-$sequence"
+        if (sequence > 0) {
+            val index = chatLines.indexOfLast { it.id == id }
+            if (index >= 0 && partial.isNotBlank()) chatLines[index] = chatLines[index].copy(text = partial)
+        }
+    }
+
     LaunchedEffect(liveState.latestUserTranscriptItemId) {
         val itemId = liveState.latestUserTranscriptItemId
         val transcript = liveState.latestUserTranscript.trim()
+        val id = "voice-" + liveState.latestUserTranscriptSequence
         if (itemId.isNotBlank() && itemId != lastLiveUserTranscriptItemId && transcript.isNotBlank()) {
-            chatLines.add(VoiceChatLine(isUser = true, text = transcript))
+            val index = chatLines.indexOfLast { it.id == id }
+            if (index >= 0) chatLines[index] = chatLines[index].copy(text = transcript)
+            else chatLines.add(VoiceChatLine(isUser = true, text = transcript, id = id))
             lastLiveUserTranscriptItemId = itemId
             while (chatLines.size > 12) chatLines.removeAt(0)
         }
@@ -503,7 +525,11 @@ fun AdventureVoiceCompanionScreen(
 }
 
 @Composable
-private data class VoiceChatLine(val isUser: Boolean, val text: String)
+private data class VoiceChatLine(
+    val isUser: Boolean,
+    val text: String,
+    val id: String = java.util.UUID.randomUUID().toString(),
+)
 
 private fun VoiceCommandExample(command: String, description: String) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
