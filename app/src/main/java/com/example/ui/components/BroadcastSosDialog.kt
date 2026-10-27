@@ -74,13 +74,13 @@ fun BroadcastSosDialog(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "Broadcast Distress Beacon",
+                                text = "Create Local SOS Note",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
                             Text(
-                                text = "Alerts fellow riders & rescue services nearby",
+                                text = "Nothing is sent to responders or other riders",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF94A3B8)
                             )
@@ -184,7 +184,7 @@ fun BroadcastSosDialog(
                 OutlinedTextField(
                     value = contactPhone,
                     onValueChange = { contactPhone = it },
-                    label = { Text("Callback phone number for responders") },
+                    label = { Text("Optional callback number (stored locally)") },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color(0xFFCBD5E1),
@@ -225,7 +225,7 @@ fun BroadcastSosDialog(
                     ) {
                         Icon(Icons.Default.Sos, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Activate SOS", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Save Local SOS", color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
             }
