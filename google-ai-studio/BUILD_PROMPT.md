@@ -97,13 +97,40 @@ Never auto-place a real order, request/store real payment details or treat a vag
 - Search and filters actually filter sample results.
 - Keep one cart state and show cart count.
 - On mobile use bottom nav and a sticky voice dock that never covers important actions.
+- Persist benign preferences locally in the demo; make market and provider preferences easy to edit.
 - Avoid constant location tracking, background recording, continuous audio/video streaming and heavy external map tiles.
 - Gracefully represent offline, network, permission and provider-integration placeholders.
+
+## India and Canada market behaviour
+
+Add a prominent but compact, editable market selector in onboarding, Explore and Settings:
+- **India:** INR, kilometres, Celsius, English initially with a roadmap for user-selected Hindi, Tamil, Malayalam, Telugu, Kannada, Bengali and Marathi.
+- **Canada:** CAD, kilometres by default (allow miles), Celsius, English initially with a roadmap for French.
+- Device locale may suggest the initial country, but the user can override it. Do not request GPS permission merely to choose a market. Preview choices are local/demo preferences.
+
+Inside Explore add **Services for your market**, with category filters Maps, Food, Transport, Stays, Outdoors, Fuel/charging and these example providers:
+- India: Google Maps, Mappls, Swiggy, Zomato, IRCTC Rail Connect, redBus, Rapido, MakeMyTrip, Booking.com, Airbnb, Incredible India.
+- Canada: Google Maps, Uber Eats, DoorDash, Skip, VIA Rail, Uber/Lyft, Parks Canada Reservations, Booking.com, Airbnb, AllTrails, PlugShare and ChargePoint.
+- Include category, market coverage note, one-line purpose, and EXTERNAL HANDOFF ONLY label on every provider card. Sample buttons simulate a handoff; they must not imply partner access, a live API, live inventory, payment, reservation, ticket, ride or order.
+- Map search is separate from provider homepages. Show the query and selected market before simulating a Maps handoff.
+- Canada providers vary by city/province/territory; Parks Canada is federal park information and is not a substitute for provincial/territorial park sources. Indian coverage also varies by city and region.
+
+Add a user-editable **Trip profile** panel. Include preferred language/voice, activity mode, units/currency, budget range, cuisine and optional dietary preference, optional allergy notes, accessibility/difficulty, vehicle/fuel or EV profile, preferred Maps/food/stay provider, accommodation style, route preferences (tolls/scenic/unpaved/ferries), notification quietness, data-saving/offline needs, memory location precision, cloud backup and sharing preference. Make every preference reversible. Do not infer personal preferences from identity. Allergy/dietary details and precise location are private by default and must not be sent to a provider without an explicit user action.
+
+Currency and budgeting requirements:
+- Every monetary amount is stored with an ISO currency code (INR or CAD); never label INR as CAD.
+- Do not use a fixed demo exchange rate or claim current currency conversion.
+- Show localised currency symbols and format numbers using the chosen market.
+- Preview amounts are deterministic sample data. Do not ask for payment details.
+
+Add an honest action-state model throughout UI:
+SUGGESTED → AWAITING_CONFIRMATION → HANDED_OFF / SUBMITTED → VERIFIED_COMPLETE / FAILED / OUTCOME_UNKNOWN.
+Opening a provider is HANDED_OFF, never VERIFIED_COMPLETE. For simulated food order flow, final review must name provider, restaurant, exact items and quantities, pickup/delivery choice, destination, fees and total. Only after a fresh confirm button may the preview show “DEMO ORDER PLACED — SIMULATION ONLY”. Never claim that a restaurant was contacted or money was charged.
 
 ## Definition of done
 - Preview opens on a polished Journey screen.
 - All five sections navigate.
-- Explore filters work.
+- Explore filters work, including the India/Canada selector, market-specific provider categories and preferred-provider state.
 - Fuel calculator updates and validates.
 - Food cart can be built, reviewed, confirmed as simulated, or cancelled.
 - Trip stops/reminders can be edited and completed.

@@ -3,6 +3,12 @@
 ## Product promise
 Adventurer is a voice-first journey co-pilot coordinating navigation, trip planning, food, fuel, stays, memories and adventure milestones. It is not a replacement map, delivery marketplace or unrestricted phone operator. Specialist providers handle live navigation and transactions; Adventurer owns trip context, personal preferences, reminders, decision support and a unified history.
 
+## India and Canada launch strategy
+
+Adventurer uses one shared journey, food, fuel, safety and memory model with user-selected regional providers. India prioritizes intercity and highway travel, region-specific food and rail/bus/stay handoffs; Canada prioritizes trails/parks, camping reservations, seasonal access and EV-charging discovery. Google Maps remains a handoff/navigation provider rather than a map UI Adventurer attempts to duplicate.
+
+The implementation strategy, provider shortlist, market-specific preferences, privacy constraints, integration ladder and sprint plan are in [INDIA_CANADA_MARKET_PLAYBOOK.md](INDIA_CANADA_MARKET_PLAYBOOK.md). Current Android UI only opens provider sites/apps; no provider has been integrated to read private cart, ticket, booking, payment or live inventory state. INR-aware budget persistence is a known schema-migration item because the current trip plan still contains a CAD-specific field.
+
 ## Feature domains
 - Journey: current trip, next planned stop, route progress when supplied by an approved source, concise briefing.
 - Navigation handoff: open a selected map provider with a destination or directions; distinguish handoff from verified navigation.
