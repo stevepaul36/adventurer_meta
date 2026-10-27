@@ -57,6 +57,8 @@ data class RealtimeAdventureContext(
 )
 
 data class RealtimeAdventureState(
+    /** Unique across reconnects so UI transcript IDs cannot collide with prior sessions. */
+    val sessionId: String = java.util.UUID.randomUUID().toString(),
     val isConnecting: Boolean = false,
     val isConnected: Boolean = false,
     val isListening: Boolean = false,
