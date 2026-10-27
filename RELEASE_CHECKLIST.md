@@ -1,11 +1,13 @@
 # Adventurer production release checklist
 
+For signed-AAB generation and the full Firebase/RevenueCat/Play Console handoff, also use [PRODUCTION_RELEASE_RUNBOOK.md](PRODUCTION_RELEASE_RUNBOOK.md). The workflow builds a release candidate only; it does not publish to Google Play.
+
 ## Firebase and AI security
 
 - [ ] Set the final, owned application ID; register it in Firebase and add the matching `app/google-services.json` locally.
 - [ ] Enable Firebase Anonymous Authentication, Cloud Firestore, Cloud Storage, Cloud Functions and App Check.
 - [ ] Configure App Check: debug provider only for local development; Play Integrity for production.
-- [ ] Set server secrets `GEMINI_API_KEY` and `REVENUECAT_SECRET_API_KEY` with Firebase CLI, never Android build properties.
+- [ ] Set server secrets `BOSON_API_KEY`, `GEMINI_API_KEY` and `REVENUECAT_SECRET_API_KEY` with Firebase CLI, never Android build properties.
 - [ ] Deploy callable Functions and strict Firestore/Storage rules; test unauthorized requests and object access are rejected.
 - [ ] Test active, expired, refunded, restored and unverifiable subscriptions. Verify the backend fails closed if RevenueCat cannot be reached.
 - [ ] Test monthly quota concurrency and failure rollback; confirm the counter only charges successful results.
