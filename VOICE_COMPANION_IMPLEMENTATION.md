@@ -1,52 +1,87 @@
-# Adventurer Voice Companion — implementation and handoff
+# Adventurer Voice Companion & Live Guide — implementation handoff
 
-## What this branch implements
+## Product result
 
-This is a foreground Android voice-control slice built on the existing Jetpack Compose app and existing ActivityType, GPS tracker, Explore & Plan and Story Studio modules.
+Adventurer now has two voice paths:
 
-- **Talk now:** one-shot speech recognition starts only after the user taps the microphone and grants RECORD_AUDIO.
-- **Hey Adventurer (opt-in):** once explicitly enabled, a lightweight wake-phrase loop runs while the Android Activity is foregrounded. The controller pauses listening when the Activity pauses/stops. It does not register an OS-level wake-word service and is not available while the app is closed.
-- **Hands-free navigation:** go back, next screen, previous tab, open Feed, Explore, tracker, Voice, Story Studio, Roadside Radar, or profile.
-- **Activity commands:** switch between supported adventure types; read the selected activity's existing in-app briefing; start, pause and resume the current tracker session; read local session distance/time/GPS-fix status.
-- **Place intents:** “search for [place]” opens an external Google Maps search after spoken acknowledgement. “What's that?” is not guessed: this slice explicitly tells the user that verified place context is not connected yet.
-- **Voice output:** Android TextToSpeech, calm/balanced/energetic delivery presets, language following Adventurer's current selected language, stop-speaking button, remembered Tour/Wander preference.
-- **Privacy-conscious analytics:** coarse command action only; no transcript, raw audio, destination query, exact coordinate or route geometry is logged.
-- **Voice UI:** a global voice bubble remains visible on app screens; a dedicated screen explains the supported command vocabulary and limitations.
+1. **Voice commands / fallback** — tap Talk Now for a single speech-recognition turn, or explicitly enable “Hey Adventurer” while the app is foregrounded. Speech commands route to deterministic actions and Android TextToSpeech replies.
+2. **Live AI Guide** — explicitly start a realtime full-duplex audio session. Audio is captured as PCM16 mono at 24 kHz and sent over a WebSocket to Boson Higgs Realtime using an ephemeral, short-lived client token minted by Firebase Cloud Functions. Returned audio is played through an Android AudioTrack. The session handles interruption events by cancelling a response, flushing pending playback, and truncating conversation audio to the amount that actually played.
 
-## Reference repository ideas adopted
+Live Guide runs separately from the basic recognizer. It supports natural follow-up questions, interruption while the guide speaks, source-backed nearby map context, exact-title Wikipedia introductory summaries for named place questions, spoken app actions, and locally persisted guide preferences.
 
-The attached RoamAlong reference separates realtime conversation, tools, location context, place research and proactive pacing. This Android slice preserves that separation at the product boundary:
+## Reference architecture adapted
 
-1. the recognizer turns speech into text;
-2. a deterministic command parser maps only a small allowlist into app actions;
-3. the application executes actual navigation/session actions and gives a spoken response;
-4. existing activity/tracker state provides local context; and
-5. UI copy makes unsupported actions visible instead of allowing the model to pretend that work happened.
+The supplied RoamAlong repository separates the audio transport, realtime model, tools, geospatial research and pacing. Adventurer carries that separation into the native Android/Cloud Functions stack:
 
-The current slice does **not** copy the reference's React/Expo/WebSocket implementation into the Kotlin app, and does not embed provider credentials in the APK.
+- `AdventureRealtimeVoiceSession.kt` owns PCM capture/playback, WebSocket lifecycle, VAD configuration, event processing, tool execution, interruption and playback truncation.
+- `AdventureVoiceController.kt` owns the lightweight one-shot/foreground wake phrase experience and local TTS fallback.
+- `AdventureGuidePreferences.kt` persists topic interests, narrative style, suggestion level and live narration tone locally.
+- `MainActivity.kt` wires realtime model tools to real app navigation, selected activity, tracker status and user-triggered place lookups.
+- `functions/src/index.ts` mints a short-lived Boson credential, calls OpenStreetMap Overpass for nearby named map features, and uses Wikipedia's API for exact-title introductory summaries.
+- `functions/src/nearbyPlaces.ts` rounds spatial cells, normalizes and ranks nearby candidates by distance and, when movement provides a useful heading, approximate relative direction.
 
-## Platform limits and safety rules
+The model cannot execute arbitrary Kotlin. It can request a small explicit tool allowlist, and the app returns whether the action succeeded. It cannot dispatch SOS or end/delete an activity by voice.
 
-Android's regular SpeechRecognizer is not intended for endless background recognition. Therefore hands-free is explicitly opt-in and foreground-only. Depending on installed Android speech services and language packs, speech recognition may require a network. Text-to-speech uses the installed device engine; a suitable local voice must be downloaded for offline narration.
+## Shipped voice actions
 
-When speaking “SOS” or “emergency,” the app only opens Safety/Roadside Radar and asks the user to confirm any emergency action. It never dispatches an alert based solely on speech. “End trip” opens the tracker for confirmation instead of deleting or stopping a session with a potentially misrecognized command. For a confirmed live GPS session on a motorcycle or in a car at 5 km/h or more, longer activity briefings and external map-app launches are blocked until stopped; short navigation acknowledgements remain available. This guard is intentionally conservative and is not a distracted-driving detector.
+- Navigate: back, next/previous main screen, Feed, Explore & Plan, tracker, Story Studio, Safety Help and profile.
+- Activity changes: motorcycling, cycling, walking, trekking, car trips, camping, fishing, hunting, wildlife watching, scuba, snorkelling, paddling, boating, islands/coasts, and other supported activity modes.
+- Tracker: start a real session when location permissions are available, pause/resume, and read current distance/time/GPS-fix state.
+- Place questions: silently prefetch a small nearby context list at Live Guide start and quietly refresh it after about 140 metres of movement or three minutes of age (minimum 45-second request interval). Refreshed context is provided for the next user-led turn; it never triggers unsolicited speech. When the user asks about a nearby/unnamed object, the guide can consult those candidates. For a specific named place, it can query an exact-title Wikipedia summary. Source details are returned alongside summary text.
+- Personalization: locally saved topic interests, narrative style, suggestion level and one of the supported live narration tones. The user can change these with the UI or explicitly ask Live Guide to save a preference.
+- Tour/Wander: updates the realtime instruction context. Suggestion level controls whether an answer includes a follow-up idea; it does not enable unsolicited GPS-triggered speech.
+- Voice quality of life: full-duplex voice interrupt handling, playback flush/truncation, speech stop on the basic path, language following Adventurer’s selected app language for fallback TTS, local voice preference, and coarse action analytics.
 
-The app must not proactively speak while a motorcycle/car user is in motion. There is no automatic narration of unknown landmarks: until a source-backed place provider, route context and confidence checks are connected, location-based narration is intentionally withheld. GPS coordinates and direction alone cannot reliably infer exactly what someone is looking at.
+## Server setup required before Live Guide works
 
-## What remains unconnected
+The Android app does **not** contain a Boson API key. Live Guide requires your own configured Boson key and a deployed Firebase backend:
 
-- **True always-on wake-word engine:** requires a supported native hotword SDK/service and licensing/configuration. This branch does not keep a microphone open after the app backgrounds or closes.
-- **Realtime duplex voice agent and barge-in:** the current recognizer+TTS flow is turn-based. A provider-backed WebSocket session with short-lived server-issued credentials is required for natural interruption during speaking. Never ship a long-lived AI key in Android resources or BuildConfig.
-- **Verified nearby place / landmark context:** connect a provider with explicit attribution, allowed caching, rate limiting and freshness metadata. Label AI-generated interpretation separately from retrieved facts and keep the source URL/provider provenance with each story.
-- **Automatic Tour-mode place narration:** add only once place search and route/distance context are authoritative enough; make proactive narration opt-in, apply cooldowns and skip when speech, recording controls or movement safety gates say it is a bad time.
-- **Offline place research:** store small, user-selected place/story packs with source timestamps and storage limits. Do not bulk-download public OSM tiles in violation of the tile service policy, or depend on the public Nominatim service for production autocomplete.
-- **AI TTS/music export:** a separate Story Studio export capability using a licensed TTS provider and Android Media3 Transformer is not part of this voice-control slice.
+1. Set the server secret using the Firebase CLI: `firebase functions:secrets:set BOSON_API_KEY`.
+2. Deploy Cloud Functions from this repository: `firebase deploy --only functions`.
+3. Confirm that Firebase Auth and App Check are configured for the Android app and that the Firebase project is configured for the same deployment.
+4. In Android, open Voice, grant microphone permission, and tap **Start Live AI Guide**. If the secret/backend is unavailable, the status displays a failure and Talk Now remains a separate fallback.
 
-## Before release
+The callable that mints a token is authenticated and App-Check protected. It requests a limited-lifetime ephemeral token (10 minutes), and only that ephemeral token is sent to the Android WebSocket connection. Live Guide sends the microphone audio stream to the configured Boson Realtime service while the session is active.
 
-1. Test on real Android devices with and without an offline speech pack; speech recognition and TTS support vary across manufacturers.
-2. Validate microphone permission denial, revoked permission, no recognition service, network loss, Android app backgrounding, Bluetooth/headset routing and interruptions by phone calls.
-3. Check notification/foreground-service policies before any future background mic mode; avoid continuous recording unless a supported, declared and compliant design justifies it.
-4. Add server-authenticated, short-lived credentials before using a realtime voice API.
-5. Do not market Tour mode as a live local expert until source-backed place research is wired in and its claims are tested.
-6. Run Gradle unit tests and the Android GitHub Actions workflow on this branch before merging.
+The deployed functions must use the Boson endpoint, current model/audio protocol, and secret corresponding to the provider account. Provider availability, account credit/quota and current SDK/server semantics must be confirmed on a real device before a public release. Higgs Realtime currently uses its provider default voice; Natural/Warm/Calm/Energetic/Clear are prompt-style guidance, not selectable named voice IDs or voice cloning.
+
+## Nearby research, sources and privacy
+
+- The nearby search uses one Overpass request around a rounded coordinate cell and caches public OSM elements for six hours (with a limited stale-cache fallback). While the user has explicitly started Live Guide, the app quietly refreshes this context when the usable location has moved about 140 metres or the last result is around three minutes old, with a 45-second minimum attempt interval. The new context is queued for the next user-led question; it never triggers unsolicited narration. It does not perform five separate searches for directional sectors.
+- Coordinates are sent from Android to Adventurer's authenticated Firebase callable only when Live Guide performs a nearby lookup/prefetch. The server rounds the latitude/longitude before using the public map API and before placing the spatial key in the shared cache; exact coordinates are not intentionally written to analytics or the shared place cache.
+- OSM features are **possible map candidates**, not camera recognition, guaranteed POI identity, proof of access, or safety/navigation data. Heading is an approximation, not eye gaze.
+- Wikipedia enrichment is an introductory summary only when an exact normalized article title matches. A close but non-exact match is not used as a fact source. Article claims can still be incomplete or outdated.
+- The app does not put audio, transcripts, destination queries, exact coordinates, source URLs or map geometry in voice analytics. Analytics records coarse action names/event counts only.
+- Topics/style/proactivity/voice preferences are stored in device-local SharedPreferences and passed into the Live Guide prompt. They are not uploaded as analytics.
+- The public Overpass server is suitable only for a careful prototype-level request pattern; it can rate-limit or become unavailable. Before broad production rollout, evaluate a provider contract, fair use, attribution, cache rules and reliability. Do not bulk-download public OSM raster tiles or treat the public Nominatim service as unlimited autocomplete.
+- A nearby result or Wikipedia story does not verify current opening hours, trail/road closures, permits, weather, tides/currents, wildlife law, emergency services, diving status or safe access. Those require official, current source integrations.
+
+## Safety and platform boundaries
+
+- The basic “Hey Adventurer” recognizer loop is **foreground-only**, explicitly opted into, and pauses when the app backgrounds. Android's standard SpeechRecognizer is not a supported endless background hotword service; depending on the installed Android speech provider, recognition may send audio to a remote recognition service.
+- Live Guide needs microphone permission and runs only while Adventurer is foregrounded; moving the app to the background disconnects it. The session does not continue recording with the app closed.
+- For a motorcycle/car activity, Live Guide requires a real GPS tracker session to be running while stationary. It disconnects when that GPS-confirmed session passes the conservative movement threshold. This is a guard, not a distraction detector. Do not use it while driving/riding; use local controls/short basic commands safely.
+- A voice request for SOS opens Safety Help and asks the user to confirm any emergency action; it never silently dispatches an alert. “End trip” opens tracker controls rather than deleting/stopping data without confirmation.
+- The app does not proactively narrate every nearby place. Nearby context is prefetched on explicit Live Guide startup and refreshed quietly as location changes, then used only after user turns. Automatic place-arrival narration, route generation/rerouting, automatic background check-ins, emergency notification delivery and licensed offline map packs are not enabled here.
+- The application never claims that GPS heading determines where the user's eyes are pointing.
+
+## Testing and release checks
+
+The Android GitHub Actions workflow builds the debug APK and runs unit tests. The Cloud Functions workflow builds and tests the backend. These automated tests cannot replace actual-device verification.
+
+Before release, test:
+1. Secret absent, token rejected/expired, App Check/auth failure, service outage, exhausted provider credits and retries.
+2. Fresh GPS fix vs. permission denied, inaccurate/stale fix, no network and no map candidate.
+3. Echo cancellation/noise suppression, headset/Bluetooth audio routing, audio interruptions, incoming phone call, app backgrounding, and TTS/microphone cleanup.
+4. Barge-in latency and whether unplayed audio is removed from both speaker playback and assistant conversation context.
+5. Vehicle guard at standstill, on a confirmed moving GPS session and after pause; ensure no voice session remains active on movement.
+6. Preference saving, app restart, dynamic session update and no query/transcript logging.
+7. Place/source narration wording: verify that facts are attributed to OSM/Wikipedia and never presented as live safety/access guidance.
+
+## Current non-goals
+
+- OS-level/custom always-on wake-word listening when the app is closed.
+- Provider-driven live weather/tide/road/trail/access/permit/condition data.
+- Verified directions, map matching, route optimization, or official offline topographic/marine charts.
+- Automatic landmark-arrival speech, background monitoring, emergency dispatch or automatic contact notifications.
+- Provider-independent speech-model operation; Live Guide is optional and requires a deployed Boson/Firebase backend.

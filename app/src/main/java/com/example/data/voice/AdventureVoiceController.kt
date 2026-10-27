@@ -23,7 +23,7 @@ import java.util.UUID
 
 enum class AdventureGuideMode { WANDER, TOUR }
 enum class AdventureVoiceStyle { CALM, BALANCED, ENERGETIC }
-enum class VoiceStartRequest { PUSH_TO_TALK, HANDS_FREE }
+enum class VoiceStartRequest { PUSH_TO_TALK, HANDS_FREE, REALTIME_GUIDE }
 
 enum class AdventureVoiceAction {
     IGNORED, WAKE_ONLY, HELP, STOP_SPEAKING, DISABLE_HANDS_FREE, REPEAT_LAST,

@@ -6,9 +6,11 @@ Adventurer is evolving from a motorcycle-first prototype into a multi-activity a
 
 ## Product features
 
-- **Adventure Voice Companion (new prototype slice):** optional “Hey Adventurer” phrase while the app is foregrounded, one-shot talk button, spoken navigation across main screens, activity switching, current-session status, activity-aware briefings, TTS styles, stop-speaking control, Tour/Wander interaction styles, and external map search by voice. Commands use a small deterministic parser; they do not ask an LLM to invent app actions.
-- **Voice safety:** long activity briefings and opening another map app are blocked during a GPS-confirmed, moving motorcycle/car session; short voice navigation remains available. This is a conservative guard, not a distraction detector.
-- **Voice platform limits:** this is foreground-only and user-armed. Android's standard SpeechRecognizer is not an OS-level wake-word service and is not designed for unlimited background listening. Device speech recognition may use network services. Live realtime speech-to-speech, interrupt-by-speaking barge-in, verified nearby POI research, and background hotword listening are not connected in this slice.
+- **Adventure Voice Companion:** one-shot Talk Now, optional foreground “Hey Adventurer” commands, spoken app navigation, activity switching, tracker start/pause/resume/status, and Android TTS fallback.
+- **Live AI Guide (optional backend feature):** native 24 kHz duplex audio over a Boson Higgs Realtime WebSocket, barge-in cancellation/playback truncation, safe application tools, nearby OSM context prefetch and movement-based quiet refresh (never unsolicited speech), exact-title Wikipedia summaries for named places, and locally saved guide preferences (interests, narrative style, suggestion level and live narration tone). The user starts the microphone explicitly; no provider key is packaged in the APK.
+- **Voice safety and limits:** Live Guide requires a configured Firebase backend secret and Auth/App Check, runs only in the foreground, and stops for a GPS-confirmed moving motorcycle/car session. The basic wake phrase also runs only in the foreground; this is not an OS-level always-on assistant. OSM/Wikipedia are reference sources, not verified navigation or current safety/access feeds. Automatic place-arrival narration, offline map packs and background SOS are not enabled.
+
+Setup details and a device-test checklist are in [VOICE_COMPANION_IMPLEMENTATION.md](VOICE_COMPANION_IMPLEMENTATION.md). Live Guide requires deploying Cloud Functions and running `firebase functions:secrets:set BOSON_API_KEY` in your Firebase project.
 
 
 - **Ride telemetry HUD:** speed, altitude, elapsed time, distance and sensor-based lean-angle foundation.

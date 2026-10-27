@@ -27,6 +27,12 @@ object AdventureFunnelAnalytics {
         "voice_push_to_talk_started",
         "voice_hands_free_enabled",
         "voice_command_executed",
+        "live_voice_connect_requested",
+        "live_voice_connected",
+        "live_voice_disconnected",
+        "live_voice_nearby_prefetch",
+        "voice_guide_preferences_saved",
+        "voice_place_fact_requested",
     )
 
     fun log(context: Context, eventName: String, params: Map<String, Any> = emptyMap()) {
