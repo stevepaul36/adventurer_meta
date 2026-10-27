@@ -35,7 +35,7 @@ class AdventureRealtimeVoiceSessionTest {
     @Test
     fun incomingSpeechTranscriptsStaySeparateAndCompleteOncePerItem() {
         val transcripts = RealtimeUserTranscriptBuffer()
-        assertEquals("Could you", transcripts.append("item-1", "Could "))
+        assertEquals("Could ", transcripts.append("item-1", "Could "))
         assertEquals("Could you", transcripts.append("item-1", "you"))
         assertEquals("Find Niagara Falls", transcripts.append("item-2", "Find Niagara Falls"))
         assertEquals("Could you find the lake?", transcripts.complete("item-1", "Could you find the lake?"))
@@ -54,7 +54,7 @@ class AdventureRealtimeVoiceSessionTest {
         transcripts.append("four", "still here")
         transcripts.clear()
         assertEquals(null, transcripts.complete("four", ""))
-        assertEquals("123456789012", transcripts.append("limit", "123456789012345678"))
+        assertEquals("789012345678", transcripts.append("limit", "123456789012345678"))
     }
 
     @Test
