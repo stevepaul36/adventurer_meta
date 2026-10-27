@@ -61,6 +61,20 @@ class AdventureVoiceCommandTest {
     }
 
     @Test
+    fun nearbyDiscoveryPhrasesRouteToGroundedNearbyContext() {
+        assertEquals(AdventureVoiceAction.NEARBY_CONTEXT, AdventureVoiceCommandParser.parse("what is around me").action)
+        assertEquals(AdventureVoiceAction.NEARBY_CONTEXT, AdventureVoiceCommandParser.parse("tell me about nearby places").action)
+        assertEquals(AdventureVoiceAction.NEARBY_CONTEXT, AdventureVoiceCommandParser.parse("Hey Adventurer, what is around me", requireWakePhrase = true).action)
+    }
+
+    @Test
+    fun placeSearchRemainsNamedQueryAndDoesNotClaimExecution() {
+        val command = AdventureVoiceCommandParser.parse("find place Tim Hortons near me")
+        assertEquals(AdventureVoiceAction.SEARCH_PLACE, command.action)
+        assertEquals("tim hortons near me", command.query)
+    }
+
+    @Test
     fun emergencyPhraseRoutesToSafetyScreenButDoesNotDispatchSos() {
         assertEquals(AdventureVoiceAction.SAFETY_HELP, AdventureVoiceCommandParser.parse("emergency").action)
     }
