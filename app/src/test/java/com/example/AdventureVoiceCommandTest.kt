@@ -71,6 +71,14 @@ class AdventureVoiceCommandTest {
     }
 
     @Test
+    fun parsesStoryStudioNarrationCommands() {
+        assertEquals(AdventureVoiceAction.PLAY_STORY_NARRATION, AdventureVoiceCommandParser.parse("play narration").action)
+        assertEquals(AdventureVoiceAction.PLAY_STORY_NARRATION, AdventureVoiceCommandParser.parse("read my story").action)
+        assertEquals(AdventureVoiceAction.PLAY_STORY_NARRATION, AdventureVoiceCommandParser.parse("narrate my story").action)
+        assertEquals(AdventureVoiceAction.STOP_SPEAKING, AdventureVoiceCommandParser.parse("stop narration").action)
+    }
+
+    @Test
     fun suppressesLongVehicleGuidanceOnlyForConfirmedLiveMovement() {
         val movingMotorcycle = VoiceMotionSnapshot(
             activityType = ActivityType.Motorcycling,

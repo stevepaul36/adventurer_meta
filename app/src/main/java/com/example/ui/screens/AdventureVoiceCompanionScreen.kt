@@ -191,6 +191,8 @@ fun AdventureVoiceCompanionScreen(
                     VoiceCommandExample("“Give me an activity briefing”", "Hear the selected activity's current in-app guidance and prototype limitations.")
                     VoiceCommandExample("“Read my trip status” / “pause recording”", "Hear local GPS-session details or pause/resume an active session.")
                     VoiceCommandExample("“Search for Niagara Falls”", "Open an external map search; results are not verified by Adventurer.")
+                    VoiceCommandExample("“Play narration” / “read my story”", "Read the generated Story Studio narration in its selected language without navigating the player.")
+                    VoiceCommandExample("Tap Talk now or Stop", "Start a voice turn or interrupt current speech. Spoken interruption during playback requires a future realtime barge-in engine.")
                 }
             }
         }

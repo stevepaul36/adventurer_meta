@@ -45,6 +45,7 @@ import com.example.data.planning.AdventurePlannerRepository
 import com.example.data.model.ActivityType
 import com.example.data.voice.AdventureVoiceAction
 import com.example.data.voice.AdventureVoiceController
+import com.example.viewmodel.StoryStudioViewModel
 import com.example.data.voice.AdventureVoiceSafetyPolicy
 import com.example.data.voice.VoiceMotionSnapshot
 import com.example.data.voice.AdventureGuideMode
@@ -103,6 +104,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
     val plannerRepository = remember(context) { AdventurePlannerRepository(context.applicationContext) }
     val locationManager = remember { com.example.data.location.LocationManager(context.applicationContext) }
     val voiceController = remember(context) { AdventureVoiceController(context) }
+    val storyStudioViewModel: StoryStudioViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner, voiceController) {
@@ -196,6 +198,20 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                 AdventureVoiceAction.OPEN_STORY_STUDIO -> {
                     viewModel.navigateTo(Screen.STORY_STUDIO)
                     VoiceCommandReply("Opening Story Studio. Your existing activity-aware story tools are ready.")
+                }
+                AdventureVoiceAction.PLAY_STORY_NARRATION -> {
+                    val story = storyStudioViewModel.state.value.story
+                    if (vehicleIsMoving()) {
+                        VoiceCommandReply("Please pull over safely before playing a long story narration.")
+                    } else if (story == null) {
+                        viewModel.navigateTo(Screen.STORY_STUDIO)
+                        VoiceCommandReply("There isn't a generated story to read yet. In Story Studio, select footage and create a story first.")
+                    } else {
+                        VoiceCommandReply(
+                            text = story.narration.ifBlank { story.caption },
+                            languageCode = "${storyStudioViewModel.state.value.language.code}-IN",
+                        )
+                    }
                 }
                 AdventureVoiceAction.OPEN_RADAR -> {
                     viewModel.navigateTo(Screen.RADAR)
@@ -411,7 +427,11 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     Screen.EXPEDITIONS -> ExpeditionsScreen(viewModel = viewModel)
                     Screen.RADAR -> RoadsideRadarScreen(viewModel = viewModel)
                     Screen.LIVE_TRACKER -> GpsTrackerScreen(viewModel = viewModel)
-                    Screen.STORY_STUDIO -> AiStoryStudioScreen(viewModel = viewModel)
+                    Screen.STORY_STUDIO -> AiStoryStudioScreen(
+                        viewModel = viewModel,
+                        studio = storyStudioViewModel,
+                        voiceController = voiceController,
+                    )
                     Screen.GAMIFICATION -> GamificationScreen(viewModel = viewModel)
                     Screen.CLUBS -> ClubsScreen(viewModel = viewModel)
                     Screen.PROFILE -> ProfileScreen(viewModel = viewModel)

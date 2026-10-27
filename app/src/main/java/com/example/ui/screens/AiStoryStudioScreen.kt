@@ -8,8 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import android.widget.Toast
 import android.widget.VideoView
 import androidx.activity.compose.BackHandler
@@ -53,6 +51,7 @@ import coil.compose.AsyncImage
 import com.example.data.model.ActivityType
 import com.example.data.billing.AdventurerProBilling
 import com.example.analytics.AdventureFunnelAnalytics
+import com.example.data.voice.AdventureVoiceController
 import com.example.data.story.AdventureStoryTemplates
 import com.example.data.story.AnalysisResult
 import com.example.data.story.ReelExporter
@@ -71,7 +70,6 @@ import com.example.viewmodel.StudioState
 import com.example.viewmodel.SupportedLang
 import kotlinx.coroutines.launch
 import java.io.File
-import java.util.Locale
 
 private val Panel = Color(0xFF131B2A)
 private val PanelBorder = Color(0xFF334155)
@@ -81,6 +79,7 @@ private val Violet = Color(0xFFC084FC)
 @Composable
 fun AiStoryStudioScreen(
     viewModel: AdventurerViewModel,
+    voiceController: AdventureVoiceController,
     modifier: Modifier = Modifier,
     studio: StoryStudioViewModel = viewModel(),
 ) {
@@ -88,6 +87,8 @@ fun AiStoryStudioScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state by studio.state.collectAsState()
+    val voiceState by voiceController.state.collectAsState()
+    val speaking = voiceState.isSpeaking
     val activityMode by viewModel.activityMode.collectAsState()
     val proState by AdventurerProBilling.state.collectAsState()
     var tab by rememberSaveable { mutableStateOf(0) }
@@ -111,25 +112,6 @@ fun AiStoryStudioScreen(
     }
     val pickLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) studio.setSource(uri, displayName(context, uri))
-    }
-
-    // --- Text-to-speech for the narration
-    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
-    var speaking by remember { mutableStateOf(false) }
-    DisposableEffect(Unit) {
-        var engine: TextToSpeech? = null
-        engine = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                engine?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(utteranceId: String?) {}
-                    override fun onDone(utteranceId: String?) { speaking = false }
-                    @Deprecated("Deprecated in Java")
-                    override fun onError(utteranceId: String?) { speaking = false }
-                })
-                tts = engine
-            }
-        }
-        onDispose { engine?.stop(); engine?.shutdown() }
     }
 
     Scaffold(
@@ -238,19 +220,26 @@ fun AiStoryStudioScreen(
                         speaking = speaking,
                         onSpeak = {
                             val story = state.story ?: return@storyTab
-                            val engine = tts
-                            if (engine == null) {
-                                Toast.makeText(context, "Text-to-speech is not ready yet", Toast.LENGTH_SHORT).show()
-                            } else if (speaking) {
-                                engine.stop(); speaking = false
+                            val ride = viewModel.telemetry.value
+                            val vehicleMoving = com.example.data.voice.AdventureVoiceSafetyPolicy.isVehicleInMotion(
+                                com.example.data.voice.VoiceMotionSnapshot(
+                                    activityType = ride.activityType,
+                                    isRecording = ride.isRecording,
+                                    isPaused = ride.isPaused,
+                                    hasGpsFix = ride.hasGpsFix,
+                                    isDemo = ride.isDemo,
+                                    speedKmH = ride.currentSpeedKmH,
+                                )
+                            )
+                            if (voiceController.state.value.isSpeaking) {
+                                voiceController.stopSpeaking()
+                            } else if (vehicleMoving) {
+                                voiceController.say("Please pull over safely before playing a long story narration.")
                             } else {
-                                val result = engine.setLanguage(Locale.forLanguageTag("${state.language.code}-IN"))
-                                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                                    engine.setLanguage(Locale.forLanguageTag("en-IN"))
-                                    Toast.makeText(context, "${state.language.displayName} voice not installed — install it in Settings › Text-to-speech", Toast.LENGTH_LONG).show()
-                                }
-                                engine.speak(story.narration.ifBlank { story.caption }, TextToSpeech.QUEUE_FLUSH, null, "ridestory")
-                                speaking = true
+                                voiceController.sayInLanguage(
+                                    story.narration.ifBlank { story.caption },
+                                    "${state.language.code}-IN",
+                                )
                             }
                         },
                         onCopy = { text ->
