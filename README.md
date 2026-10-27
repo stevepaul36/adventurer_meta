@@ -15,7 +15,7 @@ Setup details and a device-test checklist are in [VOICE_COMPANION_IMPLEMENTATION
 
 - **Ride telemetry HUD:** speed, altitude, elapsed time, distance and sensor-based lean-angle foundation.
 - **Expedition concepts:** routes, contingency plans, high-altitude guidance and trip-budget tools.
-- **Roadside radar/SOS UI:** roadside service concepts and one-tap safety UI; live dispatch workflows require backend integration.
+- **Roadside radar/SOS UI:** prototype interface only. The app does not connect to a live rescue network, notify responders, or verify roadside contacts. Seeded fake incidents and service listings are disabled; the UI explicitly warns users to call local emergency services directly.
 - **AI Ride Story Studio:** select a video, ask AI for candidate highlights, edit timestamps, generate captions and export a local MP4 using Media3 Transformer or save EDL JSON.
 - **Adventurer Pro:** RevenueCat subscription paywall, store-priced purchase flow, restore purchases, and Pro gating for AI generation.
 
