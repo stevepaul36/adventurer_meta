@@ -67,8 +67,12 @@ data class RealtimeAdventureState(
     /** Complete user speech transcript, identified by unique input item ID. */
     val latestUserTranscript: String = "",
     val latestUserTranscriptItemId: String = "",
+    val latestUserTranscriptSequence: Long = 0L,
+    /** Sequence of the latest speech-start event; UI inserts a placeholder before assistant replies. */
+    val incomingSpeechTurnSequence: Long = 0L,
     /** Partial user speech while realtime transcription is arriving. */
     val interimUserTranscript: String = "",
+    val interimUserTranscriptSequence: Long = 0L,
     val lastError: String? = null,
 )
 
@@ -166,6 +170,9 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
     private val pendingContextNotes = ArrayDeque<String>()
     private val pendingTextTurns = PendingTextTurnQueue()
     private val userTranscriptBuffer = RealtimeUserTranscriptBuffer()
+    private val inputSpeechSequenceLock = Any()
+    private val speechSequenceByItem = linkedMapOf<String, Long>()
+    @Volatile private var currentInputSpeechSequence: Long = 0L
     @Volatile private var pendingSessionUpdate: RealtimeAdventureContext? = null
     @Volatile private var playbackStartHeadPosition: Int = -1
     @Volatile private var playbackResponseId: String? = null
@@ -381,6 +388,7 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
         synchronized(pendingContextNotes) { pendingContextNotes.clear() }
         pendingTextTurns.clear()
         userTranscriptBuffer.clear()
+        synchronized(inputSpeechSequenceLock) { speechSequenceByItem.clear(); currentInputSpeechSequence = 0L }
         pendingSessionUpdate = null
         synchronized(cancelledResponseIds) { cancelledResponseIds.clear() }
         runCatching { audioRecord?.stop() }
@@ -576,25 +584,37 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
             "conversation.item.input_audio_transcription.delta" -> {
                 val itemId = event.optString("item_id")
                 val delta = event.optString("delta")
-                userTranscriptBuffer.append(itemId, delta)?.let { partial ->
-                    _state.update { it.copy(interimUserTranscript = partial) }
+                if (itemId.isNotBlank()) {
+                    val sequence = synchronized(inputSpeechSequenceLock) {
+                        speechSequenceByItem.getOrPut(itemId) { currentInputSpeechSequence }.also {
+                            while (speechSequenceByItem.size > 8) speechSequenceByItem.remove(speechSequenceByItem.keys.first())
+                        }
+                    }
+                    userTranscriptBuffer.append(itemId, delta)?.let { partial ->
+                        _state.update { it.copy(interimUserTranscript = partial, interimUserTranscriptSequence = sequence) }
+                    }
                 }
             }
             "conversation.item.input_audio_transcription.completed" -> {
                 val itemId = event.optString("item_id").ifBlank { event.optString("event_id") }
+                val sequence = synchronized(inputSpeechSequenceLock) {
+                    speechSequenceByItem.remove(itemId) ?: currentInputSpeechSequence
+                }
                 val transcript = userTranscriptBuffer.complete(itemId, event.optString("transcript"))
                 if (!transcript.isNullOrBlank()) {
                     _state.update {
                         it.copy(
                             latestUserTranscript = transcript,
                             latestUserTranscriptItemId = itemId.ifBlank { java.util.UUID.randomUUID().toString() },
+                            latestUserTranscriptSequence = sequence,
                             interimUserTranscript = "",
                         )
                     }
                 }
             }
             "input_audio_buffer.speech_started" -> {
-                _state.update { it.copy(interimUserTranscript = "") }
+                val sequence = synchronized(inputSpeechSequenceLock) { ++currentInputSpeechSequence }
+                _state.update { it.copy(incomingSpeechTurnSequence = sequence, interimUserTranscript = "", interimUserTranscriptSequence = sequence) }
                 handleBargeIn()
             }
             "response.done" -> {
