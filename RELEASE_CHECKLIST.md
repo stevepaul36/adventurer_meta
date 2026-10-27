@@ -19,6 +19,12 @@
 - [ ] Verify localized price and subscription period/renewal disclosure, cancellation guidance, restore purchases and support path.
 - [ ] Adjust the 30-successful-generation monthly AI limit only after estimating real inference costs.
 
+## Safety-critical feature status
+
+- [ ] Do not advertise Roadside Radar as live until verified provider data and a tested backend dispatch/acknowledgement workflow are deployed.
+- [ ] Keep fabricated SOS reports, responder identities, phone numbers and roadside-service listings out of the runtime data source.
+- [ ] Verify the UI clearly states that local-only SOS actions do not contact responders and directs users to local emergency services for urgent help.
+
 ## Android and legal release
 
 - [ ] Configure upload signing key and passwords through secure CI secrets; keep signing material out of Git.

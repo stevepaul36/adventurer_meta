@@ -15,7 +15,7 @@ Setup details and a device-test checklist are in [VOICE_COMPANION_IMPLEMENTATION
 
 - **Ride telemetry HUD:** speed, altitude, elapsed time, distance and sensor-based lean-angle foundation.
 - **Expedition concepts:** routes, contingency plans, high-altitude guidance and trip-budget tools.
-- **Roadside radar/SOS UI:** roadside service concepts and one-tap safety UI; live dispatch workflows require backend integration.
+- **Roadside radar/SOS UI:** prototype interface only. The app does not connect to a live rescue network, notify responders, or verify roadside contacts. Seeded fake incidents and service listings are disabled; the UI explicitly warns users to call local emergency services directly.
 - **AI Ride Story Studio:** select a video, ask AI for candidate highlights, edit timestamps, generate captions and export a local MP4 using Media3 Transformer or save EDL JSON.
 - **Adventurer Pro:** RevenueCat subscription paywall, store-priced purchase flow, restore purchases, and Pro gating for AI generation.
 
@@ -88,7 +88,7 @@ More detail: [functions/README.md](functions/README.md) and [RELEASE_CHECKLIST.m
 
 ## Build and tests
 
-- Android: GitHub Actions workflow `.github/workflows/android-build.yml` assembles the debug APK and runs unit tests.
+- Android: GitHub Actions workflow `.github/workflows/android-build.yml` assembles the debug APK, runs unit tests, and uploads `adventurer-debug-apk` as a 14-day CI artifact when tests pass. Download it from the successful [Android build workflow](https://github.com/stevepaul36/adventurer_meta/actions/workflows/android-build.yml); this is a debug/test build, not a Play Store release.
 - Functions: `cd functions && npm install && npm test` runs TypeScript compilation and entitlement/path unit tests.
 - Local MP4 rendering happens on device; server-side Gemini requests need network access, deployed Functions, valid secrets, Auth and App Check.
 
