@@ -558,7 +558,7 @@ fun AdventurePlannerScreen(
                                 TextButton(onClick = {
                                     val term = (destination.ifBlank { destinationQuery } + " " + idea.title).trim()
                                     if (term.isNotBlank()) runCatching {
-                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(RegionalProviderCatalog.googleMapsSearchUrl(term, selectedMarket)))
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(RegionalProviderCatalog.googleMapsSearchUrl(term, selectedMarket))))
                                     }
                                 }) { Text("Check provider", color = HighAltitudeCyan) }
                             }
