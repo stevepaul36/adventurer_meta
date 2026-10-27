@@ -1,0 +1,136 @@
+name: Signed Android release candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-release-candidate
+  cancel-in-progress: false
+
+jobs:
+  release-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      REVENUECAT_API_KEY: ${{ secrets.REVENUECAT_API_KEY }}
+
+    steps:
+      - name: Require the protected main branch
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Run this workflow from the main branch only."
+            exit 1
+          fi
+
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Validate required release secrets
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          REVENUECAT_API_KEY: ${{ secrets.REVENUECAT_API_KEY }}
+        run: |
+          set -euo pipefail
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD GOOGLE_SERVICES_JSON_BASE64 REVENUECAT_API_KEY; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Required GitHub Actions secret is missing: $name"
+              exit 1
+            fi
+          done
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Prepare release-only configuration
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/adventurer-upload.jks"
+          chmod 600 "$RUNNER_TEMP/adventurer-upload.jks"
+          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
+          chmod 600 app/google-services.json
+          python3 - <<'PY'
+          import json
+          import pathlib
+          import re
+          import sys
+
+          gradle_file = pathlib.Path("app/build.gradle.kts").read_text()
+          match = re.search(r'applicationId\s*=\s*"([^"]+)"', gradle_file)
+          if not match:
+              sys.exit("Could not determine applicationId from app/build.gradle.kts.")
+          application_id = match.group(1)
+          config = json.loads(pathlib.Path("app/google-services.json").read_text())
+          registered_ids = {
+              client.get("client_info", {}).get("android_client_info", {}).get("package_name")
+              for client in config.get("client", [])
+          }
+          if application_id not in registered_ids:
+              sys.exit(
+                  f"google-services.json has no Android client registered for {application_id}. "
+                  "Register this exact package in the intended Firebase project."
+              )
+          project_id = config.get("project_info", {}).get("project_id")
+          if not project_id:
+              sys.exit("google-services.json is missing project_info.project_id.")
+          print(f"Firebase config validated for applicationId={application_id}, project={project_id}.")
+          PY
+          test -s "$RUNNER_TEMP/adventurer-upload.jks"
+
+      - name: Generate CI-only debug signing key
+        shell: bash
+        run: |
+          keytool -genkeypair -v \
+            -keystore debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Run unit tests and build the signed Android App Bundle
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/adventurer-upload.jks
+        run: gradle --no-daemon :app:testDebugUnitTest :app:bundleRelease
+
+      - name: Verify release artifact exists and calculate checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle="app/build/outputs/bundle/release/app-release.aab"
+          test -s "$bundle"
+          sha256sum "$bundle" > "$bundle.sha256"
+          cat "$bundle.sha256"
+
+      - name: Upload signed release candidate (not published)
+        uses: actions/upload-artifact@v4
+        with:
+          name: adventurer-signed-release-candidate-${{ github.run_number }}
+          path: |
+            app/build/outputs/bundle/release/app-release.aab
+            app/build/outputs/bundle/release/app-release.aab.sha256
+          if-no-files-found: error
+          retention-days: 7
