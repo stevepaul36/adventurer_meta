@@ -44,6 +44,10 @@ The app should share one trip and story system across activities instead of trea
 
 The detailed capability matrix, safety boundaries, common data model and rollout plan live in [MULTI_ADVENTURE_PRODUCT_BLUEPRINT.md](MULTI_ADVENTURE_PRODUCT_BLUEPRINT.md). The current generic GPS recorder does **not** replace an underwater dive computer, certify hunting/fishing regulations, or guarantee off-grid emergency dispatch.
 
+## Voice-first Adventure Copilot
+
+The product strategy, provider boundaries, confirmation policy, UX requirements and phased roadmap are documented in [ADVENTURE_COPILOT_PRODUCT_PLAN.md](ADVENTURE_COPILOT_PRODUCT_PLAN.md). The current implementation connects the existing voice command for nearby-place questions to the authenticated GPS/OSM lookup and reports the results as map candidates with explicit limitations. It does not perform visual recognition, live traffic/ETA calculation, restaurant booking, food ordering or arbitrary cross-app tapping.
+
 ## Technology
 
 - Kotlin, Jetpack Compose, Android lifecycle/ViewModel/StateFlow.
