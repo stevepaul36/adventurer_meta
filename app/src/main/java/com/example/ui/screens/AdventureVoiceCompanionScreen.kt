@@ -76,9 +76,10 @@ fun AdventureVoiceCompanionScreen(
     var lastLiveTranscript by remember { mutableStateOf("") }
     val chatLines = remember { mutableStateListOf<VoiceChatLine>() }
 
-    LaunchedEffect(liveState.latestTranscript) {
+    // Stream partial audio transcripts in the status panel; append only once the response finishes.
+    LaunchedEffect(liveState.isSpeaking, liveState.latestTranscript) {
         val transcript = liveState.latestTranscript.trim()
-        if (transcript.isNotBlank() && transcript != lastLiveTranscript) {
+        if (!liveState.isSpeaking && transcript.isNotBlank() && transcript != lastLiveTranscript) {
             chatLines.add(VoiceChatLine(isUser = false, text = transcript))
             lastLiveTranscript = transcript
             while (chatLines.size > 12) chatLines.removeAt(0)
