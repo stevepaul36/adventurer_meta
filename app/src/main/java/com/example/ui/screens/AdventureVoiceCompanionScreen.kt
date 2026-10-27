@@ -74,7 +74,18 @@ fun AdventureVoiceCompanionScreen(
     var showPersonalization by rememberSaveable { mutableStateOf(false) }
     var chatInput by rememberSaveable { mutableStateOf("") }
     var lastLiveTranscript by remember { mutableStateOf("") }
+    var lastLiveUserTranscriptItemId by remember { mutableStateOf("") }
     val chatLines = remember { mutableStateListOf<VoiceChatLine>() }
+
+    LaunchedEffect(liveState.latestUserTranscriptItemId) {
+        val itemId = liveState.latestUserTranscriptItemId
+        val transcript = liveState.latestUserTranscript.trim()
+        if (itemId.isNotBlank() && itemId != lastLiveUserTranscriptItemId && transcript.isNotBlank()) {
+            chatLines.add(VoiceChatLine(isUser = true, text = transcript))
+            lastLiveUserTranscriptItemId = itemId
+            while (chatLines.size > 12) chatLines.removeAt(0)
+        }
+    }
 
     // Stream partial audio transcripts in the status panel; append only once the response finishes.
     LaunchedEffect(liveState.isSpeaking, liveState.latestTranscript) {
@@ -250,6 +261,9 @@ fun AdventureVoiceCompanionScreen(
                     Text(liveState.status, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     liveState.lastError?.takeIf { it.isNotBlank() }?.let {
                         Text(it, color = AmberGold, style = MaterialTheme.typography.bodySmall)
+                    }
+                    liveState.interimUserTranscript.takeIf { it.isNotBlank() }?.let { partial ->
+                        Text("You: $partial…", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     }
                     if (liveState.latestTranscript.isNotBlank()) {
                         Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(12.dp)) {
