@@ -144,7 +144,7 @@ fun AiStoryStudioScreen(
                             color = Color.White
                         )
                         Text(
-                            if (state.firebaseConfigured) "On-device scoring · Firebase set up; cloud AI needs Pro" else "On-device scoring · offline story mode ready",
+                            if (state.firebaseConfigured) "Local scoring · Firebase detected; cloud setup may still be required" else "Local scoring · offline story mode ready",
                             style = MaterialTheme.typography.labelSmall,
                             color = if (state.firebaseConfigured) Violet else AmberGold,
                         )
