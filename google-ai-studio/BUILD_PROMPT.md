@@ -7,10 +7,15 @@ Build a polished, responsive, full-screen React + TypeScript app called ADVENTUR
 ## Output requirement
 Create a working multi-screen app with interactive UI and client-side local mock data. Do not return only a landing page, wireframe or explanation. No API keys are needed for Preview. Do not invent successful live bookings, orders, GPS fixes, navigation, or camera capture. Clearly label simulated actions.
 
-## Visual direction
+## Design references and visual direction
+Use the two reference projects as inspiration for principles, not as code to copy:
+- **Tandem:** interruptible voice interaction, short progress updates, visible task states, correction/pause controls, and a clear difference between a handoff and verified completion.
+- **Every Joule:** editorial storytelling, tactile visual detail, a sense of discovery, and memorable visual transitions. Borrow that sense of craft for the Memories and trip-story areas; do not copy its physics-lesson content or require heavy 3D rendering.
+- Combine them into a distinct Adventurer identity: a practical trip command center during planning, and a beautiful expedition journal when revisiting memories.
+
 - Premium adventure-tech, calm and cinematic; not a generic chatbot or dense admin dashboard.
 - Full-screen responsive app. Desktop: spacious three-column workspace. Tablet: two columns. Mobile: one column with bottom navigation.
-- Deep charcoal/navy background, warm amber adventure accent, muted teal for connected/verified states, high-contrast off-white typography, generous spacing, restrained borders, rounded cards, subtle topographic contour patterns and map-like route lines.
+- Journey and Explore use deep charcoal/navy, warm amber accents, muted teal for connected/verified states, high-contrast off-white typography, generous spacing, restrained borders, rounded cards, subtle topographic contour patterns and map-like route lines. Memories and trip-story views may use a warmer paper/editorial treatment with serif headlines and carefully chosen photographic layouts.
 - Modern readable sans-serif. Avoid giant hero gradients, excessive glow, overuse of glassmorphism, emoji-only navigation and tiny grey text.
 - Use inline SVG icons or a reliable icon library. Provide fallbacks for remote images.
 - Accessible keyboard focus, semantic controls, clear labels, visible state changes and touch-friendly targets.
