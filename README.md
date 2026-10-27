@@ -48,6 +48,12 @@ The detailed capability matrix, safety boundaries, common data model and rollout
 
 The product strategy, provider boundaries, confirmation policy, UX requirements and phased roadmap are documented in [ADVENTURE_COPILOT_PRODUCT_PLAN.md](ADVENTURE_COPILOT_PRODUCT_PLAN.md). The [2019–2026 voice-first product research](ADVENTURER_VOICE_FIRST_PRODUCT_RESEARCH_2019_2026.md) explains the low-data architecture, short speech UX, fuel planning, camera permissions and staged roadmap. A deterministic fuel-range calculator is now present with unit tests; it is not yet wired to live route data, automatic reminders or vehicle telemetry. The current implementation connects the existing voice command for nearby-place questions to the authenticated GPS/OSM lookup and reports the results as map candidates with explicit limitations. It does not perform visual recognition, live traffic/ETA calculation, restaurant booking, food ordering or arbitrary cross-app tapping.
 
+## Interactive India/Canada UI preview
+
+A full-screen responsive product prototype is available at [`prototypes/india-canada-market-preview/index.html`](prototypes/india-canada-market-preview/index.html). Open the file directly in a modern browser—no build, package install, API key or server is required. The companion [preview README](prototypes/india-canada-market-preview/README.md) lists the flows to try and their limitations.
+
+The preview includes market switching, regional provider catalogue, search filters, local trip stop editing/export, reminders/checklists, fuel estimation, a food cart/review/confirmation simulation, a private memory timeline and a deterministic voice-demo workspace. It is a design/interaction sandbox, not a deployed service and not the Kotlin app. Run `node scripts/validate-market-preview.mjs` from the repository root to check the prototype's JavaScript syntax and required interactions.
+
 ## India and Canada market support
 
 Explore & Plan now includes an explicit India/Canada service selector, category filters, regional provider cards and market-aware Google Maps search. The selection is user-editable and seeded from the device country only; it does not use GPS to choose a market. Provider cards are **external website handoffs only**—Adventurer does not read their private screens, live inventory, cart/booking data, payment state or receipts.
