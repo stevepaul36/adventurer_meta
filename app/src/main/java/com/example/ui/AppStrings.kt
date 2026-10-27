@@ -10,6 +10,7 @@ import com.example.viewmodel.SupportedLang
 enum class Str(val en: String, val hi: String, val mr: String, val kn: String, val ta: String) {
     NAV_FEED("Feed", "फ़ीड", "फीड", "ಫೀಡ್", "ஃபீட்"),
     NAV_EXPLORE("Explore", "एक्सप्लोर", "एक्सप्लोर", "ಅನ್ವೇಷಿಸಿ", "ஆராயுங்கள்"),
+    NAV_VOICE("Voice", "आवाज़", "आवाज", "ಧ್ವನಿ", "குரல்"),
     QUICK_EXPEDITIONS("Expeditions", "अभियान", "मोहीमा", "ಅಭಿಯಾನಗಳು", "பயணங்கள்"),
     NAV_PASSES("Passes", "दर्रे", "खिंडी", "ಘಾಟ್‌ಗಳು", "கணவாய்கள்"),
     NAV_RIDE("Ride", "राइड", "राइड", "ರೈಡ್", "ரைடு"),
