@@ -131,10 +131,15 @@ fun AdventurePlannerScreen(
     var startDate by rememberSaveable { mutableStateOf("Flexible dates") }
     var daysText by rememberSaveable { mutableStateOf("2") }
     val initialBudgetCurrency = remember {
-        val saved = marketPreferences.getString("budget_currency_code", null)
-        when (saved) {
-            "CAD", "INR" -> saved
-            else -> if (Locale.getDefault().country.equals("IN", ignoreCase = true)) "INR" else "CAD"
+        val savedCurrency = marketPreferences.getString("budget_currency_code", null)
+        val savedMarket = marketPreferences.getString("selected_market", null)
+        when (savedCurrency) {
+            "CAD", "INR" -> savedCurrency
+            else -> when (savedMarket) {
+                AdventureMarket.INDIA.name -> "INR"
+                AdventureMarket.CANADA.name -> "CAD"
+                else -> if (Locale.getDefault().country.equals("IN", ignoreCase = true)) "INR" else "CAD"
+            }
         }
     }
     var budgetCurrencyCode by rememberSaveable { mutableStateOf(initialBudgetCurrency) }
@@ -759,7 +764,7 @@ fun AdventurePlannerScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text("Adjust:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                listOf(-50, 50, 100).forEach { delta ->
+                                (if (budgetCurrencyCode == "INR") listOf(-1000, 1000, 2500) else listOf(-50, 50, 100)).forEach { delta ->
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
                                         color = MaterialTheme.colorScheme.surface,
