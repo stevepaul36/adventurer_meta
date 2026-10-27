@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.TipsAndUpdates
 import androidx.compose.material.icons.filled.VolumeUp
@@ -26,15 +27,19 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +71,37 @@ fun AdventureVoiceCompanionScreen(
     val liveState by liveGuideSession.state.collectAsState()
     val activityMode by viewModel.activityMode.collectAsState()
     var guidePreferences by remember(preferencesStore) { mutableStateOf(preferencesStore.load()) }
+    var showPersonalization by rememberSaveable { mutableStateOf(false) }
+    var chatInput by rememberSaveable { mutableStateOf("") }
+    var lastLiveTranscript by remember { mutableStateOf("") }
+    val chatLines = remember { mutableStateListOf<VoiceChatLine>() }
+
+    LaunchedEffect(liveState.latestTranscript) {
+        val transcript = liveState.latestTranscript.trim()
+        if (transcript.isNotBlank() && transcript != lastLiveTranscript) {
+            chatLines.add(VoiceChatLine(isUser = false, text = transcript))
+            lastLiveTranscript = transcript
+            while (chatLines.size > 12) chatLines.removeAt(0)
+        }
+    }
+
+    fun sendTypedMessage() {
+        val message = chatInput.trim()
+        if (message.isBlank()) return
+        chatLines.add(VoiceChatLine(isUser = true, text = message))
+        while (chatLines.size > 12) chatLines.removeAt(0)
+        chatInput = ""
+        if (liveState.isConnected) {
+            lastLiveTranscript = ""
+            if (!liveGuideSession.sendTextTurn(message)) {
+                chatLines.add(VoiceChatLine(isUser = false, text = "Live Guide couldn't queue that message. Wait for the current reply or reconnect, then try again."))
+            }
+        } else {
+            val reply = controller.submitTextCommand(message, speakResponse = false)
+            chatLines.add(VoiceChatLine(isUser = false, text = reply.ifBlank { "Command received." }))
+        }
+        while (chatLines.size > 12) chatLines.removeAt(0)
+    }
 
     fun saveGuidePreferences(updated: AdventureGuidePreferences) {
         val saved = preferencesStore.save(updated)
@@ -83,7 +119,7 @@ fun AdventureVoiceCompanionScreen(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Adventure Voice Companion", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                 Text(
-                    "Use your voice to navigate Adventurer, control a session, and hear an activity-aware briefing.",
+                    "Tap to talk or type a command. Connect Live AI Guide for open-ended conversation; preferences are optional and can be changed later.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -111,11 +147,18 @@ fun AdventureVoiceCompanionScreen(
                                     state.isSpeaking -> "Adventurer is speaking"
                                     state.isListening -> "Listening"
                                     state.handsFreeEnabled -> "Hey Adventurer is armed"
-                                    else -> "Voice is ready"
+                                    !controller.isSpeechRecognitionAvailable() -> "Speech input unavailable · type below"
+                                    !state.isReady -> "Starting voice output…"
+                                    else -> "Ready to talk or type"
                                 },
                                 fontWeight = FontWeight.Bold,
                             )
-                            Text(state.status, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                if (!controller.isSpeechRecognitionAvailable()) "${state.status} You can still use the text command box below."
+                                else state.status,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -196,7 +239,7 @@ fun AdventureVoiceCompanionScreen(
                         Button(
                             onClick = { onRequestVoice(VoiceStartRequest.REALTIME_GUIDE) },
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = state.isReady || !liveState.isConnecting,
+                            enabled = !liveState.isConnecting,
                         ) {
                             Icon(Icons.Filled.Headphones, contentDescription = null)
                             Spacer(Modifier.width(6.dp))
@@ -232,7 +275,63 @@ fun AdventureVoiceCompanionScreen(
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Remember my adventure interests", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Chat and quick commands", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (liveState.isConnected) "Live AI Guide is connected. Ask naturally; sent messages are processed in order."
+                        else "Offline command mode is available now. Type a command below; open-ended AI chat needs Firebase, App Check and the BOSON_API_KEY server secret.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    if (chatLines.isEmpty()) {
+                        Text("Try: Open Explore · Read my trip status · Open Story Studio · Switch to trekking", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        chatLines.takeLast(8).forEach { line ->
+                            Surface(
+                                color = if (line.isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text(if (line.isUser) "You" else "Adventurer", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                    Text(line.text, style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = chatInput,
+                            onValueChange = { chatInput = it.take(500) },
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text("Ask or command…") },
+                            maxLines = 3,
+                        )
+                        Button(onClick = { sendTypedMessage() }, enabled = chatInput.isNotBlank()) {
+                            Icon(Icons.Filled.Send, contentDescription = "Send message")
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Open Explore", "Read my trip status", "Open Story Studio", "Switch to trekking").forEach { command ->
+                            FilterChip(selected = false, onClick = { chatInput = command; sendTypedMessage() }, label = { Text(command) })
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            OutlinedButton(onClick = { showPersonalization = !showPersonalization }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Filled.TipsAndUpdates, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(if (showPersonalization) "Hide optional personalisation" else "Personalise your guide (optional)")
+            }
+        }
+
+        if (showPersonalization) {
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Remember my adventure interests", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(
                         "Saved on this device and supplied to Live Guide as personalization context. It never treats preferences as facts about a place.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -333,6 +432,7 @@ fun AdventureVoiceCompanionScreen(
                 }
             }
         }
+        }
 
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
@@ -388,6 +488,8 @@ fun AdventureVoiceCompanionScreen(
 }
 
 @Composable
+private data class VoiceChatLine(val isUser: Boolean, val text: String)
+
 private fun VoiceCommandExample(command: String, description: String) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(command, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
