@@ -2,6 +2,10 @@ package com.example.data.ai
 
 import android.content.Context
 import android.net.Uri
+import com.example.data.story.AdventureStoryTemplate
+import com.example.data.story.StoryCopy
+import com.example.data.story.StudioMoment
+import com.example.data.story.formatTime
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
@@ -96,6 +100,63 @@ object RideStoryAiService {
         } finally {
             deleteTemporaryVideo(storagePath)
         }
+    }
+
+    /** Text-only story generation: selected moment metadata is sent; no video is uploaded. */
+    suspend fun generateAdventureStory(
+        title: String,
+        location: String,
+        language: String,
+        activityName: String,
+        template: AdventureStoryTemplate,
+        moments: List<StudioMoment>,
+        sourceDurationSec: Double,
+    ): StoryCopy {
+        val ordered = moments.sortedBy { it.startSec }
+        require(ordered.isNotEmpty()) { "Select at least one moment before writing a story." }
+        val sentMoments = ordered.take(8)
+        val result = callFunction(
+            "generateAdventureStory",
+            mapOf(
+                "title" to title.take(80),
+                "location" to location.take(120),
+                "language" to language.take(80),
+                "activityName" to activityName.take(64),
+                "templateTitle" to template.title.take(80),
+                "templateGuidance" to template.promptGuidance.take(500),
+                "sourceDurationSec" to sourceDurationSec.coerceIn(0.0, 72_000.0),
+                "clips" to sentMoments.map { moment ->
+                    mapOf(
+                        "timeRange" to "${formatTime(moment.startSec)} - ${formatTime(moment.endSec)}".take(40),
+                        "title" to moment.label.take(100),
+                        "tag" to moment.tags.firstOrNull()?.take(40).orEmpty().ifBlank { "Adventure" },
+                    )
+                },
+            ),
+        )
+        val caption = result["caption"] as? String
+        val diary = result["diary"] as? String
+        require(!caption.isNullOrBlank() && !diary.isNullOrBlank()) {
+            "The cloud story service returned an incomplete result. Your offline template is still available."
+        }
+        val rawHashtags = result["hashtags"] as? List<*> ?: emptyList<Any>()
+        val hashtags = rawHashtags.mapNotNull { it as? String }
+            .map { value -> if (value.startsWith("#")) value.take(41) else "#$value".take(41) }
+            .filter { it.length > 1 }
+            .take(8)
+        val rawChapters = result["chapterTitles"] as? List<*> ?: emptyList<Any>()
+        val sentChapterTitles = sentMoments.indices.map { index ->
+            (rawChapters.getOrNull(index) as? String)?.trim()?.takeIf { it.isNotBlank() } ?: sentMoments[index].label
+        }
+        val chapterTitles = sentChapterTitles + ordered.drop(sentMoments.size).map { it.label }
+        return StoryCopy(
+            caption = caption.take(280),
+            diary = diary.take(4_000),
+            hashtags = hashtags,
+            chapterTitles = chapterTitles,
+            narration = (result["narration"] as? String).orEmpty().take(2_000),
+            fromAi = true,
+        )
     }
 
     suspend fun generateCaption(
