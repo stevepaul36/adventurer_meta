@@ -115,7 +115,7 @@ fun RoadsideRadarScreen(
                                 color = DangerRed.copy(alpha = 0.2f)
                             ) {
                                 Text(
-                                    text = "LIVE",
+                                    text = "NOT CONNECTED",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = DangerRed,
@@ -158,6 +158,31 @@ fun RoadsideRadarScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp)
             )
+
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        "Not connected to live rescue services",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Text(
+                        "SOS broadcasts and responder listings are local-only in this build. They do not notify emergency services or other riders. For urgent help, call your local emergency number directly.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
 
             // Active User SOS Alert Banner (if user has active beacon)
             if (myActiveSos != null) {
