@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -103,6 +104,7 @@ class AdventureVoiceController(private val context: Context) {
     private var currentUtteranceId: String? = null
     private var pendingAfterSpeech: (() -> Unit)? = null
     private var commandHandler: ((ParsedAdventureVoiceCommand) -> VoiceCommandReply)? = null
+    private var ignoreCancelErrorUntilMillis: Long = 0L
 
     private val _state = MutableStateFlow(
         AdventureVoiceState(
@@ -115,6 +117,12 @@ class AdventureVoiceController(private val context: Context) {
         )
     )
     val state: StateFlow<AdventureVoiceState> = _state.asStateFlow()
+
+    private val oneShotRestartRunnable = Runnable {
+        if (foregroundActive && _state.value.awaitingCommand && !_state.value.handsFreeEnabled && !_state.value.isSpeaking) {
+            startListening()
+        }
+    }
 
     init {
         // Use the Activity context for SpeechRecognizer; callers shut the controller down with
@@ -145,6 +153,47 @@ class AdventureVoiceController(private val context: Context) {
 
     fun hasMicrophonePermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+    fun isSpeechRecognitionAvailable(): Boolean =
+        runCatching { SpeechRecognizer.isRecognitionAvailable(context) }.getOrDefault(false)
+
+    /** Executes only the existing typed, allowlisted app commands; this is the offline chat fallback. */
+    fun submitTextCommand(rawText: String, speakResponse: Boolean = false): String {
+        val text = rawText.trim()
+        if (text.isBlank()) return "Type a command such as “open Explore” or “read my trip status”."
+        val parsed = AdventureVoiceCommandParser.parse(text, requireWakePhrase = false)
+        val reply = when (parsed.action) {
+            AdventureVoiceAction.IGNORED -> VoiceCommandReply("Please enter a command.")
+            AdventureVoiceAction.WAKE_ONLY -> VoiceCommandReply("You're in text mode. Type a full command, or tap Talk now to speak.")
+            AdventureVoiceAction.STOP_SPEAKING -> {
+                stopSpeaking()
+                VoiceCommandReply("Speech stopped.")
+            }
+            AdventureVoiceAction.DISABLE_HANDS_FREE -> {
+                disableHandsFree()
+                VoiceCommandReply("Hands-free listening is off.")
+            }
+            AdventureVoiceAction.GUIDED_MODE -> {
+                setGuideMode(AdventureGuideMode.TOUR)
+                VoiceCommandReply("Tour mode selected.")
+            }
+            AdventureVoiceAction.WANDER_MODE -> {
+                setGuideMode(AdventureGuideMode.WANDER)
+                VoiceCommandReply("Wander mode selected. I'll keep answers concise and wait for you to ask.")
+            }
+            AdventureVoiceAction.REPEAT_LAST -> VoiceCommandReply(
+                _state.value.lastResponse.ifBlank { "I haven't said anything to repeat yet." }
+            )
+            else -> commandHandler?.invoke(parsed)
+                ?: VoiceCommandReply("Local controls are not connected yet. Try open Explore, open Story Studio, switch to trekking, or read my trip status.")
+        }
+        if (reply.silent) {
+            reply.afterSpeech?.invoke()
+            return reply.text.ifBlank { "Done." }
+        }
+        if (speakResponse) say(reply.text, reply.afterSpeech) else reply.afterSpeech?.invoke()
+        return reply.text
+    }
 
     fun updateLanguage(code: String) {
         _state.value = _state.value.copy(languageCode = code.ifBlank { "en" })
@@ -194,13 +243,14 @@ class AdventureVoiceController(private val context: Context) {
             return
         }
         stopSpeaking()
+        mainHandler.removeCallbacks(oneShotRestartRunnable)
         stopRecognizer()
         _state.value = _state.value.copy(
             awaitingCommand = true,
             isListening = false,
-            status = "Listening for a command. Try “open Explore” or “go back”.",
+            status = if (isSpeechRecognitionAvailable()) "Starting microphone…" else "No speech-recognition service is available on this device. You can type a command below.",
         )
-        if (foregroundActive) startListening()
+        if (foregroundActive) scheduleOneShotRestart(300)
     }
 
     fun setForegroundActive(active: Boolean) {
@@ -211,8 +261,11 @@ class AdventureVoiceController(private val context: Context) {
             if (_state.value.handsFreeEnabled) {
                 _state.value = _state.value.copy(status = "Listening paused while the app is in the background.")
             }
-        } else if (_state.value.handsFreeEnabled && hasMicrophonePermission() && !_state.value.isSpeaking) {
-            startListening()
+        } else if (hasMicrophonePermission() && !_state.value.isSpeaking) {
+            when {
+                _state.value.handsFreeEnabled -> startListening()
+                _state.value.awaitingCommand -> scheduleOneShotRestart(180)
+            }
         }
     }
 
@@ -256,10 +309,12 @@ class AdventureVoiceController(private val context: Context) {
         pendingAfterSpeech = null
         _state.value = _state.value.copy(isSpeaking = false, status = "Speech stopped.")
         if (_state.value.handsFreeEnabled && foregroundActive) scheduleRestart(250)
+        else if (_state.value.awaitingCommand && foregroundActive) scheduleOneShotRestart(120)
     }
 
     fun shutdown() {
         mainHandler.removeCallbacksAndMessages(null)
+        mainHandler.removeCallbacks(oneShotRestartRunnable)
         speechRecognizer?.cancel()
         speechRecognizer?.destroy()
         speechRecognizer = null
@@ -324,8 +379,12 @@ class AdventureVoiceController(private val context: Context) {
 
     private fun ensureRecognizer() {
         if (speechRecognizer != null) return
-        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-            _state.value = _state.value.copy(status = "No speech-recognition service is available on this device.")
+        if (!isSpeechRecognitionAvailable()) {
+            _state.value = _state.value.copy(
+                isListening = false,
+                awaitingCommand = false,
+                status = "No speech-recognition service is available on this device. You can type commands instead.",
+            )
             return
         }
         val onDeviceAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
@@ -362,6 +421,7 @@ class AdventureVoiceController(private val context: Context) {
             override fun onError(error: Int) {
                 mainHandler.post {
                     _state.value = _state.value.copy(isListening = false)
+                    if (error == SpeechRecognizer.ERROR_CLIENT && SystemClock.uptimeMillis() <= ignoreCancelErrorUntilMillis) return@post
                     if (_state.value.isSpeaking) return@post
                     if (_state.value.handsFreeEnabled && foregroundActive) {
                         _state.value = _state.value.copy(status = "Still listening for “Hey Adventurer”…")
@@ -420,6 +480,13 @@ class AdventureVoiceController(private val context: Context) {
 
     private val restartListeningRunnable = Runnable { startListening() }
 
+    private fun scheduleOneShotRestart(delayMillis: Long) {
+        mainHandler.removeCallbacks(oneShotRestartRunnable)
+        if (foregroundActive && _state.value.awaitingCommand && !_state.value.handsFreeEnabled && !_state.value.isSpeaking) {
+            mainHandler.postDelayed(oneShotRestartRunnable, delayMillis)
+        }
+    }
+
     private fun scheduleRestart(delayMillis: Long) {
         mainHandler.removeCallbacks(restartListeningRunnable)
         if (_state.value.handsFreeEnabled && foregroundActive && !_state.value.isSpeaking) {
@@ -428,8 +495,12 @@ class AdventureVoiceController(private val context: Context) {
     }
 
     private fun stopRecognizer() {
+        val recognizer = speechRecognizer
         _state.value = _state.value.copy(isListening = false)
-        runCatching { speechRecognizer?.cancel() }
+        // Android may deliver ERROR_CLIENT asynchronously after cancel(); don't let that old
+        // callback clear a newer one-shot request (notably the Hey Adventurer follow-up turn).
+        if (recognizer != null) ignoreCancelErrorUntilMillis = SystemClock.uptimeMillis() + 700L
+        runCatching { recognizer?.cancel() }
     }
 
     private fun processTranscript(rawText: String) {
@@ -450,7 +521,9 @@ class AdventureVoiceController(private val context: Context) {
         when (parsed.action) {
             AdventureVoiceAction.WAKE_ONLY -> {
                 _state.value = _state.value.copy(awaitingCommand = true)
-                say("I'm listening. What do you need?", null)
+                say("I'm listening. What do you need?", afterSpeech = {
+                    if (!_state.value.handsFreeEnabled) scheduleOneShotRestart(180)
+                })
             }
             AdventureVoiceAction.STOP_SPEAKING -> stopSpeaking()
             AdventureVoiceAction.DISABLE_HANDS_FREE -> {
@@ -498,15 +571,24 @@ object AdventureVoiceCommandParser {
     private val wakePhrases = listOf("hey adventurer", "hi adventurer", "okay adventurer", "ok adventurer")
 
     fun parse(transcript: String, requireWakePhrase: Boolean = false): ParsedAdventureVoiceCommand {
-        val normalized = transcript.lowercase(Locale.ROOT)
+        var normalized = transcript.lowercase(Locale.ROOT)
             .replace(Regex("(?<=\\p{L})['’](?=\\p{L})"), "")
             .replace(Regex("[^\\p{L}\\p{N}\\s]"), " ")
             .replace(Regex("\\s+"), " ")
             .trim()
+        val politePrefixes = listOf("please ", "could you ", "can you ", "would you ", "i want you to ", "i want to ")
+        while (true) {
+            val prefix = politePrefixes.firstOrNull { normalized.startsWith(it) } ?: break
+            normalized = normalized.removePrefix(prefix).trim()
+        }
         if (normalized.isBlank()) return ParsedAdventureVoiceCommand(AdventureVoiceAction.IGNORED)
         val wake = wakePhrases.firstOrNull { normalized == it || normalized.startsWith("$it ") }
         if (requireWakePhrase && wake == null) return ParsedAdventureVoiceCommand(AdventureVoiceAction.IGNORED)
-        val phrase = if (wake != null) normalized.removePrefix(wake).trim() else normalized
+        var phrase = if (wake != null) normalized.removePrefix(wake).trim() else normalized
+        while (true) {
+            val prefix = politePrefixes.firstOrNull { phrase.startsWith(it) } ?: break
+            phrase = phrase.removePrefix(prefix).trim()
+        }
         if (phrase.isBlank()) return ParsedAdventureVoiceCommand(AdventureVoiceAction.WAKE_ONLY, wakeDetected = wake != null)
 
         val exact = phrase.trim()
@@ -524,10 +606,10 @@ object AdventureVoiceCommandParser {
             exact in setOf("next", "next screen", "go forward", "go to next screen") -> return result(AdventureVoiceAction.NEXT_SCREEN)
             exact in setOf("previous", "previous tab", "go to previous tab") -> return result(AdventureVoiceAction.PREVIOUS_SCREEN)
             exact in setOf("home", "go home", "open home", "open feed", "show feed") -> return result(AdventureVoiceAction.OPEN_FEED)
-            exact in setOf("explore", "open explore", "open explore and plan", "open planner", "plan a trip") -> return result(AdventureVoiceAction.OPEN_EXPLORE)
-            exact in setOf("open tracker", "open ride", "open activity", "show tracker", "open live tracker") -> return result(AdventureVoiceAction.OPEN_TRACKER)
+            exact in setOf("explore", "open explore", "open the explore", "go to explore", "take me to explore", "open explore and plan", "open planner", "open trip planner", "open my trips", "show my trip planner", "plan a trip") -> return result(AdventureVoiceAction.OPEN_EXPLORE)
+            exact in setOf("open tracker", "open ride", "open activity", "show tracker", "open live tracker", "show my activity") -> return result(AdventureVoiceAction.OPEN_TRACKER)
             exact in setOf("open voice", "open voice companion", "open assistant") -> return result(AdventureVoiceAction.OPEN_VOICE)
-            exact in setOf("open story studio", "create a story", "open story", "make a story") -> return result(AdventureVoiceAction.OPEN_STORY_STUDIO)
+            exact in setOf("open story studio", "go to story studio", "open my story studio", "open stories", "open my stories", "show my stories", "create a story", "make a story", "write my story", "make my story") -> return result(AdventureVoiceAction.OPEN_STORY_STUDIO)
             exact in setOf("open safety", "open help", "open radar", "open roadside radar") -> return result(AdventureVoiceAction.OPEN_RADAR)
             exact in setOf("open profile", "show profile", "open my profile") -> return result(AdventureVoiceAction.OPEN_PROFILE)
             exact in setOf("start recording", "start activity", "start trip", "begin activity", "begin ride") -> return result(AdventureVoiceAction.START_ACTIVITY)
@@ -535,7 +617,7 @@ object AdventureVoiceCommandParser {
             exact in setOf("resume", "resume recording", "resume activity", "resume trip", "resume ride", "continue trip") -> return result(AdventureVoiceAction.RESUME_ACTIVITY)
             exact in setOf("end trip", "finish trip", "stop activity", "open trip controls") -> return result(AdventureVoiceAction.END_ACTIVITY)
             exact in setOf("activity briefing", "give me an activity briefing", "guide me", "what should i know", "tell me about this activity") -> return result(AdventureVoiceAction.ACTIVITY_BRIEFING)
-            exact in setOf("status", "trip status", "activity status", "how far have i gone", "how far", "current speed", "read my status") -> return result(AdventureVoiceAction.RIDE_STATUS)
+            exact in setOf("status", "trip status", "activity status", "how far have i gone", "how far", "current speed", "read my status", "read my trip status", "what am i doing now") -> return result(AdventureVoiceAction.RIDE_STATUS)
             exact in setOf("sos", "emergency", "i need help", "safety help") -> return result(AdventureVoiceAction.SAFETY_HELP)
             exact in setOf("guided tour", "tour mode", "switch to tour mode") -> return result(AdventureVoiceAction.GUIDED_MODE)
             exact in setOf("wander mode", "switch to wander mode", "on demand mode") -> return result(AdventureVoiceAction.WANDER_MODE)
@@ -550,7 +632,7 @@ object AdventureVoiceCommandParser {
             if (activity != null) return result(AdventureVoiceAction.SELECT_ACTIVITY, activity = activity)
         }
 
-        val searchPrefix = listOf("search for ", "look up ", "find place ", "tell me about ", "where is ")
+        val searchPrefix = listOf("search for ", "look up ", "find place ", "where can i find ", "find ", "look for ", "navigate to ", "take me to ", "go to ", "show me ", "tell me about ", "where is ")
             .firstOrNull { exact.startsWith(it) }
         if (searchPrefix != null) {
             val query = exact.removePrefix(searchPrefix).trim()

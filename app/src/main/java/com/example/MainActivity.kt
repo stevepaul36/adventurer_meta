@@ -927,7 +927,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     Screen.PRO_PAYWALL -> ProPaywallScreen(viewModel = viewModel)
                 }
             }
-            if (currentScreen != Screen.VOICE_COMPANION && currentScreen != Screen.JOURNEY) {
+            if (currentScreen != Screen.VOICE_COMPANION) {
                 AdventureVoiceBubble(
                     controller = voiceController,
                     onRequestVoice = requestVoice,

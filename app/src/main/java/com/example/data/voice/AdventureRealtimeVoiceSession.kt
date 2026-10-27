@@ -57,16 +57,73 @@ data class RealtimeAdventureContext(
 )
 
 data class RealtimeAdventureState(
+    /** Unique across reconnects so UI transcript IDs cannot collide with prior sessions. */
+    val sessionId: String = java.util.UUID.randomUUID().toString(),
     val isConnecting: Boolean = false,
     val isConnected: Boolean = false,
     val isListening: Boolean = false,
     val isSpeaking: Boolean = false,
     val status: String = "Live Guide is stopped.",
+    /** Complete assistant response transcript. */
     val latestTranscript: String = "",
+    /** Complete user speech transcript, identified by unique input item ID. */
+    val latestUserTranscript: String = "",
+    val latestUserTranscriptItemId: String = "",
+    val latestUserTranscriptSequence: Long = 0L,
+    /** Sequence of the latest speech-start event; UI inserts a placeholder before assistant replies. */
+    val incomingSpeechTurnSequence: Long = 0L,
+    /** Partial user speech while realtime transcription is arriving. */
+    val interimUserTranscript: String = "",
+    val interimUserTranscriptSequence: Long = 0L,
     val lastError: String? = null,
 )
 
 typealias RealtimeAdventureToolHandler = suspend (name: String, arguments: Map<String, Any?>) -> Map<String, Any?>
+
+/** Small bounded FIFO so fast typed messages cannot race an in-flight realtime response. */
+internal class PendingTextTurnQueue(private val capacity: Int = 3) {
+    private val lock = Any()
+    private val turns = ArrayDeque<String>()
+
+    init { require(capacity > 0) { "capacity must be positive" } }
+
+    fun offer(text: String): Boolean = synchronized(lock) {
+        val safe = text.trim().take(500)
+        if (safe.isEmpty() || turns.size >= capacity) false
+        else { turns.addLast(safe); true }
+    }
+
+    fun poll(): String? = synchronized(lock) {
+        if (turns.isEmpty()) null else turns.removeFirst()
+    }
+
+    fun clear() = synchronized(lock) { turns.clear() }
+}
+
+/** Keeps partial transcripts separate by input item so overlapping async events do not blend turns. */
+internal class RealtimeUserTranscriptBuffer(private val maxItems: Int = 8, private val maxCharacters: Int = 500) {
+    private val partials = linkedMapOf<String, StringBuilder>()
+
+    @Synchronized
+    fun append(itemId: String, delta: String): String? {
+        if (itemId.isBlank() || delta.isBlank()) return null
+        val buffer = partials.getOrPut(itemId) { StringBuilder() }
+        buffer.append(delta)
+        if (buffer.length > maxCharacters) buffer.delete(0, buffer.length - maxCharacters)
+        while (partials.size > maxItems) partials.remove(partials.keys.first())
+        return buffer.toString()
+    }
+
+    @Synchronized
+    fun complete(itemId: String, transcript: String): String? {
+        val partial = if (itemId.isBlank()) null else partials.remove(itemId)?.toString()
+        val finalText = transcript.trim().ifBlank { partial.orEmpty().trim() }
+        return finalText.take(maxCharacters).takeIf { it.isNotBlank() }
+    }
+
+    @Synchronized
+    fun clear() = partials.clear()
+}
 
 internal object RealtimeVoiceInterruptionPolicy {
     fun responseIdsToSuppress(activeResponseId: String?, playbackResponseId: String?): List<String> =
@@ -113,6 +170,11 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
     @Volatile private var responseInFlight: Boolean = false
     private val cancelledResponseIds = mutableSetOf<String>()
     private val pendingContextNotes = ArrayDeque<String>()
+    private val pendingTextTurns = PendingTextTurnQueue()
+    private val userTranscriptBuffer = RealtimeUserTranscriptBuffer()
+    private val inputSpeechSequenceLock = Any()
+    private val speechSequenceByItem = linkedMapOf<String, Long>()
+    @Volatile private var currentInputSpeechSequence: Long = 0L
     @Volatile private var pendingSessionUpdate: RealtimeAdventureContext? = null
     @Volatile private var playbackStartHeadPosition: Int = -1
     @Volatile private var playbackResponseId: String? = null
@@ -285,18 +347,35 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
         queued.forEach(::sendContextNoteNow)
     }
 
-    /** Sends a short text turn into the live conversation without toggling back to screen taps. */
-    fun sendTextTurn(text: String) {
+    /** Sends a text turn in order; at most three turns wait while the live guide finishes a reply. */
+    fun sendTextTurn(text: String): Boolean {
         val safeText = text.trim().take(500)
-        if (safeText.isEmpty() || !_state.value.isConnected) return
+        if (safeText.isEmpty() || !_state.value.isConnected || !acceptingAudio.get()) return false
+        if (responseInFlight || _state.value.isSpeaking) {
+            val queued = pendingTextTurns.offer(safeText)
+            if (queued) _state.update { it.copy(status = "Message queued; finishing the current reply first.") }
+            return queued
+        }
+        sendTextTurnNow(safeText)
+        return true
+    }
+
+    private fun sendTextTurnNow(text: String) {
+        if (!_state.value.isConnected || !acceptingAudio.get()) return
+        responseInFlight = true
+        _state.update { it.copy(status = "Sending your message to Live Guide…", lastError = null) }
         send(JSONObject()
             .put("type", "conversation.item.create")
             .put("item", JSONObject()
                 .put("type", "message")
                 .put("role", "user")
-                .put("content", JSONArray().put(JSONObject().put("type", "input_text").put("text", safeText)))))
-        responseInFlight = true
+                .put("content", JSONArray().put(JSONObject().put("type", "input_text").put("text", text)))))
         send(JSONObject().put("type", "response.create"))
+    }
+
+    private fun flushNextTextTurn() {
+        val next = pendingTextTurns.poll() ?: return
+        sendTextTurnNow(next)
     }
 
     /** Stops microphone/network/audio immediately; no background listening survives this call. */
@@ -309,6 +388,9 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
         activeAssistantItemId = null
         playbackResponseId = null
         synchronized(pendingContextNotes) { pendingContextNotes.clear() }
+        pendingTextTurns.clear()
+        userTranscriptBuffer.clear()
+        synchronized(inputSpeechSequenceLock) { speechSequenceByItem.clear(); currentInputSpeechSequence = 0L }
         pendingSessionUpdate = null
         synchronized(cancelledResponseIds) { cancelledResponseIds.clear() }
         runCatching { audioRecord?.stop() }
@@ -466,7 +548,7 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
                 activeAssistantItemId = null
                 playbackStartHeadPosition = -1
                 finalTranscript = StringBuilder()
-                _state.update { it.copy(isSpeaking = true, status = "Adventurer is thinking…") }
+                _state.update { it.copy(isSpeaking = true, latestTranscript = "", status = "Adventurer is thinking…") }
             }
             "response.output_item.added" -> {
                 val item = event.optJSONObject("item")
@@ -501,7 +583,42 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
                     _state.update { it.copy(latestTranscript = transcript) }
                 }
             }
-            "input_audio_buffer.speech_started" -> handleBargeIn()
+            "conversation.item.input_audio_transcription.delta" -> {
+                val itemId = event.optString("item_id")
+                val delta = event.optString("delta")
+                if (itemId.isNotBlank()) {
+                    val sequence = synchronized(inputSpeechSequenceLock) {
+                        speechSequenceByItem.getOrPut(itemId) { currentInputSpeechSequence }.also {
+                            while (speechSequenceByItem.size > 8) speechSequenceByItem.remove(speechSequenceByItem.keys.first())
+                        }
+                    }
+                    userTranscriptBuffer.append(itemId, delta)?.let { partial ->
+                        _state.update { it.copy(interimUserTranscript = partial, interimUserTranscriptSequence = sequence) }
+                    }
+                }
+            }
+            "conversation.item.input_audio_transcription.completed" -> {
+                val itemId = event.optString("item_id").ifBlank { event.optString("event_id") }
+                val sequence = synchronized(inputSpeechSequenceLock) {
+                    speechSequenceByItem.remove(itemId) ?: currentInputSpeechSequence
+                }
+                val transcript = userTranscriptBuffer.complete(itemId, event.optString("transcript"))
+                if (!transcript.isNullOrBlank()) {
+                    _state.update {
+                        it.copy(
+                            latestUserTranscript = transcript,
+                            latestUserTranscriptItemId = itemId.ifBlank { java.util.UUID.randomUUID().toString() },
+                            latestUserTranscriptSequence = sequence,
+                            interimUserTranscript = "",
+                        )
+                    }
+                }
+            }
+            "input_audio_buffer.speech_started" -> {
+                val sequence = synchronized(inputSpeechSequenceLock) { ++currentInputSpeechSequence }
+                _state.update { it.copy(incomingSpeechTurnSequence = sequence, interimUserTranscript = "", interimUserTranscriptSequence = sequence) }
+                handleBargeIn()
+            }
             "response.done" -> {
                 val response = event.optJSONObject("response")
                 val responseId = response?.optString("id").orEmpty()
@@ -518,6 +635,8 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
                     .mapNotNull { output.optJSONObject(it) }
                     .filter { it.optString("type") == "function_call" && it.optString("executor") != "server" }
                 if (toolCalls.isNotEmpty()) {
+                    // Keep this turn locked while the client-side tools run so typed chat cannot race them.
+                    responseInFlight = true
                     scope.launch { executeClientTools(toolCalls) }
                 } else {
                     activeResponseId = null
@@ -525,6 +644,7 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
                         it.copy(isSpeaking = false, isConnected = true, status = "Live Guide connected. Ask another question.")
                     }
                     finalTranscript = StringBuilder()
+                    flushNextTextTurn()
                 }
             }
             "error" -> {

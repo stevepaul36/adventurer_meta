@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +41,8 @@ fun ProfileScreen(
     val gamification by viewModel.gamification.collectAsState()
     val activityMode by viewModel.activityMode.collectAsState()
     val currentLang by viewModel.currentLang.collectAsState()
+    var showActivitySettings by rememberSaveable { mutableStateOf(false) }
+    var showLanguageSettings by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -47,7 +50,7 @@ fun ProfileScreen(
                 title = {
                     Column {
                         Text("Rider Profile & Garage", fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("Motorcycle Specs & Telemetry History", style = MaterialTheme.typography.labelSmall, color = AmberGold)
+                        Text("Optional personalisation · not required to start a trip", style = MaterialTheme.typography.labelSmall, color = AmberGold)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B0F17))
@@ -89,6 +92,7 @@ fun ProfileScreen(
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(user.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Sample profile and trip stats · you can personalize later", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
                         Text("📍 ${user.location} • Level ${gamification.level} Trail Master", style = MaterialTheme.typography.labelMedium, color = AmberGold)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -172,10 +176,11 @@ fun ProfileScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.TwoWheeler, contentDescription = null, tint = AdventureOrange)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Primary Expedition Steed", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("Example vehicle setup", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(user.bikeModel, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AmberGold)
+                        Text("Replace these example specifications before relying on vehicle-specific estimates.", style = MaterialTheme.typography.bodySmall, color = Color(0xFF94A3B8))
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "• Displacement: 452cc Sherpa DOHC Liquid-Cooled\n• Power / Torque: 40.02 PS / 40 Nm @ 5500 RPM\n• Suspension: 43mm USD Showa Forks (200mm travel)\n• Gear: Cross-spoke tubeless wheels, aluminum engine guard, 45L hard panniers, Garmin GPS bar mount",
@@ -186,7 +191,7 @@ fun ProfileScreen(
                 }
             }
 
-            // Activity Mode Preferences
+            // Optional activity preferences are collapsed until the user chooses to personalize.
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -196,36 +201,42 @@ fun ProfileScreen(
                         brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF334155))
                     )
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Preferred Adventure Mode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            "Choose the activity you usually do. The current GPS recorder and trip recap are being generalized; specialist features such as live trail conditions, regulations and dive-computer import are not wired yet.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF94A3B8)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        ActivityType.values().forEach { mode ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(mode.displayName, color = Color.White, style = MaterialTheme.typography.bodyMedium)
-                                RadioButton(
-                                    selected = activityMode == mode,
-                                    onClick = { viewModel.setActivityMode(mode) },
-                                    colors = RadioButtonDefaults.colors(selectedColor = AdventureOrange)
-                                )
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Preferred adventure mode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text(activityMode.displayName, style = MaterialTheme.typography.bodySmall, color = AmberGold)
+                            }
+                            TextButton(onClick = { showActivitySettings = !showActivitySettings }) {
+                                Text(if (showActivitySettings) "Done" else "Change")
+                            }
+                        }
+                        if (showActivitySettings) {
+                            Text(
+                                "Optional. You can change this anytime; specialist trail, regulation and dive-computer feeds are not connected yet.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF94A3B8)
+                            )
+                            ActivityType.values().forEach { mode ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(mode.displayName, color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                                    RadioButton(
+                                        selected = activityMode == mode,
+                                        onClick = { viewModel.setActivityMode(mode) },
+                                        colors = RadioButtonDefaults.colors(selectedColor = AdventureOrange)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // Language Selector Card
+            // Language is optional too: show the current choice and expand only on request.
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -235,23 +246,30 @@ fun ProfileScreen(
                         brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF334155))
                     )
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("App Language", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                        Spacer(modifier = Modifier.height(10.dp))
-                        SupportedLang.values().forEach { lang ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("${lang.displayName} (${lang.localName})", color = Color.White, style = MaterialTheme.typography.bodyMedium)
-                                RadioButton(
-                                    selected = currentLang == lang,
-                                    onClick = { viewModel.setLanguage(lang) },
-                                    colors = RadioButtonDefaults.colors(selectedColor = AmberGold)
-                                )
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("App language", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text("${currentLang.displayName} (${currentLang.localName})", style = MaterialTheme.typography.bodySmall, color = AmberGold)
+                            }
+                            TextButton(onClick = { showLanguageSettings = !showLanguageSettings }) {
+                                Text(if (showLanguageSettings) "Done" else "Change")
+                            }
+                        }
+                        if (showLanguageSettings) {
+                            SupportedLang.values().forEach { lang ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("${lang.displayName} (${lang.localName})", color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                                    RadioButton(
+                                        selected = currentLang == lang,
+                                        onClick = { viewModel.setLanguage(lang) },
+                                        colors = RadioButtonDefaults.colors(selectedColor = AmberGold)
+                                    )
+                                }
                             }
                         }
                     }
