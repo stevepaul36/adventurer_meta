@@ -514,7 +514,7 @@ object AdventureVoiceCommandParser {
             exact in setOf("sos", "emergency", "i need help", "safety help") -> return result(AdventureVoiceAction.SAFETY_HELP)
             exact in setOf("guided tour", "tour mode", "switch to tour mode") -> return result(AdventureVoiceAction.GUIDED_MODE)
             exact in setOf("wander mode", "switch to wander mode", "on demand mode") -> return result(AdventureVoiceAction.WANDER_MODE)
-            exact in setOf("what is that", "what's that", "what is this", "what's this", "tell me about nearby places", "what is around me") -> return result(AdventureVoiceAction.NEARBY_CONTEXT)
+            exact in setOf("what is that", "whats that", "what's that", "what is this", "whats this", "what's this", "tell me about nearby places", "what is around me") -> return result(AdventureVoiceAction.NEARBY_CONTEXT)
         }
 
         val activityPrefix = listOf("switch activity to ", "change activity to ", "switch to ", "use activity ")

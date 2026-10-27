@@ -55,6 +55,7 @@ class AdventureVoiceCommandTest {
     @Test
     fun deicticPlaceQuestionsRequirePlaceContextInsteadOfGuessing() {
         assertEquals(AdventureVoiceAction.NEARBY_CONTEXT, AdventureVoiceCommandParser.parse("what is that").action)
+        assertEquals(AdventureVoiceAction.NEARBY_CONTEXT, AdventureVoiceCommandParser.parse("what's that").action)
     }
 
     @Test
