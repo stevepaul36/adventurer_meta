@@ -79,7 +79,8 @@ fun AdventureVoiceCompanionScreen(
 
     LaunchedEffect(liveState.incomingSpeechTurnSequence) {
         val sequence = liveState.incomingSpeechTurnSequence
-        val id = "voice-$sequence"
+        lastLiveTranscript = ""
+        val id = "voice-${liveState.sessionId}-$sequence"
         if (sequence > 0 && chatLines.none { it.id == id }) {
             chatLines.add(VoiceChatLine(isUser = true, text = "Listening…", id = id))
             while (chatLines.size > 12) chatLines.removeAt(0)
@@ -89,7 +90,7 @@ fun AdventureVoiceCompanionScreen(
     LaunchedEffect(liveState.interimUserTranscriptSequence, liveState.interimUserTranscript) {
         val sequence = liveState.interimUserTranscriptSequence
         val partial = liveState.interimUserTranscript.trim()
-        val id = "voice-$sequence"
+        val id = "voice-${liveState.sessionId}-$sequence"
         if (sequence > 0) {
             val index = chatLines.indexOfLast { it.id == id }
             if (index >= 0 && partial.isNotBlank()) chatLines[index] = chatLines[index].copy(text = partial)
@@ -99,7 +100,7 @@ fun AdventureVoiceCompanionScreen(
     LaunchedEffect(liveState.latestUserTranscriptItemId) {
         val itemId = liveState.latestUserTranscriptItemId
         val transcript = liveState.latestUserTranscript.trim()
-        val id = "voice-" + liveState.latestUserTranscriptSequence
+        val id = "voice-${liveState.sessionId}-" + liveState.latestUserTranscriptSequence
         if (itemId.isNotBlank() && itemId != lastLiveUserTranscriptItemId && transcript.isNotBlank()) {
             val index = chatLines.indexOfLast { it.id == id }
             if (index >= 0) chatLines[index] = chatLines[index].copy(text = transcript)
