@@ -422,13 +422,13 @@ class AdventurerRepository {
     private val _expeditions = MutableStateFlow(initialExpeditions)
     val expeditions: StateFlow<List<ExpeditionRoute>> = _expeditions.asStateFlow()
 
-    private val _emergencyStations = MutableStateFlow(initialEmergencyStations)
+    private val _emergencyStations = MutableStateFlow(emptyList<EmergencyStation>())
     val emergencyStations: StateFlow<List<EmergencyStation>> = _emergencyStations.asStateFlow()
 
-    private val _distressSignals = MutableStateFlow(initialDistressSignals)
+    private val _distressSignals = MutableStateFlow(emptyList<RiderDistressSignal>())
     val distressSignals: StateFlow<List<RiderDistressSignal>> = _distressSignals.asStateFlow()
 
-    private val _roadsideServices = MutableStateFlow(initialRoadsideServices)
+    private val _roadsideServices = MutableStateFlow(emptyList<RoadsideServiceEntity>())
     val roadsideServices: StateFlow<List<RoadsideServiceEntity>> = _roadsideServices.asStateFlow()
 
     val safetyTips = initialSafetyTips
