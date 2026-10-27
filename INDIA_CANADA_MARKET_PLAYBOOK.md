@@ -154,8 +154,9 @@ Make preferences structured, editable and optionally overridden per trip. Defaul
 - Collect language, activity, travel style and provider preference without unnecessary permissions.
 
 ### Sprint 2 — preferences and money correctness
-- Migrate trip budget from CAD-only storage to amount + ISO currency code with a tested Room migration and export/import compatibility.
+- **Implemented in this native branch:** trip budget and creator-draft amounts store amount + ISO currency code; Room v1→v2 migration preserves legacy CAD amounts without conversion; trip-pack export records both fields.
 - Localize units, number/date formats and languages; never silently convert currency.
+- Still required: wider locale-aware date/number/measurement formatting, multilingual UI/speech QA, and a durable profile model beyond the current provider/market preferences.
 - Persist provider, accessibility and dietary preferences with edit/delete controls.
 
 ### Sprint 3 — live place/route data
