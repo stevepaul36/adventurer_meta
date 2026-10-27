@@ -29,7 +29,7 @@ The current slice does **not** copy the reference's React/Expo/WebSocket impleme
 
 Android's regular SpeechRecognizer is not intended for endless background recognition. Therefore hands-free is explicitly opt-in and foreground-only. Depending on installed Android speech services and language packs, speech recognition may require a network. Text-to-speech uses the installed device engine; a suitable local voice must be downloaded for offline narration.
 
-When speaking “SOS” or “emergency,” the app only opens Safety/Roadside Radar and asks the user to confirm any emergency action. It never dispatches an alert based solely on speech. “End trip” opens the tracker for confirmation instead of deleting or stopping a session with a potentially misrecognized command.
+When speaking “SOS” or “emergency,” the app only opens Safety/Roadside Radar and asks the user to confirm any emergency action. It never dispatches an alert based solely on speech. “End trip” opens the tracker for confirmation instead of deleting or stopping a session with a potentially misrecognized command. For a confirmed live GPS session on a motorcycle or in a car at 5 km/h or more, longer activity briefings and external map-app launches are blocked until stopped; short navigation acknowledgements remain available. This guard is intentionally conservative and is not a distracted-driving detector.
 
 The app must not proactively speak while a motorcycle/car user is in motion. There is no automatic narration of unknown landmarks: until a source-backed place provider, route context and confidence checks are connected, location-based narration is intentionally withheld. GPS coordinates and direction alone cannot reliably infer exactly what someone is looking at.
 

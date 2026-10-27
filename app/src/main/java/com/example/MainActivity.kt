@@ -45,6 +45,8 @@ import com.example.data.planning.AdventurePlannerRepository
 import com.example.data.model.ActivityType
 import com.example.data.voice.AdventureVoiceAction
 import com.example.data.voice.AdventureVoiceController
+import com.example.data.voice.AdventureVoiceSafetyPolicy
+import com.example.data.voice.VoiceMotionSnapshot
 import com.example.data.voice.AdventureGuideMode
 import com.example.data.voice.ParsedAdventureVoiceCommand
 import com.example.data.voice.VoiceCommandReply
@@ -224,10 +226,14 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                 }
                 AdventureVoiceAction.ACTIVITY_BRIEFING -> {
                     val activity = viewModel.activityMode.value
-                    val detail = if (voiceController.state.value.guideMode == AdventureGuideMode.TOUR) {
-                        "${activity.displayName}. ${activity.homeHint} ${activity.trackerSubtitle}"
-                    } else "${activity.displayName}. ${activity.homeHint}"
-                    VoiceCommandReply("Activity briefing. ${detail.take(360)}")
+                    if (vehicleIsMoving()) {
+                        VoiceCommandReply("I'll keep it brief while your vehicle is moving. Please pull over safely before requesting a full activity briefing.")
+                    } else {
+                        val detail = if (voiceController.state.value.guideMode == AdventureGuideMode.TOUR) {
+                            "${activity.displayName}. ${activity.homeHint} ${activity.trackerSubtitle}"
+                        } else "${activity.displayName}. ${activity.homeHint}"
+                        VoiceCommandReply("Activity briefing. ${detail.take(360)}")
+                    }
                 }
                 AdventureVoiceAction.RIDE_STATUS -> {
                     val ride = viewModel.telemetry.value
@@ -245,7 +251,9 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                 AdventureVoiceAction.NEARBY_CONTEXT -> VoiceCommandReply("I don't have a verified live nearby-place feed connected yet, so I can't identify an object reliably from “what's that”. Say “search for” and a place name to open a map search.")
                 AdventureVoiceAction.SEARCH_PLACE -> {
                     val query = command.query.orEmpty().trim()
-                    if (query.isBlank()) VoiceCommandReply("Please say the place name after “search for”.")
+                    if (vehicleIsMoving()) {
+                        VoiceCommandReply("I won't switch apps while your vehicle is moving. Please pull over safely, then ask me to search again.")
+                    } else if (query.isBlank()) VoiceCommandReply("Please say the place name after “search for”.")
                     else {
                         val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encode(query)}"))
                         VoiceCommandReply("Opening an external map search for $query. Adventurer hasn't verified these results or current conditions.", afterSpeech = {

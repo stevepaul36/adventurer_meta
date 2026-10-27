@@ -46,6 +46,31 @@ data class VoiceCommandReply(
     val silent: Boolean = false,
 )
 
+/** A deliberately conservative motion signal; GPS speed alone is not used in demo/no-fix mode. */
+data class VoiceMotionSnapshot(
+    val activityType: ActivityType,
+    val isRecording: Boolean,
+    val isPaused: Boolean,
+    val hasGpsFix: Boolean,
+    val isDemo: Boolean,
+    val speedKmH: Double,
+)
+
+object AdventureVoiceSafetyPolicy {
+    /**
+     * Restricts long spoken briefings and app-switching place searches only when the app has a
+     * confirmed live GPS fix for a moving motorcycle/car session. Walking and demo telemetry do
+     * not trigger this guard.
+     */
+    fun isVehicleInMotion(snapshot: VoiceMotionSnapshot): Boolean =
+        snapshot.isRecording &&
+            !snapshot.isPaused &&
+            snapshot.hasGpsFix &&
+            !snapshot.isDemo &&
+            snapshot.activityType in setOf(ActivityType.Motorcycling, ActivityType.CarTrips) &&
+            snapshot.speedKmH >= 5.0
+}
+
 data class AdventureVoiceState(
     val handsFreeEnabled: Boolean = false,
     val isListening: Boolean = false,

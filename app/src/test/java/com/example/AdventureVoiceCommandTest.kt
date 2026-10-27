@@ -3,6 +3,8 @@ package com.example
 import com.example.data.model.ActivityType
 import com.example.data.voice.AdventureVoiceAction
 import com.example.data.voice.AdventureVoiceCommandParser
+import com.example.data.voice.AdventureVoiceSafetyPolicy
+import com.example.data.voice.VoiceMotionSnapshot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -66,5 +68,23 @@ class AdventureVoiceCommandTest {
     @Test
     fun directPushToTalkAcceptsCommandsWithoutWakePhrase() {
         assertEquals(AdventureVoiceAction.OPEN_STORY_STUDIO, AdventureVoiceCommandParser.parse("create a story").action)
+    }
+
+    @Test
+    fun suppressesLongVehicleGuidanceOnlyForConfirmedLiveMovement() {
+        val movingMotorcycle = VoiceMotionSnapshot(
+            activityType = ActivityType.Motorcycling,
+            isRecording = true,
+            isPaused = false,
+            hasGpsFix = true,
+            isDemo = false,
+            speedKmH = 12.0,
+        )
+        assertTrue(AdventureVoiceSafetyPolicy.isVehicleInMotion(movingMotorcycle))
+        assertFalse(AdventureVoiceSafetyPolicy.isVehicleInMotion(movingMotorcycle.copy(isPaused = true)))
+        assertFalse(AdventureVoiceSafetyPolicy.isVehicleInMotion(movingMotorcycle.copy(isDemo = true)))
+        assertFalse(AdventureVoiceSafetyPolicy.isVehicleInMotion(movingMotorcycle.copy(hasGpsFix = false)))
+        assertFalse(AdventureVoiceSafetyPolicy.isVehicleInMotion(movingMotorcycle.copy(speedKmH = 3.0)))
+        assertFalse(AdventureVoiceSafetyPolicy.isVehicleInMotion(movingMotorcycle.copy(activityType = ActivityType.Walking)))
     }
 }
