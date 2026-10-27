@@ -366,7 +366,7 @@ fun AdventurePlannerScreen(
                     Text("Preparation checklist", color = PlannerMuted, style = MaterialTheme.typography.labelSmall)
                     preparationItems.forEach { label ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = label in checkedPrep, onCheckedChange = { checkedPrep = if (checked) checkedPrep + label else checkedPrep - label })
+                            Checkbox(checked = label in checkedPrep, onCheckedChange = { checked -> checkedPrep = if (checked) checkedPrep + label else checkedPrep - label })
                             Text(label, color = Color(0xFFCBD5E1), style = MaterialTheme.typography.bodySmall)
                         }
                     }

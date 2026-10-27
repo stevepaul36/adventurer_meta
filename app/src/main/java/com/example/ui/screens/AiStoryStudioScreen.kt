@@ -220,6 +220,7 @@ fun AiStoryStudioScreen(
                     1 -> highlightsTab(
                         state = state,
                         studio = studio,
+                        activityMode = activityMode,
                         onGoToFootage = { tab = 0 },
                         onShare = { shareReel(context, studio.reelShareUri(), state) },
                         onSave = {
@@ -353,6 +354,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.footageTab(
 private fun androidx.compose.foundation.lazy.LazyListScope.highlightsTab(
     state: StudioState,
     studio: StoryStudioViewModel,
+    activityMode: ActivityType,
     onGoToFootage: () -> Unit,
     onShare: () -> Unit,
     onSave: () -> Unit,
@@ -362,7 +364,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.highlightsTab(
     if (analysis == null) {
         item {
             EmptyCard(
-                if (state.busy == StudioBusy.ANALYZING) "Scanning your footage…" else "Pick or record a ride video, then tap “Find the best moments”.",
+                if (state.busy == StudioBusy.ANALYZING) "Scanning your footage…" else "Pick or record adventure footage, then tap “Find the best moments”.",
                 if (state.busy == null) "Go to footage" else null, onGoToFootage,
             )
         }
