@@ -26,7 +26,7 @@ enum class AdventureVoiceStyle { CALM, BALANCED, ENERGETIC }
 enum class VoiceStartRequest { PUSH_TO_TALK, HANDS_FREE }
 
 enum class AdventureVoiceAction {
-    IGNORED, WAKE_ONLY, HELP, STOP_SPEAKING, DISABLE_HANDS_FREE, REPEAT_LAST,
+    IGNORED, WAKE_ONLY, HELP, STOP_SPEAKING, DISABLE_HANDS_FREE, REPEAT_LAST, PLAY_STORY_NARRATION,
     BACK, NEXT_SCREEN, PREVIOUS_SCREEN, OPEN_FEED, OPEN_EXPLORE, OPEN_TRACKER,
     OPEN_VOICE, OPEN_STORY_STUDIO, OPEN_RADAR, OPEN_PROFILE, START_ACTIVITY,
     PAUSE_ACTIVITY, RESUME_ACTIVITY, END_ACTIVITY, ACTIVITY_BRIEFING, RIDE_STATUS,
@@ -44,6 +44,8 @@ data class VoiceCommandReply(
     val text: String = "",
     val afterSpeech: (() -> Unit)? = null,
     val silent: Boolean = false,
+    /** Optional per-response language, used for story narration in Story Studio's language. */
+    val languageCode: String? = null,
 )
 
 /** A deliberately conservative motion signal; GPS speed alone is not used in demo/no-fix mode. */
@@ -103,6 +105,8 @@ class AdventureVoiceController(private val context: Context) {
     private var currentUtteranceId: String? = null
     private var pendingAfterSpeech: (() -> Unit)? = null
     private var commandHandler: ((ParsedAdventureVoiceCommand) -> VoiceCommandReply)? = null
+    private var temporaryVoiceLanguage: String? = null
+    private var preparingLocalizedSpeech = false
 
     private val _state = MutableStateFlow(
         AdventureVoiceState(
@@ -216,10 +220,36 @@ class AdventureVoiceController(private val context: Context) {
         }
     }
 
+    /**
+     * Speaks a story or guide in a requested language, then restores the user's previous voice
+     * language when playback finishes, fails, or is stopped.
+     */
+    fun sayInLanguage(text: String, languageCode: String, afterSpeech: (() -> Unit)? = null) {
+        if (text.isBlank()) {
+            afterSpeech?.invoke()
+            return
+        }
+        if (_state.value.isSpeaking) stopSpeaking()
+        restoreTemporaryVoiceLanguage()
+        temporaryVoiceLanguage = _state.value.languageCode
+        updateLanguage(languageCode)
+        preparingLocalizedSpeech = true
+        say(text) {
+            preparingLocalizedSpeech = false
+            restoreTemporaryVoiceLanguage()
+            afterSpeech?.invoke()
+        }
+        preparingLocalizedSpeech = false
+    }
+
     fun say(text: String, afterSpeech: (() -> Unit)? = null) {
         if (text.isBlank()) {
             afterSpeech?.invoke()
             return
+        }
+        if (!preparingLocalizedSpeech) {
+            if (_state.value.isSpeaking) stopSpeaking()
+            restoreTemporaryVoiceLanguage()
         }
         pendingAfterSpeech = afterSpeech
         val utteranceId = UUID.randomUUID().toString()
@@ -254,6 +284,8 @@ class AdventureVoiceController(private val context: Context) {
         textToSpeech?.stop()
         currentUtteranceId = null
         pendingAfterSpeech = null
+        preparingLocalizedSpeech = false
+        restoreTemporaryVoiceLanguage()
         _state.value = _state.value.copy(isSpeaking = false, status = "Speech stopped.")
         if (_state.value.handsFreeEnabled && foregroundActive) scheduleRestart(250)
     }
@@ -280,6 +312,12 @@ class AdventureVoiceController(private val context: Context) {
         }.getOrNull()
         if (localVoice != null) runCatching { engine.voice = localVoice }
         _state.value = _state.value.copy(hasLocalTtsVoice = localVoice != null)
+    }
+
+    private fun restoreTemporaryVoiceLanguage() {
+        val previous = temporaryVoiceLanguage ?: return
+        temporaryVoiceLanguage = null
+        updateLanguage(previous)
     }
 
     private fun attachTtsListener() {
@@ -313,6 +351,8 @@ class AdventureVoiceController(private val context: Context) {
                         currentUtteranceId = null
                         _state.value = _state.value.copy(isSpeaking = false, status = "Speech playback failed.")
                         pendingAfterSpeech = null
+                        preparingLocalizedSpeech = false
+                        restoreTemporaryVoiceLanguage()
                         if (_state.value.handsFreeEnabled && foregroundActive) scheduleRestart(400)
                     }
                 }
@@ -482,6 +522,8 @@ class AdventureVoiceController(private val context: Context) {
                     reply.afterSpeech?.invoke()
                     _state.value = _state.value.copy(status = "Ready.")
                     if (_state.value.handsFreeEnabled && foregroundActive) scheduleRestart(250)
+                } else if (reply.languageCode != null) {
+                    sayInLanguage(reply.text, reply.languageCode, reply.afterSpeech)
                 } else say(reply.text, reply.afterSpeech)
             }
         }
@@ -514,7 +556,7 @@ object AdventureVoiceCommandParser {
             ParsedAdventureVoiceCommand(action, query = query, activity = activity, wakeDetected = wake != null)
 
         when {
-            exact in setOf("stop talking", "stop speaking", "cancel speech", "be quiet", "silence") ->
+            exact in setOf("stop talking", "stop speaking", "stop narration", "stop story narration", "stop story playback", "cancel speech", "be quiet", "silence") ->
                 return result(AdventureVoiceAction.STOP_SPEAKING)
             exact in setOf("stop listening", "turn off hands free", "turn off hands-free", "disable hands free", "disable hands-free") ->
                 return result(AdventureVoiceAction.DISABLE_HANDS_FREE)
@@ -527,6 +569,7 @@ object AdventureVoiceCommandParser {
             exact in setOf("explore", "open explore", "open explore and plan", "open planner", "plan a trip") -> return result(AdventureVoiceAction.OPEN_EXPLORE)
             exact in setOf("open tracker", "open ride", "open activity", "show tracker", "open live tracker") -> return result(AdventureVoiceAction.OPEN_TRACKER)
             exact in setOf("open voice", "open voice companion", "open assistant") -> return result(AdventureVoiceAction.OPEN_VOICE)
+            exact in setOf("play narration", "read narration", "read my story", "read the story", "read story aloud", "read my story aloud", "play story narration", "play my story", "narrate my story") -> return result(AdventureVoiceAction.PLAY_STORY_NARRATION)
             exact in setOf("open story studio", "create a story", "open story", "make a story") -> return result(AdventureVoiceAction.OPEN_STORY_STUDIO)
             exact in setOf("open safety", "open help", "open radar", "open roadside radar") -> return result(AdventureVoiceAction.OPEN_RADAR)
             exact in setOf("open profile", "show profile", "open my profile") -> return result(AdventureVoiceAction.OPEN_PROFILE)
