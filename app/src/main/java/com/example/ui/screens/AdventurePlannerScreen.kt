@@ -51,7 +51,9 @@ import com.example.viewmodel.AdventurerViewModel
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
+import java.util.Currency
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
@@ -113,6 +115,10 @@ fun AdventurePlannerScreen(
     BackHandler { viewModel.navigateBack() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Explicit local preferences; the locale suggests defaults but never requests GPS.
+    val marketPreferences = remember(context) {
+        context.getSharedPreferences("adventurer_market_preferences", android.content.Context.MODE_PRIVATE)
+    }
     val activityMode by viewModel.activityMode.collectAsState()
     val trips by plannerRepository.observeTrips().collectAsState(initial = emptyList())
     val savedPlaces by plannerRepository.observeSavedPlaces().collectAsState(initial = emptyList())
@@ -124,7 +130,17 @@ fun AdventurePlannerScreen(
     var destination by rememberSaveable { mutableStateOf("") }
     var startDate by rememberSaveable { mutableStateOf("Flexible dates") }
     var daysText by rememberSaveable { mutableStateOf("2") }
-    var budgetText by rememberSaveable { mutableStateOf("450") }
+    val initialBudgetCurrency = remember {
+        val saved = marketPreferences.getString("budget_currency_code", null)
+        when (saved) {
+            "CAD", "INR" -> saved
+            else -> if (Locale.getDefault().country.equals("IN", ignoreCase = true)) "INR" else "CAD"
+        }
+    }
+    var budgetCurrencyCode by rememberSaveable { mutableStateOf(initialBudgetCurrency) }
+    var budgetText by rememberSaveable {
+        mutableStateOf(if (initialBudgetCurrency == "INR") "10000" else "450")
+    }
     var selectedActivities by remember { mutableStateOf(setOf(activityMode)) }
     var selectedStopDay by rememberSaveable { mutableStateOf(1) }
     var checkInEnabled by rememberSaveable { mutableStateOf(true) }
@@ -147,11 +163,6 @@ fun AdventurePlannerScreen(
     var eventDescription by rememberSaveable { mutableStateOf("") }
     var localMetrics by remember { mutableStateOf(AdventureFunnelAnalytics.localSnapshot(context)) }
 
-    // Market and provider preferences are local, editable settings. Locale only suggests a market;
-    // location permission is not needed and country selection is never inferred from GPS.
-    val marketPreferences = remember(context) {
-        context.getSharedPreferences("adventurer_market_preferences", android.content.Context.MODE_PRIVATE)
-    }
     val suggestedMarket = remember {
         AdventureMarket.suggestedFromCountryCode(Locale.getDefault().country) ?: AdventureMarket.CANADA
     }
@@ -184,6 +195,9 @@ fun AdventurePlannerScreen(
     LaunchedEffect(selectedMarketCode) {
         marketPreferences.edit().putString("selected_market", selectedMarketCode).apply()
     }
+    LaunchedEffect(budgetCurrencyCode) {
+        marketPreferences.edit().putString("budget_currency_code", budgetCurrencyCode).apply()
+    }
     LaunchedEffect(selectedRegionalCategoryCode) {
         marketPreferences.edit().putString("selected_service_category", selectedRegionalCategoryCode).apply()
     }
@@ -198,13 +212,14 @@ fun AdventurePlannerScreen(
 
     fun exportTripPack(plan: AdventureTripPlanEntity) {
         pendingExportJson = JSONObject()
-            .put("format", "adventurer-trip-pack-v1")
+            .put("format", "adventurer-trip-pack-v2")
             .put("title", plan.title)
             .put("destination", plan.destination)
             .put("activityTypes", JSONArray(plan.activityTypesCsv.split(",").filter { it.isNotBlank() }))
             .put("startDateLabel", plan.startDateLabel)
             .put("durationDays", plan.durationDays)
-            .put("budgetCad", plan.budgetCad)
+            .put("budgetAmount", plan.budgetAmount)
+            .put("budgetCurrencyCode", plan.budgetCurrencyCode)
             .put("itineraryStops", JSONArray(plan.itineraryStopsJson))
             .put("preparationChecklist", JSONArray(plan.prepChecklistJson))
             .put("safetyPlan", JSONObject()
@@ -684,15 +699,41 @@ fun AdventurePlannerScreen(
                         OutlinedTextField(
                             value = budgetText,
                             onValueChange = { budgetText = it.filter { c -> c.isDigit() || c == '.' }.take(10) },
-                            label = { Text("Budget CAD") },
+                            label = { Text("Budget amount") },
                             modifier = Modifier.weight(1.25f),
                             singleLine = true,
                             colors = plannerFieldColors()
                         )
                     }
 
-                    // Interactive Live Budget Breakdown Calculator
-                    val currentBudget = budgetText.toDoubleOrNull() ?: 450.0
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Budget currency", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                        listOf("CAD", "INR").forEach { currencyCode ->
+                            FilterChip(
+                                selected = budgetCurrencyCode == currencyCode,
+                                onClick = { budgetCurrencyCode = currencyCode },
+                                label = { Text(currencyCode) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AmberGold,
+                                    selectedLabelColor = Color.Black,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                        }
+                    }
+                    Text(
+                        "The amount is stored with its currency. Switching India/Canada does not convert your budget; review the amount when changing currency.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
+                    // Interactive Budget Breakdown Calculator
+                    val currentBudget = budgetText.toDoubleOrNull() ?: 0.0
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -706,7 +747,7 @@ fun AdventurePlannerScreen(
                                 Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = AmberGold, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    "Live Trip Budget Estimator: CAD $${"%.0f".format(currentBudget)}",
+                                    "Trip Budget Estimator: ${formatCurrencyAmount(currentBudget, budgetCurrencyCode)}",
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -742,10 +783,10 @@ fun AdventurePlannerScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                BudgetPill("⛽ Fuel (35%)", currentBudget * 0.35, AdventureOrange)
-                                BudgetPill("🏕️ Stay (30%)", currentBudget * 0.30, HighAltitudeCyan)
-                                BudgetPill("🥪 Food (20%)", currentBudget * 0.20, AmberGold)
-                                BudgetPill("🧰 Buffer (15%)", currentBudget * 0.15, SuccessGreen)
+                                BudgetPill("⛽ Fuel (35%)", currentBudget * 0.35, AdventureOrange, budgetCurrencyCode)
+                                BudgetPill("🏕️ Stay (30%)", currentBudget * 0.30, HighAltitudeCyan, budgetCurrencyCode)
+                                BudgetPill("🥪 Food (20%)", currentBudget * 0.20, AmberGold, budgetCurrencyCode)
+                                BudgetPill("🧰 Buffer (15%)", currentBudget * 0.15, SuccessGreen, budgetCurrencyCode)
                             }
                         }
                     }
@@ -970,7 +1011,8 @@ fun AdventurePlannerScreen(
                                     activityTypesCsv = modes.joinToString(",") { it.name },
                                     startDateLabel = startDate.ifBlank { "Flexible dates" },
                                     durationDays = validDays,
-                                    budgetCad = budgetText.toDoubleOrNull()?.takeIf { it >= 0.0 },
+                                    budgetAmount = budgetText.toDoubleOrNull()?.takeIf { it >= 0.0 },
+                                    budgetCurrencyCode = budgetCurrencyCode,
                                     itineraryStopsJson = stopArray.toString(),
                                     prepChecklistJson = checklist.toString(),
                                     checkInEnabled = checkInEnabled,
@@ -1116,7 +1158,7 @@ fun AdventurePlannerScreen(
                                 Text("${draft.kind} · ${draft.activityType} · ${draft.destination}", color = HighAltitudeCyan, style = MaterialTheme.typography.labelSmall)
                                 Text(draft.status.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }, color = AmberGold, style = MaterialTheme.typography.labelSmall)
                                 if (draft.description.isNotBlank()) Text(draft.description, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                                if (draft.proposedPriceCad != null) Text("Suggested price: CAD " + "%.2f".format(Locale.CANADA, draft.proposedPriceCad), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                                if (draft.proposedPriceAmount != null) Text("Suggested price: " + formatCurrencyAmount(draft.proposedPriceAmount, draft.proposedPriceCurrencyCode), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                                 if (draft.dateLabel.isNotBlank()) Text("Proposed timing: " + draft.dateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                                     TextButton(onClick = { scope.launch { plannerRepository.deleteCreatorDraft(draft.id) } }) { Text("Delete draft", color = Color(0xFFEF4444)) }
@@ -1157,7 +1199,7 @@ fun AdventurePlannerScreen(
                     OutlinedTextField(guideTitle, { guideTitle = it.take(100) }, label = { Text("Guide title") }, singleLine = true)
                     OutlinedTextField(guideDestination, { guideDestination = it.take(120) }, label = { Text("Destination / route") }, singleLine = true)
                     OutlinedTextField(guideDescription, { guideDescription = it.take(1000) }, label = { Text("What should adventurers know?") }, minLines = 3)
-                    OutlinedTextField(guidePrice, { guidePrice = it.filter { c -> c.isDigit() || c == '.' }.take(10) }, label = { Text("Suggested price CAD (optional)") }, singleLine = true)
+                    OutlinedTextField(guidePrice, { guidePrice = it.filter { c -> c.isDigit() || c == '.' }.take(10) }, label = { Text("Suggested price ${selectedMarket.currencyCode} (optional)") }, singleLine = true)
                 }
             },
             confirmButton = {
@@ -1167,7 +1209,8 @@ fun AdventurePlannerScreen(
                         plannerRepository.saveCreatorDraft(AdventureCreatorDraftEntity(
                             kind = "GUIDE", title = guideTitle.trim(), destination = guideDestination.trim(),
                             activityType = activityMode.displayName, description = guideDescription.trim(),
-                            proposedPriceCad = guidePrice.toDoubleOrNull()?.takeIf { it >= 0.0 },
+                            proposedPriceAmount = guidePrice.toDoubleOrNull()?.takeIf { it >= 0.0 },
+                            proposedPriceCurrencyCode = selectedMarket.currencyCode,
                         ))
                         AdventureFunnelAnalytics.log(context, "creator_guide_draft_created", mapOf("activity_type" to activityMode.name))
                         refreshMetrics()
@@ -1213,11 +1256,23 @@ fun AdventurePlannerScreen(
 }
 
 @Composable
-private fun BudgetPill(title: String, amount: Double, accent: Color) {
+private fun formatCurrencyAmount(amount: Double, currencyCode: String): String {
+    val code = if (currencyCode == "INR") "INR" else "CAD"
+    val locale = if (code == "INR") Locale.forLanguageTag("en-IN") else Locale.CANADA
+    return runCatching {
+        NumberFormat.getCurrencyInstance(locale).apply {
+            currency = Currency.getInstance(code)
+            maximumFractionDigits = if (code == "INR") 0 else 2
+            minimumFractionDigits = if (code == "INR") 0 else 2
+        }.format(amount)
+    }.getOrDefault(code + " " + "%.2f".format(Locale.US, amount))
+}
+
+private fun BudgetPill(title: String, amount: Double, accent: Color, currencyCode: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(title, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
-            "$${"%.0f".format(amount)}",
+            formatCurrencyAmount(amount, currencyCode),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             color = accent
