@@ -75,3 +75,28 @@ Run this on each representative Android device before distributing a release APK
 ## Current limits
 
 Code/CI checks can prove parser/queue/metadata/backend validation and Android compilation. This workspace does not control a physical phone, install the APK or configure the user's private Firebase/RevenueCat project. Final audio, Bluetooth, account, billing and real-device lifecycle acceptance therefore remains a manual gate, not a claimed test result.
+
+## Reference project audit (attached source archives)
+
+### Tandem-main
+
+The inspected reference's product/design docs and tests emphasise one shared operator across native actions and UI flows, brief progress, explicit clarification when intent is ambiguous, one-shot confirmation for consequential actions, and distinct **completed / blocked / unknown** outcomes. Its tests specifically guard against replaying a mutation after an acknowledgement timeout, stale response audio, an interrupted turn erasing a newer tool call, and logging private transcript content.
+
+Applied here:
+- Keep action dispatch in Adventurer's single command handler, rather than creating a separate, competing voice-action path.
+- Add request/result state and tests for command recognition, one-shot wake capture, transcript ordering, bounded queueing and cancellation.
+- Do not add automatic payment, posting, deletion, booking, SOS or external phone-control claims. Require explicit confirmation plus provider result evidence if those are introduced.
+- Keep observability free of raw user transcripts, map queries and precise coordinates.
+
+### Every Joule — Lesson 1
+
+The reference's supplied page describes a visually rich, page-by-page 3D lesson, but also includes practical fallbacks: keyboard arrow-key navigation, a text version of the book with a live region, reduced-motion handling and a dedicated notice when WebGL is unavailable. Its lesson content remains usable when the 3D path fails.
+
+Applied here:
+- Keep the primary workflow linear and visible (Footage → Highlights → Story) while letting users return to previous steps.
+- Treat voice as an enhancement, not the only interaction path: typed chat and local story templates must remain usable when speech, networking or cloud AI is unavailable.
+- Give long-running operations visible progress, errors and retry/cancel paths, and make outputs editable before sharing.
+- Test large text, screen-reader announcements, keyboard focus and reduced-motion rather than assuming animation alone makes an experience friendly.
+
+These are design and test lessons derived from the attached archives. The reference projects do not demonstrate that Adventurer's backend, microphone or real-device integrations are operational; those are covered by this repository's own acceptance checklist.
+
