@@ -144,9 +144,9 @@ fun AiStoryStudioScreen(
                             color = Color.White
                         )
                         Text(
-                            if (state.aiConfigured) "On-device scoring · Meta AI · ${state.aiModel}" else "On-device scoring · AI off (add MODEL_API_KEY)",
+                            if (state.firebaseConfigured) "On-device scoring · Firebase set up; cloud AI needs Pro" else "On-device scoring · offline story mode ready",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (state.aiConfigured) Violet else AmberGold,
+                            color = if (state.firebaseConfigured) Violet else AmberGold,
                         )
                     }
                 },
@@ -305,7 +305,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.footageTab(
                 color = Color.White
             )
             Text(
-                "Analysis runs on this phone — the video is never uploaded. Only small keyframes go to Meta AI, and only when you tap Enhance.",
+                "Local scoring and reel rendering stay on this phone. Cloud highlight review uploads the selected video (max 14 MB) only after you tap the cloud-AI button, then deletes the temporary upload. Text-only story writing sends selected moment metadata, not the video.",
                 style = MaterialTheme.typography.bodySmall, color = Muted,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -399,13 +399,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.highlightsTab(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(
                     onClick = { studio.enhanceWithAi(activityMode) },
-                    enabled = state.aiConfigured && state.busy == null,
+                    enabled = state.sourceUri != null && state.moments.isNotEmpty() && state.busy == null,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9333EA)),
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.weight(1f).testTag("enhance_ai_button"),
                 ) {
                     Icon(Icons.Default.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp)); Text("Enhance with Meta AI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Spacer(Modifier.width(6.dp)); Text("Review with cloud AI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
                 Button(
                     onClick = studio::exportReel,
@@ -418,9 +418,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.highlightsTab(
                     Spacer(Modifier.width(6.dp)); Text("Render reel", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
-            if (!state.aiConfigured) {
-                Text("Add MODEL_API_KEY to .env and rebuild to let Meta AI name, re-rank and privacy-check your moments.", style = MaterialTheme.typography.labelSmall, color = Muted)
-            }
+            Text(
+                if (state.firebaseConfigured) "Cloud highlight review needs an eligible Adventurer Pro account and a configured server key. Local scoring and export are unaffected."
+                else "Offline mode is ready. Cloud highlights require Firebase/App Check, the server AI key and Adventurer Pro; local scoring and export still work.",
+                style = MaterialTheme.typography.labelSmall,
+                color = Muted,
+            )
         }
     }
 
@@ -493,7 +496,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.storyTab(
         PanelCard {
             Text("Travel story · ${state.language.displayName}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
             Text(
-                if (state.aiConfigured) "Written by Meta AI from your ${state.selected.size} moments." else "Offline template from your moments — add a model key for AI writing in Indian languages.",
+                if (state.story?.fromAi == true) "Written by secure cloud AI from your ${state.selected.size} selected moments."
+                else "Editable offline story template. AI writing requires Firebase/App Check, a configured server key and Adventurer Pro.",
                 style = MaterialTheme.typography.labelSmall, color = Muted,
             )
             Button(
