@@ -29,6 +29,18 @@
 - [ ] Test physical devices for permissions, offline mode, video size, low storage, interrupted uploads/exports, app resume and crashes.
 - [ ] Build a signed AAB, run Play pre-launch report, stage rollout, monitor crashes/ANRs and prepare rollback.
 
+
+## UI/UX and user-trust release gates
+
+- [ ] Complete every applicable item in [PRODUCTION_UX_ACCEPTANCE.md](PRODUCTION_UX_ACCEPTANCE.md) on the actual release candidate.
+- [ ] Audit all primary journeys for loading, empty, success, pending, offline, permission-denied and recoverable-error states.
+- [ ] Verify no demo/local-only action is presented as a live service; remove or clearly label mock feed, seeded locations, and sample statistics.
+- [ ] Verify GPS, voice, video export, subscription, and safety screens report success only after the underlying operation succeeds.
+- [ ] Validate Material 3 light/dark themes, accessibility font scaling, TalkBack, touch target sizes, contrast, keyboard/system-bar insets, and small-screen layouts.
+- [ ] Test physical devices for lifecycle cleanup, background/foreground transitions, network changes, Bluetooth audio routing, low storage and process recreation.
+- [ ] Confirm analytics/logs contain no API keys, tokens, precise coordinates, transcripts/audio, route geometry, or contact labels.
+- [ ] Record release-candidate build number, CI links, known issues, test evidence, rollback owner, and go/no-go decision.
+
 ## Implementation status
 
 This branch adds a RevenueCat purchase/restore adapter and paywall, client Pro gates, callable Gemini endpoints with Auth/App Check enforcement, live RevenueCat entitlement verification, transactional monthly AI quota, private video Storage rules, temporary-video cleanup, and backend tests. These controls are operational only after a real Firebase/RevenueCat setup, secrets and Functions deployment. The feed/repository remains mock-backed; anonymous Auth is a per-install identity, not full account linking; production legal pages, Play listing, final signing, account/data deletion and physical-device testing remain outstanding.

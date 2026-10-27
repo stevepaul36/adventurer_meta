@@ -38,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.voice.AdventureGuideMode
@@ -52,9 +51,6 @@ import com.example.data.voice.VoiceStartRequest
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
 import com.example.viewmodel.AdventurerViewModel
-
-private val VoicePanel = Color(0xFF131B2A)
-private val VoiceMuted = Color(0xFF94A3B8)
 
 @Composable
 fun AdventureVoiceCompanionScreen(
@@ -88,24 +84,24 @@ fun AdventureVoiceCompanionScreen(
                 Text("Adventure Voice Companion", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                 Text(
                     "Use your voice to navigate Adventurer, control a session, and hear an activity-aware briefing.",
-                    color = VoiceMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
         }
 
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = VoicePanel), shape = RoundedCornerShape(22.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(22.dp)) {
                 Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Surface(
-                            color = if (state.handsFreeEnabled) AdventureOrange else Color(0xFF263246),
+                            color = if (state.handsFreeEnabled) AdventureOrange else MaterialTheme.colorScheme.surfaceVariant,
                             shape = CircleShape,
                         ) {
                             Icon(
                                 if (state.isSpeaking) Icons.Filled.VolumeUp else Icons.Filled.Mic,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = if (state.handsFreeEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(12.dp),
                             )
                         }
@@ -119,7 +115,7 @@ fun AdventureVoiceCompanionScreen(
                                 },
                                 fontWeight = FontWeight.Bold,
                             )
-                            Text(state.status, color = VoiceMuted, style = MaterialTheme.typography.bodySmall)
+                            Text(state.status, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -150,13 +146,13 @@ fun AdventureVoiceCompanionScreen(
                     Text(
                         if (state.isOnDeviceRecognition) "Speech recognition: on-device service selected."
                         else "Speech recognition: device-default service. Depending on the device, recognition may need a network connection.",
-                        color = VoiceMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Text(
                         if (state.hasLocalTtsVoice) "Narration: a local/offline TTS voice is available for the selected language."
                         else "Narration: a local TTS voice is not confirmed. Check Android text-to-speech voice downloads for offline use.",
-                        color = VoiceMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -164,7 +160,7 @@ fun AdventureVoiceCompanionScreen(
         }
 
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = VoicePanel), shape = RoundedCornerShape(22.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(22.dp)) {
                 Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Filled.Headphones, contentDescription = null, tint = AdventureOrange)
@@ -176,14 +172,14 @@ fun AdventureVoiceCompanionScreen(
                                     liveState.isConnecting -> "Connecting securely…"
                                     else -> "Natural back-and-forth conversation"
                                 },
-                                color = if (liveState.isConnected) AdventureOrange else VoiceMuted,
+                                color = if (liveState.isConnected) AdventureOrange else MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
                     }
                     Text(
                         "Speak naturally, interrupt the guide mid-sentence, ask follow-up questions, and ask what might be nearby. Adventurer can prefetch nearby map context at connection time; place identity and direction remain uncertain.",
-                        color = VoiceMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     if (liveState.isConnected || liveState.isConnecting) {
@@ -207,26 +203,26 @@ fun AdventureVoiceCompanionScreen(
                             Text("Start Live AI Guide")
                         }
                     }
-                    Text(liveState.status, color = VoiceMuted, style = MaterialTheme.typography.bodySmall)
+                    Text(liveState.status, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     liveState.lastError?.takeIf { it.isNotBlank() }?.let {
                         Text(it, color = AmberGold, style = MaterialTheme.typography.bodySmall)
                     }
                     if (liveState.latestTranscript.isNotBlank()) {
-                        Surface(color = Color(0xFF0F172A), shape = RoundedCornerShape(12.dp)) {
+                        Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(12.dp)) {
                             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text("Latest spoken response", fontWeight = FontWeight.Bold, color = Color.White)
-                                Text(liveState.latestTranscript.take(900), color = VoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                                Text("Latest spoken response", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Text(liveState.latestTranscript.take(900), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                             }
                         }
                     }
                     Text(
                         "Live AI Guide needs the server-side BOSON_API_KEY Firebase secret and a valid signed-in/App Check session. If it is not configured, use Talk Now or the foreground “Hey Adventurer” mode.",
-                        color = VoiceMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Text(
                         "For safety, the live session will stop when a GPS-confirmed motorcycle/car session reaches the movement threshold or the app leaves the foreground. It does not send SOS, provide turn-by-turn navigation, or verify trail/road/water/weather conditions.",
-                        color = VoiceMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -234,12 +230,12 @@ fun AdventureVoiceCompanionScreen(
         }
 
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = VoicePanel), shape = RoundedCornerShape(20.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Remember my adventure interests", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(
                         "Saved on this device and supplied to Live Guide as personalization context. It never treats preferences as facts about a place.",
-                        color = VoiceMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Text("Topics", fontWeight = FontWeight.SemiBold)
@@ -280,7 +276,7 @@ fun AdventureVoiceCompanionScreen(
                     Text("Live narration tone", fontWeight = FontWeight.SemiBold)
                     Text(
                         "Higgs Realtime currently supplies its default voice. These options guide delivery style; they are not named voice IDs or voice cloning.",
-                        color = VoiceMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -294,7 +290,7 @@ fun AdventureVoiceCompanionScreen(
                     }
                     Text(
                         "Your current profile: ${preferencesStore.spokenSummary(guidePreferences)}",
-                        color = VoiceMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -302,7 +298,7 @@ fun AdventureVoiceCompanionScreen(
         }
 
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = VoicePanel), shape = RoundedCornerShape(20.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("How should your guide sound?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -310,7 +306,7 @@ fun AdventureVoiceCompanionScreen(
                         FilterChip(selected = state.voiceStyle == AdventureVoiceStyle.BALANCED, onClick = { controller.setVoiceStyle(AdventureVoiceStyle.BALANCED) }, label = { Text("Balanced") })
                         FilterChip(selected = state.voiceStyle == AdventureVoiceStyle.ENERGETIC, onClick = { controller.setVoiceStyle(AdventureVoiceStyle.ENERGETIC) }, label = { Text("Energetic") })
                     }
-                    Text("Calm/Balanced/Energetic adjusts the local Android TTS fallback. The live narration tone above guides wording; Higgs Realtime currently uses its default voice. This does not select or clone a named voice.", color = VoiceMuted, style = MaterialTheme.typography.bodySmall)
+                    Text("Calm/Balanced/Energetic adjusts the local Android TTS fallback. The live narration tone above guides wording; Higgs Realtime currently uses its default voice. This does not select or clone a named voice.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(2.dp))
                     Text("Guide style", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -333,13 +329,13 @@ fun AdventureVoiceCompanionScreen(
                             label = { Text("Tour · guided") },
                         )
                     }
-                    Text("Tour/Wander changes how Live Guide is instructed to respond. At session start, Adventurer prefetches a small nearby-place list and an exact-title-matched Wikipedia introduction when available; the guide uses it only when relevant. Automatic movement-triggered narration and verified route/condition data are not enabled.", color = VoiceMuted, style = MaterialTheme.typography.bodySmall)
+                    Text("Tour/Wander changes how Live Guide is instructed to respond. At session start, Adventurer prefetches a small nearby-place list and an exact-title-matched Wikipedia introduction when available; the guide uses it only when relevant. Automatic movement-triggered narration and verified route/condition data are not enabled.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
 
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = VoicePanel), shape = RoundedCornerShape(20.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Filled.TipsAndUpdates, contentDescription = null, tint = AmberGold)
@@ -356,11 +352,11 @@ fun AdventureVoiceCompanionScreen(
         }
 
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = VoicePanel), shape = RoundedCornerShape(20.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Current adventure context", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text("Activity: ${activityMode.displayName}", fontWeight = FontWeight.SemiBold)
-                    Text(activityMode.homeHint, color = VoiceMuted, style = MaterialTheme.typography.bodySmall)
+                    Text(activityMode.homeHint, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     if (telemetry.isRecording) {
                         Text(
                             "Session: ${if (telemetry.isPaused) "paused" else "recording"} · %.1f km · %.0f km/h".format(telemetry.distanceKm, telemetry.currentSpeedKmH),
@@ -368,11 +364,11 @@ fun AdventureVoiceCompanionScreen(
                             fontWeight = FontWeight.SemiBold,
                         )
                     } else {
-                        Text("No activity session is currently recording.", color = VoiceMuted, style = MaterialTheme.typography.bodySmall)
+                        Text("No activity session is currently recording.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     }
                     Text(
                         "Safety boundary: this companion does not provide turn-by-turn navigation, live trail/road/water/weather conditions, dive guidance, emergency dispatch, or a substitute for official sources.",
-                        color = VoiceMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -380,11 +376,11 @@ fun AdventureVoiceCompanionScreen(
         }
 
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)), shape = RoundedCornerShape(20.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Privacy & platform behaviour", fontWeight = FontWeight.Bold)
-                    Text("Microphone use starts only after you tap Talk now or explicitly enable hands-free. Wake-phrase listening runs only while Adventurer is foregrounded and pauses when the app backgrounds. Device-default recognition may process speech through the selected Android service; check that service's privacy settings.", color = VoiceMuted, style = MaterialTheme.typography.bodySmall)
-                    Text("No raw audio or transcript is sent to Adventurer analytics. Live Guide sends audio to the configured Boson realtime provider and sends rounded-only coordinates through Adventurer's server-side nearby-place callable; the backend does not forward exact coordinates to the map provider. Wake-phrase listening remains foreground-only, and microphone capture stops when the app backgrounds.", color = VoiceMuted, style = MaterialTheme.typography.bodySmall)
+                    Text("Microphone use starts only after you tap Talk now or explicitly enable hands-free. Wake-phrase listening runs only while Adventurer is foregrounded and pauses when the app backgrounds. Device-default recognition may process speech through the selected Android service; check that service's privacy settings.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    Text("No raw audio or transcript is sent to Adventurer analytics. Live Guide sends audio to the configured Boson realtime provider and sends rounded-only coordinates through Adventurer's server-side nearby-place callable; the backend does not forward exact coordinates to the map provider. Wake-phrase listening remains foreground-only, and microphone capture stops when the app backgrounds.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -394,7 +390,7 @@ fun AdventureVoiceCompanionScreen(
 @Composable
 private fun VoiceCommandExample(command: String, description: String) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(command, fontWeight = FontWeight.SemiBold, color = Color.White)
-        Text(description, color = VoiceMuted, style = MaterialTheme.typography.bodySmall)
+        Text(command, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+        Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
     }
 }
