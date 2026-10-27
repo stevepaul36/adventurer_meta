@@ -46,7 +46,7 @@ The detailed capability matrix, safety boundaries, common data model and rollout
 
 ## Voice-first Adventure Copilot
 
-The product strategy, provider boundaries, confirmation policy, UX requirements and phased roadmap are documented in [ADVENTURE_COPILOT_PRODUCT_PLAN.md](ADVENTURE_COPILOT_PRODUCT_PLAN.md). The current implementation connects the existing voice command for nearby-place questions to the authenticated GPS/OSM lookup and reports the results as map candidates with explicit limitations. It does not perform visual recognition, live traffic/ETA calculation, restaurant booking, food ordering or arbitrary cross-app tapping.
+The product strategy, provider boundaries, confirmation policy, UX requirements and phased roadmap are documented in [ADVENTURE_COPILOT_PRODUCT_PLAN.md](ADVENTURE_COPILOT_PRODUCT_PLAN.md). The [2019–2026 voice-first product research](ADVENTURER_VOICE_FIRST_PRODUCT_RESEARCH_2019_2026.md) explains the low-data architecture, short speech UX, fuel planning, camera permissions and staged roadmap. A deterministic fuel-range calculator is now present with unit tests; it is not yet wired to live route data, automatic reminders or vehicle telemetry. The current implementation connects the existing voice command for nearby-place questions to the authenticated GPS/OSM lookup and reports the results as map candidates with explicit limitations. It does not perform visual recognition, live traffic/ETA calculation, restaurant booking, food ordering or arbitrary cross-app tapping.
 
 ## Technology
 
