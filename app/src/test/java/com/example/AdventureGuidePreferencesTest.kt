@@ -33,7 +33,7 @@ class AdventureGuidePreferencesTest {
         assertTrue(defaults.interests.contains("nature_ecology"))
         assertTrue(defaults.interests.contains("local_history"))
         assertEquals("on_demand", defaults.proactivity)
-        assertEquals("mia", defaults.voicePreset)
+        assertEquals("natural", defaults.voicePreset)
     }
 
     @Test
@@ -43,14 +43,14 @@ class AdventureGuidePreferencesTest {
                 interests = setOf("marine_underwater", "geology_landforms"),
                 storyStyle = "technical_explainer",
                 proactivity = "gentle_suggestions",
-                voicePreset = "nora",
+                voicePreset = "warm",
             )
         )
         val reloaded = AdventureGuidePreferencesStore(context).load()
         assertEquals(saved, reloaded)
         assertTrue(reloaded.interests.contains("marine_underwater"))
         assertEquals("technical_explainer", reloaded.storyStyle)
-        assertEquals("nora", reloaded.voicePreset)
+        assertEquals("warm", reloaded.voicePreset)
     }
 
     @Test
@@ -60,14 +60,16 @@ class AdventureGuidePreferencesTest {
                 interests = setOf("unknown_topic"),
                 storyStyle = "injected_prompt",
                 proactivity = "always_speak_forever",
-                voicePreset = "not_a_supported_voice",
+                voicePreset = "not_a_supported_style",
             )
         )
         assertEquals(AdventureGuidePreferenceOptions.DEFAULT_INTERESTS, saved.interests)
         assertEquals("local_storyteller", saved.storyStyle)
         assertEquals("on_demand", saved.proactivity)
-        assertEquals("mia", saved.voicePreset)
+        assertEquals("natural", saved.voicePreset)
         assertFalse(saved.interests.isEmpty())
+        assertTrue(AdventureGuidePreferenceOptions.narrationStyleLabels.containsKey("warm"))
+        assertFalse(AdventureGuidePreferenceOptions.narrationStyleLabels.containsKey("mia"))
     }
 
     @Test
@@ -75,6 +77,7 @@ class AdventureGuidePreferencesTest {
         val summary = store.spokenSummary()
         assertTrue(summary.contains("Interests:"))
         assertTrue(summary.contains("Suggestion level: On demand"))
+        assertTrue(summary.contains("Narration tone: Natural"))
         assertFalse(summary.contains("latitude"))
         assertFalse(summary.contains("longitude"))
     }

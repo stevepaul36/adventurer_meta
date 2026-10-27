@@ -6,7 +6,7 @@ data class AdventureGuidePreferences(
     val interests: Set<String> = AdventureGuidePreferenceOptions.DEFAULT_INTERESTS,
     val storyStyle: String = "local_storyteller",
     val proactivity: String = "on_demand",
-    val voicePreset: String = "mia",
+    val voicePreset: String = "natural",
 )
 
 object AdventureGuidePreferenceOptions {
@@ -37,16 +37,14 @@ object AdventureGuidePreferenceOptions {
         "frequent_suggestions" to "More suggestions",
     )
 
-    val voiceLabels = linkedMapOf(
-        "mia" to "Mia",
-        "chloe" to "Chloe",
-        "marcus" to "Marcus",
-        "jake" to "Jake",
-        "nora" to "Nora",
-        "eleanor" to "Eleanor",
-        "oliver" to "Oliver",
-        "berlinda" to "Berlinda",
-        "default" to "Default",
+    // Higgs Realtime currently exposes its default voice; these options guide speech style.
+    // They are not provider voice IDs and do not clone a person's voice.
+    val narrationStyleLabels = linkedMapOf(
+        "natural" to "Natural",
+        "warm" to "Warm",
+        "calm" to "Calm",
+        "energetic" to "Energetic",
+        "clear" to "Clear",
     )
 
     val DEFAULT_INTERESTS = setOf("local_history", "nature_ecology", "local_food_culture")
@@ -68,9 +66,9 @@ class AdventureGuidePreferencesStore(context: Context) {
         val proactivity = prefs.getString("proactivity", "on_demand")
             ?.takeIf { it in AdventureGuidePreferenceOptions.proactivityLabels }
             ?: "on_demand"
-        val voice = prefs.getString("voice_preset", "mia")
-            ?.takeIf { it in AdventureGuidePreferenceOptions.voiceLabels }
-            ?: "mia"
+        val voice = prefs.getString("voice_preset", "natural")
+            ?.takeIf { it in AdventureGuidePreferenceOptions.narrationStyleLabels }
+            ?: "natural"
         return AdventureGuidePreferences(interests, style, proactivity, voice)
     }
 
@@ -81,7 +79,7 @@ class AdventureGuidePreferencesStore(context: Context) {
             .ifEmpty { AdventureGuidePreferenceOptions.DEFAULT_INTERESTS }
         val safeStyle = value.storyStyle.takeIf { it in AdventureGuidePreferenceOptions.storyStyleLabels } ?: "local_storyteller"
         val safeProactivity = value.proactivity.takeIf { it in AdventureGuidePreferenceOptions.proactivityLabels } ?: "on_demand"
-        val safeVoice = value.voicePreset.takeIf { it in AdventureGuidePreferenceOptions.voiceLabels } ?: "mia"
+        val safeVoice = value.voicePreset.takeIf { it in AdventureGuidePreferenceOptions.narrationStyleLabels } ?: "natural"
         prefs.edit()
             .putStringSet("interests", safeInterests)
             .putString("story_style", safeStyle)
@@ -97,7 +95,7 @@ class AdventureGuidePreferencesStore(context: Context) {
             .joinToString(", ")
         val style = AdventureGuidePreferenceOptions.storyStyleLabels[value.storyStyle] ?: "Local storyteller"
         val proactivity = AdventureGuidePreferenceOptions.proactivityLabels[value.proactivity] ?: "On demand"
-        val voice = AdventureGuidePreferenceOptions.voiceLabels[value.voicePreset] ?: "Default"
-        return "Interests: $interests. Story style: $style. Suggestion level: $proactivity. Realtime voice: $voice."
+        val voice = AdventureGuidePreferenceOptions.narrationStyleLabels[value.voicePreset] ?: "Natural"
+        return "Interests: $interests. Story style: $style. Suggestion level: $proactivity. Narration tone: $voice."
     }
 }

@@ -277,9 +277,14 @@ fun AdventureVoiceCompanionScreen(
                             )
                         }
                     }
-                    Text("Live voice", fontWeight = FontWeight.SemiBold)
+                    Text("Live narration tone", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Higgs Realtime currently supplies its default voice. These options guide delivery style; they are not named voice IDs or voice cloning.",
+                        color = VoiceMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        AdventureGuidePreferenceOptions.voiceLabels.forEach { (key, label) ->
+                        AdventureGuidePreferenceOptions.narrationStyleLabels.forEach { (key, label) ->
                             FilterChip(
                                 selected = guidePreferences.voicePreset == key,
                                 onClick = { saveGuidePreferences(guidePreferences.copy(voicePreset = key)) },
@@ -305,7 +310,7 @@ fun AdventureVoiceCompanionScreen(
                         FilterChip(selected = state.voiceStyle == AdventureVoiceStyle.BALANCED, onClick = { controller.setVoiceStyle(AdventureVoiceStyle.BALANCED) }, label = { Text("Balanced") })
                         FilterChip(selected = state.voiceStyle == AdventureVoiceStyle.ENERGETIC, onClick = { controller.setVoiceStyle(AdventureVoiceStyle.ENERGETIC) }, label = { Text("Energetic") })
                     }
-                    Text("Calm/Balanced/Energetic adjusts the local Android TTS fallback. Live AI Guide uses the separately saved realtime voice preset above; no voice cloning is performed.", color = VoiceMuted, style = MaterialTheme.typography.bodySmall)
+                    Text("Calm/Balanced/Energetic adjusts the local Android TTS fallback. The live narration tone above guides wording; Higgs Realtime currently uses its default voice. This does not select or clone a named voice.", color = VoiceMuted, style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(2.dp))
                     Text("Guide style", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

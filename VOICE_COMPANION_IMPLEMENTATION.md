@@ -15,7 +15,7 @@ The supplied RoamAlong repository separates the audio transport, realtime model,
 
 - `AdventureRealtimeVoiceSession.kt` owns PCM capture/playback, WebSocket lifecycle, VAD configuration, event processing, tool execution, interruption and playback truncation.
 - `AdventureVoiceController.kt` owns the lightweight one-shot/foreground wake phrase experience and local TTS fallback.
-- `AdventureGuidePreferences.kt` persists topic interests, narrative style, suggestion level and realtime voice preset locally.
+- `AdventureGuidePreferences.kt` persists topic interests, narrative style, suggestion level and live narration tone locally.
 - `MainActivity.kt` wires realtime model tools to real app navigation, selected activity, tracker status and user-triggered place lookups.
 - `functions/src/index.ts` mints a short-lived Boson credential, calls OpenStreetMap Overpass for nearby named map features, and uses Wikipedia's API for exact-title introductory summaries.
 - `functions/src/nearbyPlaces.ts` rounds spatial cells, normalizes and ranks nearby candidates by distance and, when movement provides a useful heading, approximate relative direction.
@@ -28,7 +28,7 @@ The model cannot execute arbitrary Kotlin. It can request a small explicit tool 
 - Activity changes: motorcycling, cycling, walking, trekking, car trips, camping, fishing, hunting, wildlife watching, scuba, snorkelling, paddling, boating, islands/coasts, and other supported activity modes.
 - Tracker: start a real session when location permissions are available, pause/resume, and read current distance/time/GPS-fix state.
 - Place questions: silently prefetch a small nearby context list after Live Guide starts when location access and a fresh usable fix are available. When the user asks about a nearby/unnamed object, the guide can consult that candidate list. For a specific named place, it can query an exact-title Wikipedia summary. Source details are returned alongside summary text.
-- Personalization: locally saved topic interests, narrative style, suggestion level and one of the supported realtime voice presets. The user can change these with the UI or explicitly ask Live Guide to save a preference.
+- Personalization: locally saved topic interests, narrative style, suggestion level and one of the supported live narration tones. The user can change these with the UI or explicitly ask Live Guide to save a preference.
 - Tour/Wander: updates the realtime instruction context. Suggestion level controls whether an answer includes a follow-up idea; it does not enable unsolicited GPS-triggered speech.
 - Voice quality of life: full-duplex voice interrupt handling, playback flush/truncation, speech stop on the basic path, language following Adventurer’s selected app language for fallback TTS, local voice preference, and coarse action analytics.
 
@@ -43,7 +43,7 @@ The Android app does **not** contain a Boson API key. Live Guide requires your o
 
 The callable that mints a token is authenticated and App-Check protected. It requests a limited-lifetime ephemeral token (10 minutes), and only that ephemeral token is sent to the Android WebSocket connection. Live Guide sends the microphone audio stream to the configured Boson Realtime service while the session is active.
 
-The deployed functions must use the Boson endpoint, current model/audio protocol, and secret corresponding to the provider account. Provider availability, account credit/quota and current SDK/server semantics must be confirmed on a real device before a public release.
+The deployed functions must use the Boson endpoint, current model/audio protocol, and secret corresponding to the provider account. Provider availability, account credit/quota and current SDK/server semantics must be confirmed on a real device before a public release. Higgs Realtime currently uses its provider default voice; Natural/Warm/Calm/Energetic/Clear are prompt-style guidance, not selectable named voice IDs or voice cloning.
 
 ## Nearby research, sources and privacy
 
