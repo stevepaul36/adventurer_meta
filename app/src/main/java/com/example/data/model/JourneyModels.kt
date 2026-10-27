@@ -10,6 +10,13 @@ enum class ActionStatus(val label: String, val badgeColorHex: Long) {
     SUGGESTED("Suggested", 0xFF38BDF8), // Cyan/Blue
     AWAITING_CONFIRMATION("Awaiting Confirmation", 0xFFF59E0B), // Amber
     HANDED_OFF("Handed Off", 0xFFA855F7), // Purple
+    /** Stored locally on this phone (stops, memories, notes). Not confirmed by any provider. */
+    SAVED_ON_DEVICE("Saved on device", 0xFF94A3B8), // Slate
+    /** The rider ticked this off themselves. */
+    CHECKED_OFF("Checked off by you", 0xFF22C55E), // Light green
+    /** Prototype flow — nothing real happened (no order, booking or dispatch). */
+    SIMULATED("Simulation only", 0xFF64748B), // Grey
+    /** Only for outcomes proven by a provider receipt/status. Nothing in this build produces it yet. */
     VERIFIED_COMPLETE("Verified Complete", 0xFF10B981), // Green
     UNCERTAIN("Uncertain", 0xFFEF4444) // Red
 }

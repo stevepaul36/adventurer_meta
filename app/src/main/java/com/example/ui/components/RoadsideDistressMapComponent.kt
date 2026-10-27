@@ -261,7 +261,7 @@ fun RoadsideDistressMapComponent(
             )
         }
 
-        // Floating Quick Broadcast SOS Button (Bottom Right)
+        // Floating SOS-note button (bottom right). Creates a local note only; nothing is transmitted.
         FloatingActionButton(
             onClick = onBroadcastSosClick,
             containerColor = DangerRed,
@@ -279,7 +279,7 @@ fun RoadsideDistressMapComponent(
             ) {
                 Icon(Icons.Default.Sos, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Broadcast SOS", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                Text("SOS note", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
             }
         }
     }

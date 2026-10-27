@@ -578,9 +578,10 @@ private fun CompactTurnByTurnCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Navigation, contentDescription = null, tint = HighAltitudeCyan, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("ACTIVE PASS ROUTE", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = HighAltitudeCyan)
+                    Text("SAMPLE ROUTE", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = HighAltitudeCyan)
                 }
-                Text("Leg 3 of 5", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // Stops start as an example Jispa–Sarchu trip; edit or replace them to make it yours.
+                Text("Example data · edit to make it yours", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             Row(
@@ -1570,7 +1571,7 @@ private fun ExplicitOrderConfirmationDialog(
                 }
 
                 Text(
-                    text = "⚠️ EXPLICIT CONFIRMATION NOTICE: This order is a prototype simulation. No funds will be charged and no real restaurant kitchen will be notified. Confirming sets the local action state to 'Verified Complete'.",
+                    text = "⚠️ EXPLICIT CONFIRMATION NOTICE: This order is a prototype simulation. No funds will be charged and no real restaurant kitchen will be notified. Confirming only marks this demo as 'Simulation only'.",
                     fontSize = 11.sp,
                     color = AmberGold,
                     lineHeight = 15.sp

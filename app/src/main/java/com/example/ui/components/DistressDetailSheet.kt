@@ -78,14 +78,24 @@ fun DistressDetailSheet(
                         signal = marker.signal,
                         onToggleRespond = { onToggleRespond(marker.signal.id) },
                         onCancelMySos = onCancelMySos,
-                        onCall = { EmergencyActions.dial(context, marker.signal.phoneNumber) },
+                        // Your own note: call emergency services / share your real location.
+                        // Another rider: call them / navigate to them.
+                        onCall = {
+                            if (marker.signal.isMySignal) EmergencyActions.dial(context, "112")
+                            else EmergencyActions.dial(context, marker.signal.phoneNumber)
+                        },
                         onNavigate = {
-                            EmergencyActions.navigateToCoordinates(
-                                context = context,
-                                latitude = marker.signal.latitude,
-                                longitude = marker.signal.longitude,
-                                label = "Distressed Rider: ${marker.signal.riderName}"
-                            )
+                            val s = marker.signal
+                            if (s.isMySignal) {
+                                EmergencyActions.shareLocation(context, s.latitude.takeIf { s.hasLocation }, s.longitude.takeIf { s.hasLocation })
+                            } else {
+                                EmergencyActions.navigateToCoordinates(
+                                    context = context,
+                                    latitude = s.latitude,
+                                    longitude = s.longitude,
+                                    label = "Distressed Rider: ${s.riderName}"
+                                )
+                            }
                         }
                     )
                 }
@@ -154,7 +164,11 @@ private fun RiderDistressDetailContent(
             color = if (signal.status == DistressStatus.RESPONDER_EN_ROUTE) Color(0xFF10B981).copy(alpha = 0.2f) else DangerRed.copy(alpha = 0.2f)
         ) {
             Text(
-                text = if (signal.status == DistressStatus.RESPONDER_EN_ROUTE) "${signal.responderCount} RESPONDER EN ROUTE" else "ACTIVE SOS · ${signal.timeAgo}",
+                text = when {
+                    signal.isMySignal -> "SAVED ON THIS PHONE · NOBODY NOTIFIED"
+                    signal.status == DistressStatus.RESPONDER_EN_ROUTE -> "${signal.responderCount} MARKED RESPONDING"
+                    else -> "ACTIVE SOS · ${signal.timeAgo}"
+                },
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = if (signal.status == DistressStatus.RESPONDER_EN_ROUTE) Color(0xFF10B981) else DangerRed,
@@ -197,13 +211,13 @@ private fun RiderDistressDetailContent(
         )
         TelemetryBadge(
             label = "PHONE BATTERY",
-            value = "${signal.batteryPercent}%",
+            value = if (signal.batteryPercent >= 0) "${signal.batteryPercent}%" else "—",
             icon = Icons.Default.BatteryChargingFull,
             modifier = Modifier.weight(1f)
         )
         TelemetryBadge(
             label = "ALTITUDE",
-            value = "${signal.altitudeM} m",
+            value = if (signal.hasLocation && signal.altitudeM > 0) "${signal.altitudeM} m" else "—",
             icon = Icons.Default.Landscape,
             modifier = Modifier.weight(1f)
         )
@@ -245,7 +259,7 @@ private fun RiderDistressDetailContent(
         ) {
             Icon(Icons.Default.Cancel, contentDescription = null, tint = DangerRed)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Cancel My SOS Beacon", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("Clear my SOS note", color = Color.White, fontWeight = FontWeight.Bold)
         }
     } else {
         // Volunteer response button
@@ -294,7 +308,7 @@ private fun RiderDistressDetailContent(
             ) {
                 Icon(Icons.Default.Phone, contentDescription = null, tint = AmberGold)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Call Rider", fontWeight = FontWeight.Bold)
+                Text(if (signal.isMySignal) "Call 112" else "Call Rider", fontWeight = FontWeight.Bold)
             }
 
             Button(
@@ -306,9 +320,9 @@ private fun RiderDistressDetailContent(
                     .height(48.dp)
                     .testTag("navigate_to_rider_btn")
             ) {
-                Icon(Icons.Default.Directions, contentDescription = null, tint = Color.Black)
+                Icon(if (signal.isMySignal) Icons.Default.ShareLocation else Icons.Default.Directions, contentDescription = null, tint = Color.Black)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Navigate", color = Color.Black, fontWeight = FontWeight.Bold)
+                Text(if (signal.isMySignal) "Share my location" else "Navigate", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         }
     }

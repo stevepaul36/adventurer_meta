@@ -38,7 +38,9 @@ data class RiderDistressSignal(
     val phoneNumber: String,
     val responderCount: Int = 0,
     val isMySignal: Boolean = false,
-    val isAcknowledgedByMe: Boolean = false
+    val isAcknowledgedByMe: Boolean = false,
+    /** False when no GPS fix was available; latitude/longitude are then placeholders and must not be shown. */
+    val hasLocation: Boolean = true
 )
 
 data class RoadsideServiceEntity(

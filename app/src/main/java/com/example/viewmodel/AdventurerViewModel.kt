@@ -302,7 +302,21 @@ class AdventurerViewModel(
     }
 
     fun broadcastMySos(distressType: DistressType, description: String, phone: String) {
-        repository.broadcastMySos(distressType, description, phone)
+        val t = telemetry.value
+        if (t.hasGpsFix) {
+            repository.broadcastMySos(distressType, description, phone, t.latitude, t.longitude, t.altitudeM)
+        } else {
+            repository.broadcastMySos(distressType, description, phone)
+            locationManager?.takeIf { it.hasLocationPermission() }?.getLastKnownLocation { loc ->
+                if (loc != null && (loc.latitude != 0.0 || loc.longitude != 0.0)) {
+                    repository.updateMySosLocation(loc.latitude, loc.longitude, loc.altitudeM.toInt().takeIf { it > 0 })
+                    val selected = _selectedMarker.value
+                    if (selected is MapMarkerItem.RiderDistress && selected.signal.isMySignal) {
+                        repository.distressSignals.value.firstOrNull { it.isMySignal }?.let { _selectedMarker.value = MapMarkerItem.RiderDistress(it) }
+                    }
+                }
+            }
+        }
         _showBroadcastModal.value = false
         // Automatically select own broadcast marker
         val mySignal = repository.distressSignals.value.firstOrNull { it.isMySignal }
@@ -335,7 +349,7 @@ class AdventurerViewModel(
                 altitudeM = 3200,
                 reminderNote = "Check tire pressure & top up engine oil before ascent",
                 isVisited = true,
-                status = ActionStatus.VERIFIED_COMPLETE
+                status = ActionStatus.CHECKED_OFF
             ),
             JourneyStop(
                 id = "stop-2",
@@ -585,7 +599,7 @@ class AdventurerViewModel(
         )
         _journeyStops.value = _journeyStops.value + newStop
         _voiceDockStateText.value = "Added checkpoint: ${newStop.name}. Reminder set."
-        _voiceDockActionStatus.value = ActionStatus.VERIFIED_COMPLETE
+        _voiceDockActionStatus.value = ActionStatus.SAVED_ON_DEVICE
     }
 
     fun editJourneyStop(id: String, name: String, km: Double, etaMin: Int, altitudeM: Int, reminder: String) {
@@ -601,7 +615,7 @@ class AdventurerViewModel(
             } else stop
         }
         _voiceDockStateText.value = "Updated checkpoint $name."
-        _voiceDockActionStatus.value = ActionStatus.VERIFIED_COMPLETE
+        _voiceDockActionStatus.value = ActionStatus.SAVED_ON_DEVICE
     }
 
     fun deleteJourneyStop(id: String) {
@@ -614,7 +628,7 @@ class AdventurerViewModel(
                 val newVisited = !stop.isVisited
                 stop.copy(
                     isVisited = newVisited,
-                    status = if (newVisited) ActionStatus.VERIFIED_COMPLETE else ActionStatus.SUGGESTED
+                    status = if (newVisited) ActionStatus.CHECKED_OFF else ActionStatus.SUGGESTED
                 )
             } else stop
         }
@@ -632,7 +646,7 @@ class AdventurerViewModel(
         )
         _journeyMemories.value = listOf(newMemory) + _journeyMemories.value
         _voiceDockStateText.value = "Logged memory: ${newMemory.title}. Stored in your travel journal."
-        _voiceDockActionStatus.value = ActionStatus.VERIFIED_COMPLETE
+        _voiceDockActionStatus.value = ActionStatus.SAVED_ON_DEVICE
     }
 
     fun deleteJourneyMemory(id: String) {
@@ -683,11 +697,11 @@ class AdventurerViewModel(
     fun confirmDemoOrder() {
         _activeDemoOrder.value?.let { order ->
             _activeDemoOrder.value = order.copy(
-                status = ActionStatus.VERIFIED_COMPLETE
+                status = ActionStatus.SIMULATED
             )
             _cartItems.value = emptyList()
-            _voiceDockStateText.value = "Demo order confirmed! Preparation simulation active at ${order.venueName}."
-            _voiceDockActionStatus.value = ActionStatus.VERIFIED_COMPLETE
+            _voiceDockStateText.value = "Demo only: nothing was ordered from ${order.venueName} and no payment was made."
+            _voiceDockActionStatus.value = ActionStatus.SIMULATED
         }
     }
 

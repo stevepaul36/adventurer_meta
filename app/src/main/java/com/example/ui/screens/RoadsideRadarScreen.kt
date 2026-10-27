@@ -124,7 +124,7 @@ fun RoadsideRadarScreen(
                             }
                         }
                         Text(
-                            text = "Nearby rescue services & riders in distress",
+                            text = "Emergency calls, roadside help & local SOS notes",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -135,7 +135,7 @@ fun RoadsideRadarScreen(
                         onClick = { viewModel.setShowBroadcastModal(true) },
                         modifier = Modifier.testTag("top_broadcast_sos_btn")
                     ) {
-                        Icon(Icons.Default.Emergency, contentDescription = "Broadcast SOS", tint = DangerRed)
+                        Icon(Icons.Default.Emergency, contentDescription = "Create a local SOS note", tint = DangerRed)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -275,7 +275,7 @@ fun RoadsideRadarScreen(
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text = "Call 112 or 108, or broadcast your exact GPS distress signal to nearby riders.",
+                                            text = "Call 112 or 108, or share your location with someone you trust. SOS notes stay on this phone.",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = Color(0xFFCBD5E1)
                                         )
@@ -411,7 +411,7 @@ fun RoadsideRadarScreen(
         }
     }
 
-    // Modal: Broadcast SOS Beacon Dialog
+    // Modal: create a local SOS note (nothing is transmitted)
     if (showBroadcastModal) {
         BroadcastSosDialog(
             onDismiss = { viewModel.setShowBroadcastModal(false) },
@@ -546,13 +546,13 @@ private fun ActiveSosBanner(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = "YOUR SOS BEACON IS ACTIVE",
+                        text = "YOUR SOS NOTE · ON THIS PHONE ONLY",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = DangerRed
                     )
                     Text(
-                        text = "${signal.distressType.title} · ${signal.responderCount} Responders alerted",
+                        text = "${signal.distressType.title} · not sent to anyone — call 112 or share your location",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFFCBD5E1)
                     )

@@ -536,26 +536,46 @@ class AdventurerRepository {
         }
     }
 
-    fun broadcastMySos(distressType: DistressType, description: String, phone: String) {
+    /**
+     * Saves the rider's own SOS note on this phone. Nothing is transmitted to anyone.
+     * Location fields come from a real GPS fix when available; otherwise they are marked unknown.
+     */
+    fun broadcastMySos(
+        distressType: DistressType,
+        description: String,
+        phone: String,
+        latitude: Double? = null,
+        longitude: Double? = null,
+        altitudeM: Int? = null,
+    ) {
+        val hasLocation = latitude != null && longitude != null
         val mySignal = RiderDistressSignal(
             id = "my-sos-${UUID.randomUUID().toString().take(6)}",
             riderName = "${currentUser.name} (YOU)",
             bikeModel = currentUser.bikeModel,
             distressType = distressType,
             status = DistressStatus.ACTIVE_SOS,
-            latitude = 32.5512,
-            longitude = 77.1724,
+            latitude = latitude ?: 0.0,
+            longitude = longitude ?: 0.0,
             distanceKm = 0.0,
             bearingDeg = 0f,
-            altitudeM = 3350,
-            batteryPercent = 95,
+            altitudeM = altitudeM ?: 0,
+            batteryPercent = -1, // not measured
             timeAgo = "Just now",
-            description = if (description.isNotBlank()) description else "Emergency SOS beacon active! Immediate assistance needed on route.",
-            phoneNumber = if (phone.isNotBlank()) phone else "+91 99999 11222",
+            description = description.ifBlank { "SOS note saved on this phone. Nobody has been notified automatically." },
+            phoneNumber = phone.trim(),
             responderCount = 0,
-            isMySignal = true
+            isMySignal = true,
+            hasLocation = hasLocation
         )
         _distressSignals.value = listOf(mySignal) + _distressSignals.value.filterNot { it.isMySignal }
+    }
+
+    /** Fills in the rider's real coordinates once a last-known location arrives. */
+    fun updateMySosLocation(latitude: Double, longitude: Double, altitudeM: Int?) {
+        _distressSignals.value = _distressSignals.value.map { sig ->
+            if (sig.isMySignal) sig.copy(latitude = latitude, longitude = longitude, altitudeM = altitudeM ?: sig.altitudeM, hasLocation = true) else sig
+        }
     }
 
     fun cancelMySos() {

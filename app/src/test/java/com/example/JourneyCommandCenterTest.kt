@@ -97,7 +97,7 @@ class JourneyCommandCenterTest {
         viewModel.toggleStopVisited(added.id)
         val toggled = viewModel.journeyStops.value.find { it.id == added.id }!!
         assertTrue(toggled.isVisited)
-        assertEquals(ActionStatus.VERIFIED_COMPLETE, toggled.status)
+        assertEquals(ActionStatus.CHECKED_OFF, toggled.status)
 
         // Delete stop
         viewModel.deleteJourneyStop(added.id)
@@ -135,7 +135,7 @@ class JourneyCommandCenterTest {
         // Explicit confirmation
         viewModel.confirmDemoOrder()
         val confirmedOrder = viewModel.activeDemoOrder.value!!
-        assertEquals(ActionStatus.VERIFIED_COMPLETE, confirmedOrder.status)
+        assertEquals(ActionStatus.SIMULATED, confirmedOrder.status)
         assertTrue("Cart should be cleared after confirmation", viewModel.cartItems.value.isEmpty())
 
         // Cancel order
