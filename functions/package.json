@@ -2,11 +2,13 @@
   "name": "adventurer-functions",
   "private": true,
   "description": "Secure server-side AI and subscription entitlement checks for Adventurer.",
-  "engines": { "node": "22" },
+  "engines": {
+    "node": "22"
+  },
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test lib/entitlements.test.js"
+    "test": "npm run build && node --test lib/entitlements.test.js lib/nearbyPlaces.test.js"
   },
   "dependencies": {
     "firebase-admin": "13.5.0",

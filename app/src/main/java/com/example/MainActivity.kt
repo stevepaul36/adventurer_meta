@@ -45,9 +45,13 @@ import com.example.data.planning.AdventurePlannerRepository
 import com.example.data.model.ActivityType
 import com.example.data.voice.AdventureVoiceAction
 import com.example.data.voice.AdventureVoiceController
+import com.example.data.voice.AdventureRealtimeVoiceSession
+import com.example.data.voice.RealtimeAdventureContext
 import com.example.data.voice.AdventureVoiceSafetyPolicy
 import com.example.data.voice.VoiceMotionSnapshot
 import com.example.data.voice.AdventureGuideMode
+import com.example.data.voice.AdventureGuidePreferences
+import com.example.data.voice.AdventureGuidePreferencesStore
 import com.example.data.voice.ParsedAdventureVoiceCommand
 import com.example.data.voice.VoiceCommandReply
 import com.example.data.voice.VoiceStartRequest
@@ -63,6 +67,13 @@ import com.example.ui.theme.AdventurerTheme
 import com.example.ui.theme.AmberGold
 import com.example.viewmodel.AdventurerViewModel
 import com.example.viewmodel.Screen
+import com.google.firebase.functions.FirebaseFunctions
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : ComponentActivity() {
 
@@ -86,6 +97,15 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private data class VoicePlaceFix(
+    val latitude: Double,
+    val longitude: Double,
+    val headingDeg: Double?,
+    val speedMps: Double,
+    val accuracyM: Double,
+    val timestampMillis: Long,
+)
+
 private data class NavTab(val screen: Screen, val label: Str, val selected: ImageVector, val unselected: ImageVector, val accent: Color)
 
 private val NavTabs = listOf(
@@ -101,15 +121,21 @@ private val NavTabs = listOf(
 fun AdventurerApp(viewModel: AdventurerViewModel) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val plannerRepository = remember(context) { AdventurePlannerRepository(context.applicationContext) }
+    val guidePreferencesStore = remember(context) { AdventureGuidePreferencesStore(context.applicationContext) }
     val locationManager = remember { com.example.data.location.LocationManager(context.applicationContext) }
     val voiceController = remember(context) { AdventureVoiceController(context) }
+    val liveGuideSession = remember(context) { AdventureRealtimeVoiceSession(context.applicationContext) }
+    val appScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    DisposableEffect(lifecycleOwner, voiceController) {
+    DisposableEffect(lifecycleOwner, voiceController, liveGuideSession) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> voiceController.setForegroundActive(true)
-                Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> voiceController.setForegroundActive(false)
+                Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> {
+                    voiceController.setForegroundActive(false)
+                    liveGuideSession.disconnect("Live Guide paused because Adventurer left the foreground.")
+                }
                 else -> Unit
             }
         }
@@ -118,6 +144,229 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             voiceController.shutdown()
+            liveGuideSession.close()
+        }
+    }
+
+    fun currentVehicleIsMoving(): Boolean {
+        val ride = viewModel.telemetry.value
+        return AdventureVoiceSafetyPolicy.isVehicleInMotion(
+            VoiceMotionSnapshot(
+                activityType = ride.activityType,
+                isRecording = ride.isRecording,
+                isPaused = ride.isPaused,
+                hasGpsFix = ride.hasGpsFix,
+                isDemo = ride.isDemo,
+                speedKmH = ride.currentSpeedKmH,
+            )
+        )
+    }
+
+    fun currentSessionSummary(): String {
+        val ride = viewModel.telemetry.value
+        if (!ride.isRecording) return "No activity session is recording."
+        val minutes = ride.elapsedSeconds / 60
+        val gps = if (ride.hasGpsFix && !ride.isDemo) "GPS fix confirmed" else "GPS fix not confirmed"
+        return "${ride.activityType.displayName} session ${if (ride.isPaused) "paused" else "recording"}, %.1f kilometres, %d minutes, %s".format(
+            java.util.Locale.US, ride.distanceKm, minutes, gps
+        )
+    }
+
+    fun buildRealtimeGuideContext(): RealtimeAdventureContext {
+        val currentActivity = viewModel.activityMode.value
+        val preferences = guidePreferencesStore.load()
+        return RealtimeAdventureContext(
+            activityName = currentActivity.displayName,
+            activityGuidance = "${currentActivity.homeHint} ${currentActivity.trackerSubtitle}",
+            languageCode = viewModel.currentLang.value.code,
+            guideMode = voiceController.state.value.guideMode,
+            sessionSummary = currentSessionSummary(),
+            preferencesSummary = guidePreferencesStore.spokenSummary(preferences),
+            voicePreset = preferences.voicePreset,
+            vehicleInMotion = currentVehicleIsMoving(),
+        )
+    }
+
+    suspend fun getFreshVoicePlaceFix(): VoicePlaceFix? {
+        if (!locationManager.hasLocationPermission()) return null
+        val now = System.currentTimeMillis()
+        val cached = locationManager.currentLocation.value
+        if (cached != null && now - cached.timestamp in 0L..120_000L && cached.accuracyM <= 100f) {
+            return VoicePlaceFix(
+                latitude = cached.latitude,
+                longitude = cached.longitude,
+                headingDeg = cached.bearingDeg.toDouble(),
+                speedMps = (cached.speedKmH / 3.6).coerceAtLeast(0.0),
+                accuracyM = cached.accuracyM.toDouble(),
+                timestampMillis = cached.timestamp,
+            )
+        }
+
+        val cancellation = CancellationTokenSource()
+        return try {
+            withTimeoutOrNull(12_000) {
+                val location = LocationServices.getFusedLocationProviderClient(context)
+                    .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellation.token)
+                    .await() ?: return@withTimeoutOrNull null
+                val timestamp = location.time
+                val accuracy = if (location.hasAccuracy()) location.accuracy.toDouble() else Double.POSITIVE_INFINITY
+                if (System.currentTimeMillis() - timestamp !in 0L..120_000L || accuracy > 100.0) {
+                    return@withTimeoutOrNull null
+                }
+                VoicePlaceFix(
+                    latitude = location.latitude,
+                    longitude = location.longitude,
+                    headingDeg = if (location.hasBearing()) location.bearing.toDouble() else null,
+                    speedMps = if (location.hasSpeed()) location.speed.toDouble().coerceIn(0.0, 100.0) else 0.0,
+                    accuracyM = accuracy,
+                    timestampMillis = timestamp,
+                )
+            }
+        } catch (_: Exception) {
+            null
+        } finally {
+            cancellation.cancel()
+        }
+    }
+
+    suspend fun requestNearbyContext(): Map<String, Any?> {
+        val fix = getFreshVoicePlaceFix()
+            ?: return mapOf("ok" to false, "message" to "I need a fresh, permission-authorized GPS fix to look up nearby places. I will not guess your location.")
+        return try {
+            val request = mutableMapOf<String, Any>(
+                "latitude" to fix.latitude,
+                "longitude" to fix.longitude,
+                "speedMps" to fix.speedMps,
+                "radiusMeters" to 250,
+            )
+            fix.headingDeg?.let { request["headingDeg"] = it }
+            val result = FirebaseFunctions.getInstance("us-central1")
+                .getHttpsCallable("getNearbyAdventurePlaces")
+                .call(request)
+                .await()
+            val payload = result.data as? Map<*, *>
+                ?: return mapOf("ok" to false, "message" to "Nearby research returned an invalid response.")
+            val places = (payload["places"] as? List<*>)?.mapNotNull { raw ->
+                val place = raw as? Map<*, *> ?: return@mapNotNull null
+                val name = place["name"] as? String ?: return@mapNotNull null
+                val distance = (place["distanceMeters"] as? Number)?.toInt()
+                val direction = listOfNotNull(place["relativeDirection"] as? String, place["relativeClock"] as? String).joinToString(", ")
+                mapOf(
+                    "name" to name.take(100),
+                    "category" to ((place["category"] as? String).orEmpty().take(80)),
+                    "distance_meters" to (distance ?: 0),
+                    "relative_direction" to direction,
+                    "source_url" to ((place["mapUrl"] as? String).orEmpty().take(200)),
+                )
+            }?.take(5).orEmpty()
+            val wiki = payload["wikipedia"] as? Map<*, *>
+            val fact = if (wiki != null) mapOf(
+                "title" to ((wiki["title"] as? String).orEmpty().take(100)),
+                "summary" to ((wiki["summary"] as? String).orEmpty().take(500)),
+                "source" to ((wiki["source"] as? String).orEmpty()),
+                "url" to ((wiki["url"] as? String).orEmpty().take(300)),
+            ) else null
+            mapOf(
+                "ok" to true,
+                "source" to "OpenStreetMap contributors",
+                "source_url" to "https://www.openstreetmap.org/copyright",
+                "freshness" to ((payload["freshness"] as? String).orEmpty()),
+                "places" to places,
+                "wiki_fact" to (fact ?: emptyMap<String, String>()),
+                "caveat" to ((payload["note"] as? String).orEmpty().take(400)),
+            )
+        } catch (error: Exception) {
+            mapOf(
+                "ok" to false,
+                "message" to when {
+                    error.message.orEmpty().contains("resource-exhausted", true) -> "Nearby research is cooling down. Use the recently prefetched context if available."
+                    error.message.orEmpty().contains("unauthenticated", true) -> "Secure sign-in is not ready for nearby research."
+                    else -> "Nearby-place research is temporarily unavailable. Do not guess a landmark or current conditions."
+                }
+            )
+        }
+    }
+
+    suspend fun requestAdventurePlaceFacts(placeName: String): Map<String, Any?> {
+        val query = placeName.trim().take(120)
+        if (query.isBlank()) return mapOf("ok" to false, "message" to "A specific place name is required; I won't guess the name of an unnamed object.")
+        return try {
+            val response = FirebaseFunctions.getInstance("us-central1")
+                .getHttpsCallable("lookupAdventurePlaceFacts")
+                .call(mapOf("placeName" to query))
+                .await()
+            val payload = response.data as? Map<*, *>
+                ?: return mapOf("ok" to false, "message" to "The place-fact service returned an invalid response.")
+            val found = payload["found"] == true
+            val fact = payload["fact"] as? Map<*, *>
+            if (!found || fact == null) {
+                mapOf(
+                    "ok" to false,
+                    "message" to ((payload["message"] as? String).orEmpty().ifBlank {
+                        "No exact-title source-backed summary was found. Please provide more context rather than guessing."
+                    }),
+                    "source" to "Wikipedia",
+                    "source_url" to ((payload["sourceUrl"] as? String).orEmpty().take(240)),
+                )
+            } else {
+                AdventureFunnelAnalytics.log(context, "voice_place_fact_requested")
+                mapOf(
+                    "ok" to true,
+                    "title" to ((fact["title"] as? String).orEmpty().take(120)),
+                    "summary" to ((fact["summary"] as? String).orEmpty().take(600)),
+                    "source" to ((fact["source"] as? String).orEmpty().ifBlank { "Wikipedia" }),
+                    "source_url" to ((fact["url"] as? String).orEmpty().take(280)),
+                    "caveat" to ((payload["note"] as? String).orEmpty().take(400)),
+                )
+            }
+        } catch (_: Exception) {
+            mapOf("ok" to false, "message" to "Place facts are temporarily unavailable. I don't have a verified summary to use.")
+        }
+    }
+
+    fun startLiveGuide() {
+        voiceController.disableHandsFree()
+        voiceController.stopSpeaking()
+        if (currentVehicleIsMoving()) {
+            liveGuideSession.disconnect("Live Guide is paused for safety. Pull over and stop the vehicle before starting a conversation.")
+            return
+        }
+        val currentActivity = viewModel.activityMode.value
+        if (currentActivity == ActivityType.Motorcycling || currentActivity == ActivityType.CarTrips) {
+            val ride = viewModel.telemetry.value
+            if (!ride.isRecording || ride.isDemo || !ride.hasGpsFix) {
+                liveGuideSession.disconnect("For vehicle activities, start a real GPS tracker session while stationary before starting Live Guide. The guide stops automatically when motion is detected.")
+                return
+            }
+        }
+        val sessionContext = buildRealtimeGuideContext().copy(vehicleInMotion = false)
+        AdventureFunnelAnalytics.log(context, "live_voice_connect_requested", mapOf("activity_type" to currentActivity.name))
+        appScope.launch {
+            liveGuideSession.connect(sessionContext)
+            if (liveGuideSession.state.value.isConnected) {
+                // Prefetch a small, user-visible-context-only place list while the user begins the
+                // conversation. It is injected as context without forcing an unsolicited response.
+                val prefetch = requestNearbyContext()
+                if (prefetch["ok"] == true && liveGuideSession.state.value.isConnected) {
+                    val note = buildString {
+                        append("[PREFETCHED_NEARBY_CONTEXT] Source: OpenStreetMap contributors. ")
+                        append("The following are community-map candidates, not visual identification or verified safety/access information. ")
+                        append("Candidate data: ")
+                        append((prefetch["places"] as? List<*>)?.joinToString("; ") { it.toString().take(180) }.orEmpty().take(1200))
+                        val fact = prefetch["wiki_fact"] as? Map<*, *>
+                        val wikiSummary = (fact?.get("summary") as? String).orEmpty()
+                        if (wikiSummary.isNotBlank()) {
+                            append(" Wikipedia source-backed introductory summary: ")
+                            append(wikiSummary.take(500))
+                            append(" Source URL: ")
+                            append(fact["url"].toString().take(250))
+                        }
+                        append(" Do not mention or describe any candidate unless the user asks; never infer what the user is looking at. These results are not navigation or current conditions.")
+                    }
+                    liveGuideSession.sendContextNote(note)
+                    AdventureFunnelAnalytics.log(context, "live_voice_nearby_prefetch", mapOf("result_count" to ((prefetch["places"] as? List<*>)?.size ?: 0)))
+                }
+            }
         }
     }
 
@@ -127,19 +376,28 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
             when (pendingVoiceStart) {
                 VoiceStartRequest.PUSH_TO_TALK -> voiceController.startOneShot()
                 VoiceStartRequest.HANDS_FREE -> voiceController.enableHandsFree()
+                VoiceStartRequest.REALTIME_GUIDE -> startLiveGuide()
             }
         } else voiceController.permissionDenied()
     }
     val requestVoice: (VoiceStartRequest) -> Unit = { request ->
         pendingVoiceStart = request
-        AdventureFunnelAnalytics.log(
-            context,
-            if (request == VoiceStartRequest.HANDS_FREE) "voice_hands_free_enabled" else "voice_push_to_talk_started"
-        )
+        when (request) {
+            VoiceStartRequest.HANDS_FREE -> AdventureFunnelAnalytics.log(context, "voice_hands_free_enabled")
+            VoiceStartRequest.PUSH_TO_TALK -> AdventureFunnelAnalytics.log(context, "voice_push_to_talk_started")
+            VoiceStartRequest.REALTIME_GUIDE -> Unit // Recorded after permission is granted and connection is attempted.
+        }
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
             when (request) {
-                VoiceStartRequest.PUSH_TO_TALK -> voiceController.startOneShot()
-                VoiceStartRequest.HANDS_FREE -> voiceController.enableHandsFree()
+                VoiceStartRequest.PUSH_TO_TALK -> {
+                    liveGuideSession.disconnect("Live Guide paused for Talk Now.")
+                    voiceController.startOneShot()
+                }
+                VoiceStartRequest.HANDS_FREE -> {
+                    liveGuideSession.disconnect("Live Guide paused for hands-free voice commands.")
+                    voiceController.enableHandsFree()
+                }
+                VoiceStartRequest.REALTIME_GUIDE -> startLiveGuide()
             }
         } else voicePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
     }
@@ -311,6 +569,156 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
     val activityMode by viewModel.activityMode.collectAsState()
     val lang by viewModel.currentLang.collectAsState()
 
+    LaunchedEffect(liveGuideSession, viewModel, locationManager) {
+        liveGuideSession.setToolHandler { toolName, arguments ->
+            when (toolName) {
+                "get_nearby_adventure_places" -> requestNearbyContext()
+                "get_adventure_place_facts" -> requestAdventurePlaceFacts(arguments["place_name"] as? String ?: "")
+                "save_adventure_guide_preferences" -> {
+                    val old = guidePreferencesStore.load()
+                    val requestedInterests = (arguments["interests"] as? List<*>)
+                        ?.filterIsInstance<String>()
+                        ?.toSet()
+                        ?: old.interests
+                    val updated = guidePreferencesStore.save(
+                        old.copy(
+                            interests = requestedInterests,
+                            storyStyle = arguments["story_style"] as? String ?: old.storyStyle,
+                            proactivity = arguments["proactivity"] as? String ?: old.proactivity,
+                            voicePreset = arguments["voice_preset"] as? String ?: old.voicePreset,
+                        )
+                    )
+                    liveGuideSession.updateGuidePreferences(buildRealtimeGuideContext())
+                    AdventureFunnelAnalytics.log(context, "voice_guide_preferences_saved")
+                    mapOf(
+                        "ok" to true,
+                        "summary" to "Guide preferences were saved on this device.",
+                        "preferences" to guidePreferencesStore.spokenSummary(updated),
+                    )
+                }
+                "execute_adventurer_action" -> {
+                    val action = arguments["action"] as? String
+                    if (action.isNullOrBlank()) {
+                        mapOf("ok" to false, "message" to "The requested action is missing.")
+                    } else if (currentVehicleIsMoving() && action !in setOf("pause_activity", "open_safety_help")) {
+                        mapOf("ok" to false, "message" to "The live guide has a vehicle-motion safety guard. Pull over and stop before continuing.")
+                    } else {
+                        when (action) {
+                            "go_back" -> {
+                                val changed = viewModel.navigateBack()
+                                mapOf("ok" to true, "summary" to if (changed) "Returned to the previous screen." else "Already at home.")
+                            }
+                            "next_screen" -> {
+                                viewModel.navigateToNextTopLevel()
+                                mapOf("ok" to true, "summary" to "Opened the next main app screen.")
+                            }
+                            "previous_screen" -> {
+                                viewModel.navigateToPreviousTopLevel()
+                                mapOf("ok" to true, "summary" to "Opened the previous main app screen.")
+                            }
+                            "open_feed" -> {
+                                viewModel.navigateTo(Screen.FEED)
+                                mapOf("ok" to true, "summary" to "Opened the adventure feed.")
+                            }
+                            "open_explore" -> {
+                                viewModel.navigateTo(Screen.EXPLORE_PLAN)
+                                mapOf("ok" to true, "summary" to "Opened Explore and Plan.")
+                            }
+                            "open_tracker" -> {
+                                viewModel.navigateTo(Screen.LIVE_TRACKER)
+                                mapOf("ok" to true, "summary" to "Opened the activity tracker.")
+                            }
+                            "open_story_studio" -> {
+                                viewModel.navigateTo(Screen.STORY_STUDIO)
+                                mapOf("ok" to true, "summary" to "Opened Story Studio.")
+                            }
+                            "open_safety_help" -> {
+                                viewModel.navigateTo(Screen.RADAR)
+                                mapOf("ok" to true, "summary" to "Opened Safety and Help. No SOS was dispatched.")
+                            }
+                            "open_profile" -> {
+                                viewModel.navigateTo(Screen.PROFILE)
+                                mapOf("ok" to true, "summary" to "Opened the profile.")
+                            }
+                            "set_activity" -> {
+                                val activityName = arguments["activity_type"] as? String
+                                val requestedActivity = ActivityType.values().firstOrNull { it.name == activityName }
+                                if (requestedActivity == null) mapOf("ok" to false, "message" to "That activity is not supported.")
+                                else {
+                                    viewModel.setActivityMode(requestedActivity)
+                                    mapOf("ok" to true, "summary" to "Selected activity ${requestedActivity.displayName}.")
+                                }
+                            }
+                            "start_activity" -> {
+                                if (viewModel.telemetry.value.isRecording) mapOf("ok" to false, "message" to "A session is already recording.")
+                                else if (viewModel.locationManager?.hasLocationPermission() != true) mapOf("ok" to false, "message" to "Location permission is required. Open Tracker and grant location permission before starting a voice-controlled real GPS session.")
+                                else {
+                                    viewModel.startRide()
+                                    mapOf("ok" to true, "summary" to "The activity tracker started. Keep attention on your environment.")
+                                }
+                            }
+                            "pause_activity" -> {
+                                val ride = viewModel.telemetry.value
+                                if (!ride.isRecording) mapOf("ok" to false, "message" to "There is no active session to pause.")
+                                else if (ride.isPaused) mapOf("ok" to true, "summary" to "The session is already paused.")
+                                else {
+                                    viewModel.pauseRide()
+                                    mapOf("ok" to true, "summary" to "The session was paused.")
+                                }
+                            }
+                            "resume_activity" -> {
+                                val ride = viewModel.telemetry.value
+                                if (!ride.isRecording) mapOf("ok" to false, "message" to "There is no active session to resume.")
+                                else if (!ride.isPaused) mapOf("ok" to true, "summary" to "The session is already running.")
+                                else if (currentVehicleIsMoving()) mapOf("ok" to false, "message" to "Pull over and stop before resuming with the voice agent.")
+                                else {
+                                    viewModel.resumeRide()
+                                    mapOf("ok" to true, "summary" to "The session was resumed.")
+                                }
+                            }
+                            "read_status" -> {
+                                if (currentVehicleIsMoving()) mapOf("ok" to false, "message" to "Live Guide has been paused for vehicle movement.")
+                                else mapOf("ok" to true, "summary" to currentSessionSummary())
+                            }
+                            "activity_briefing" -> {
+                                if (currentVehicleIsMoving()) mapOf("ok" to false, "message" to "A longer briefing is blocked while the vehicle is moving. Pull over safely first.")
+                                else {
+                                    val activity = viewModel.activityMode.value
+                                    mapOf("ok" to true, "summary" to "${activity.displayName}. ${activity.homeHint} ${activity.trackerSubtitle}".take(650))
+                                }
+                            }
+                            else -> mapOf("ok" to false, "message" to "This action is not enabled.")
+                        }
+                    }
+                }
+                else -> mapOf("ok" to false, "message" to "That tool is not registered by Adventurer.")
+            }
+        }
+    }
+
+    LaunchedEffect(
+        liveGuideSession,
+        telemetry.isRecording,
+        telemetry.isPaused,
+        telemetry.hasGpsFix,
+        telemetry.isDemo,
+        telemetry.currentSpeedKmH,
+        activityMode,
+    ) {
+        if (currentVehicleIsMoving() && liveGuideSession.state.value.isConnected) {
+            liveGuideSession.disconnect("Live Guide stopped because vehicle movement was detected. Stop in a safe place before starting a new conversation.")
+        }
+    }
+
+    LaunchedEffect(liveGuideSession) {
+        var wasConnected = false
+        liveGuideSession.state.collect { state ->
+            if (!wasConnected && state.isConnected) AdventureFunnelAnalytics.log(context, "live_voice_connected")
+            if (wasConnected && !state.isConnected) AdventureFunnelAnalytics.log(context, "live_voice_disconnected")
+            wasConnected = state.isConnected
+        }
+    }
+
     LaunchedEffect(currentScreen) {
         if (currentScreen == Screen.VOICE_COMPANION) {
             AdventureFunnelAnalytics.log(context, "voice_assistant_open")
@@ -407,7 +815,14 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                 when (screen) {
                     Screen.FEED -> FeedScreen(viewModel = viewModel)
                     Screen.EXPLORE_PLAN -> AdventurePlannerScreen(viewModel = viewModel, plannerRepository = plannerRepository)
-                    Screen.VOICE_COMPANION -> AdventureVoiceCompanionScreen(viewModel = viewModel, controller = voiceController, onRequestVoice = requestVoice)
+                    Screen.VOICE_COMPANION -> AdventureVoiceCompanionScreen(
+                        viewModel = viewModel,
+                        controller = voiceController,
+                        liveGuideSession = liveGuideSession,
+                        preferencesStore = guidePreferencesStore,
+                        onGuidePreferencesChanged = { liveGuideSession.updateGuidePreferences(buildRealtimeGuideContext()) },
+                        onRequestVoice = requestVoice,
+                    )
                     Screen.EXPEDITIONS -> ExpeditionsScreen(viewModel = viewModel)
                     Screen.RADAR -> RoadsideRadarScreen(viewModel = viewModel)
                     Screen.LIVE_TRACKER -> GpsTrackerScreen(viewModel = viewModel)

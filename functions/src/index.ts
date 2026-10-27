@@ -7,6 +7,12 @@ import { defineSecret, defineString } from "firebase-functions/params";
 import { HttpsError, onCall, type CallableRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import {
+  buildNearbyOverpassQuery,
+  nearbyPlaceCacheKey,
+  normalizeNearbyPlaces,
+  roundForNearbyQuery,
+} from "./nearbyPlaces";
+import {
   isEntitlementActive,
   isSafeStoragePath,
   stableQuotaOwnerKey,
@@ -22,6 +28,7 @@ const PRO_ENTITLEMENT = "adventurer_pro";
 const MONTHLY_AI_LIMIT = 30;
 const MAX_VIDEO_BYTES = 14 * 1024 * 1024;
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
+const bosonApiKey = defineSecret("BOSON_API_KEY");
 const revenueCatSecretKey = defineSecret("REVENUECAT_SECRET_API_KEY");
 const geminiModel = defineString("GEMINI_MODEL", { default: "gemini-3.8-flash" });
 
@@ -389,3 +396,320 @@ export const cleanupTemporaryRideVideos = onSchedule(
     logger.info("Temporary ride-video cleanup completed", { deleted });
   },
 );
+
+
+/**
+ * Mints a short-lived Boson Realtime token. The permanent provider key never leaves Functions.
+ * The user must have a Firebase Auth session and pass App Check before the provider is called.
+ */
+async function reserveUserCooldown(uid: string, key: string, cooldownMs: number): Promise<void> {
+  const rateRef = db.doc(`users/${uid}/voiceRateLimits/${key}`);
+  const now = Date.now();
+  const isTooSoon = await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(rateRef);
+    const lastRequest = Number(snapshot.get("lastRequestedAtMillis") ?? 0);
+    if (now - lastRequest < cooldownMs) return true;
+    transaction.set(rateRef, { lastRequestedAtMillis: now }, { merge: true });
+    return false;
+  });
+  if (isTooSoon) {
+    throw new HttpsError("resource-exhausted", "Please wait a moment before starting another live voice session.");
+  }
+}
+
+export const createAdventureRealtimeToken = onCall({
+  region: REGION,
+  enforceAppCheck: true,
+  secrets: [bosonApiKey],
+  timeoutSeconds: 12,
+  maxInstances: 10,
+}, async (request) => {
+  const uid = requireUid(request);
+  const apiKey = bosonApiKey.value().trim();
+  if (!apiKey) {
+    throw new HttpsError("failed-precondition", "Live voice is not configured on the server yet. Use Talk Now or configure the BOSON_API_KEY secret.");
+  }
+  await reserveUserCooldown(uid, "liveVoiceToken", 10_000);
+
+  let upstream: Response;
+  try {
+    upstream = await fetch("https://api.boson.ai/v1/realtime/client_secrets", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ expires_after: { seconds: 600 } }),
+      signal: AbortSignal.timeout(8_000),
+    });
+  } catch (error) {
+    logger.warn("Boson ephemeral-token request failed", {
+      error: error instanceof Error ? error.name : "unknown",
+    });
+    throw new HttpsError("unavailable", "Live voice could not connect to its provider. Please retry.");
+  }
+
+  if (!upstream.ok) {
+    logger.warn("Boson ephemeral-token request returned non-success", { status: upstream.status });
+    throw new HttpsError("unavailable", "Live voice credentials could not be created. Check the server's provider configuration.");
+  }
+
+  const payload = record(await upstream.json());
+  if (typeof payload.value !== "string" || !payload.value.startsWith("bai-eph-") ||
+      !Number.isFinite(Number(payload.expires_at))) {
+    logger.error("Boson ephemeral-token response had an unexpected shape");
+    throw new HttpsError("internal", "Live voice received an unexpected provider response.");
+  }
+
+  return {
+    value: payload.value,
+    expires_at: Number(payload.expires_at),
+  };
+});
+
+async function reserveNearbyBriefing(uid: string): Promise<void> {
+  const rateRef = db.doc(`users/${uid}/voiceRateLimits/nearbyPlaceBriefing`);
+  const now = Date.now();
+  const isTooSoon = await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(rateRef);
+    const lastRequest = Number(snapshot.get("lastRequestedAtMillis") ?? 0);
+    if (now - lastRequest < 4_000) return true;
+    transaction.set(rateRef, { lastRequestedAtMillis: now }, { merge: true });
+    return false;
+  });
+  if (isTooSoon) {
+    throw new HttpsError("resource-exhausted", "Nearby research is cooling down. Ask again in a few seconds.");
+  }
+}
+
+
+async function loadExactWikipediaExcerpt(placeName: string): Promise<{
+  title: string;
+  summary: string;
+  url: string;
+  source: "Wikipedia";
+} | null> {
+  const normalizeTitle = (value: string) => value.normalize("NFKD").toLocaleLowerCase("en-US")
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+  const normalizedName = normalizeTitle(placeName);
+  if (!normalizedName || normalizedName.length < 3) return null;
+
+  const cacheId = normalizedName.slice(0, 120);
+  const cacheRef = db.collection("voiceWikiCache").doc(cacheId);
+  const now = Date.now();
+  const cacheSnapshot = await cacheRef.get();
+  const cacheExpiry = Number(cacheSnapshot.get("expiresAtMillis") ?? 0);
+  if (cacheExpiry > now) {
+    const cachedTitle = cacheSnapshot.get("title");
+    const cachedSummary = cacheSnapshot.get("summary");
+    const cachedUrl = cacheSnapshot.get("url");
+    if (typeof cachedTitle === "string" && typeof cachedSummary === "string" && typeof cachedUrl === "string") {
+      return { title: cachedTitle, summary: cachedSummary, url: cachedUrl, source: "Wikipedia" };
+    }
+    return null;
+  }
+
+  try {
+    const headers = {
+      "User-Agent": "AdventurerAndroid/1.0 (+https://github.com/stevepaul36/adventurer_meta)",
+      Accept: "application/json",
+    };
+    const searchUrl = new URL("https://en.wikipedia.org/w/api.php");
+    searchUrl.search = new URLSearchParams({
+      action: "query",
+      list: "search",
+      srsearch: placeName,
+      srnamespace: "0",
+      srlimit: "5",
+      format: "json",
+    }).toString();
+    const searchResponse = await fetch(searchUrl, { headers, signal: AbortSignal.timeout(5_000) });
+    if (!searchResponse.ok) return null;
+    const searchPayload = record(await searchResponse.json());
+    const query = record(searchPayload.query);
+    const hits = Array.isArray(query.search) ? query.search.map(record) : [];
+    // Exact title match only: never turn a loosely related Wikipedia result into a claim about a place.
+    const exactHit = hits.find((hit) => typeof hit.title === "string" && normalizeTitle(hit.title) === normalizedName);
+    if (!exactHit || typeof exactHit.title !== "string") {
+      await cacheRef.set({ notFound: true, expiresAtMillis: now + 12 * 60 * 60 * 1000 }, { merge: true });
+      return null;
+    }
+
+    const pageUrl = new URL("https://en.wikipedia.org/w/api.php");
+    pageUrl.search = new URLSearchParams({
+      action: "query",
+      prop: "extracts|info",
+      exintro: "1",
+      explaintext: "1",
+      inprop: "url",
+      titles: exactHit.title,
+      format: "json",
+    }).toString();
+    const pageResponse = await fetch(pageUrl, { headers, signal: AbortSignal.timeout(5_000) });
+    if (!pageResponse.ok) return null;
+    const pagePayload = record(await pageResponse.json());
+    const pages = record(record(pagePayload.query).pages);
+    const page = Object.values(pages).map(record).find((item) => typeof item.extract === "string");
+    if (!page || typeof page.title !== "string" || typeof page.extract !== "string" || typeof page.fullurl !== "string") {
+      await cacheRef.set({ notFound: true, expiresAtMillis: now + 12 * 60 * 60 * 1000 }, { merge: true });
+      return null;
+    }
+    const summary = page.extract.trim().replace(/\s+/g, " ").slice(0, 650);
+    const result = { title: page.title, summary, url: page.fullurl, source: "Wikipedia" as const };
+    await cacheRef.set({
+      title: result.title,
+      summary: result.summary,
+      url: result.url,
+      source: result.source,
+      expiresAtMillis: now + 7 * 24 * 60 * 60 * 1000,
+    }, { merge: true });
+    return result;
+  } catch {
+    // A fact lookup is optional. The OSM place list remains usable without it.
+    return null;
+  }
+}
+
+/** Exact-title Wikipedia lookup for a specifically named landmark or place. */
+export const lookupAdventurePlaceFacts = onCall({
+  region: REGION,
+  enforceAppCheck: true,
+  timeoutSeconds: 12,
+  maxInstances: 5,
+}, async (request) => {
+  const uid = requireUid(request);
+  const data = record(request.data);
+  const placeName = requiredText(data.placeName, "place name", 120);
+  await reserveUserCooldown(uid, "placeFactLookup", 2_000);
+  const fact = await loadExactWikipediaExcerpt(placeName);
+  if (!fact) {
+    return {
+      found: false,
+      query: placeName,
+      source: "Wikipedia",
+      sourceUrl: "https://en.wikipedia.org/",
+      message: "No exact-title Wikipedia article was found. Do not infer facts from a similar title; ask the user to provide more context or say there is no sourced summary available.",
+    };
+  }
+  return {
+    found: true,
+    fact,
+    source: "Wikipedia",
+    sourceUrl: fact.url,
+    note: "This is an introductory article summary for an exact-title match, not proof that it is the place the user can currently see. Historical facts may be incomplete or outdated; live conditions and safety/access information are not included.",
+  };
+});
+
+/**
+ * User-triggered nearby discovery for a live adventure conversation.
+ * Coordinates are rounded before any third-party request; no user ID or exact input location is
+ * stored in the shared cache. The response is descriptive context, never safety/navigation data.
+ */
+export const getNearbyAdventurePlaces = onCall({
+  region: REGION,
+  enforceAppCheck: true,
+  timeoutSeconds: 20,
+  maxInstances: 5,
+}, async (request) => {
+  const uid = requireUid(request);
+  const data = record(request.data);
+  const inputLat = Number(data.latitude);
+  const inputLon = Number(data.longitude);
+  const rawRadius = Number(data.radiusMeters ?? 250);
+  const headingCandidate = Number(data.headingDeg);
+  const speedCandidate = Number(data.speedMps ?? 0);
+
+  if (!Number.isFinite(inputLat) || Math.abs(inputLat) > 90 ||
+      !Number.isFinite(inputLon) || Math.abs(inputLon) > 180) {
+    throw new HttpsError("invalid-argument", "A current GPS location is required for nearby place research.");
+  }
+  if (!Number.isFinite(rawRadius) || rawRadius < 50 || rawRadius > 500) {
+    throw new HttpsError("invalid-argument", "Nearby research radius must be between 50 and 500 metres.");
+  }
+  const headingDeg = Number.isFinite(headingCandidate) && headingCandidate >= 0 && headingCandidate <= 360
+    ? headingCandidate : undefined;
+  const speedMps = Number.isFinite(speedCandidate) && speedCandidate >= 0 && speedCandidate <= 100
+    ? speedCandidate : 0;
+
+  // Rounded to about 100 m latitude bands: less spatially precise than the actual GPS fix.
+  const latitude = roundForNearbyQuery(inputLat);
+  const longitude = roundForNearbyQuery(inputLon);
+  const radiusMeters = Math.round(rawRadius / 50) * 50;
+  const cacheKey = nearbyPlaceCacheKey(latitude, longitude, radiusMeters);
+  const cacheRef = db.collection("voicePlaceCache").doc(cacheKey);
+  const now = Date.now();
+  const cacheSnapshot = await cacheRef.get();
+  const cachedElements = cacheSnapshot.get("elements");
+  const cachedAtValue = cacheSnapshot.get("cachedAt");
+  const cachedAtMillis = cachedAtValue instanceof Timestamp ? cachedAtValue.toMillis() : 0;
+  const cachedAgeMs = cachedAtMillis > 0 ? Math.max(0, now - cachedAtMillis) : Number.POSITIVE_INFINITY;
+  const cacheIsFresh = Array.isArray(cachedElements) && cachedAgeMs <= 6 * 60 * 60 * 1000;
+  let elements: unknown[];
+  let stale = false;
+
+  if (cacheIsFresh) {
+    elements = cachedElements as unknown[];
+  } else {
+    await reserveNearbyBriefing(uid);
+    const query = buildNearbyOverpassQuery(latitude, longitude, radiusMeters);
+    try {
+      const upstream = await fetch("https://overpass-api.de/api/interpreter", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          "User-Agent": "AdventurerAndroid/1.0 (+https://github.com/stevepaul36/adventurer_meta)",
+          Accept: "application/json",
+        },
+        body: new URLSearchParams({ data: query }),
+        signal: AbortSignal.timeout(12_000),
+      });
+      if (!upstream.ok) {
+        logger.warn("Nearby OSM research returned non-success", { status: upstream.status });
+        throw new Error("overpass_non_success");
+      }
+      const payload = record(await upstream.json());
+      const upstreamElements = Array.isArray(payload.elements) ? payload.elements.slice(0, 80) : [];
+      elements = upstreamElements;
+      await cacheRef.set({
+        schemaVersion: 1,
+        source: "OpenStreetMap Overpass API",
+        elements: upstreamElements,
+        cachedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    } catch (error) {
+      // A stale public place list is preferable to failing the conversational turn, but it is
+      // always labelled stale and is never presented as a fresh condition or access report.
+      const staleFallback = Array.isArray(cachedElements) && cachedAgeMs <= 24 * 60 * 60 * 1000;
+      if (!staleFallback) {
+        logger.warn("Nearby place provider unavailable", {
+          error: error instanceof Error ? error.name : "unknown",
+        });
+        throw new HttpsError("unavailable", "Nearby place data is temporarily unavailable. Try again later.");
+      }
+      elements = cachedElements as unknown[];
+      stale = true;
+    }
+  }
+
+  const places = normalizeNearbyPlaces({ elements }, {
+    lat: latitude,
+    lon: longitude,
+    headingDeg,
+    speedMps,
+    radiusMeters,
+  });
+  const likelyCandidate = places[0];
+  const wikipedia = likelyCandidate && likelyCandidate.distanceMeters <= 180
+    ? await loadExactWikipediaExcerpt(likelyCandidate.name)
+    : null;
+  return {
+    places,
+    ...(wikipedia ? { wikipedia } : {}),
+    source: "OpenStreetMap contributors",
+    sourceUrl: "https://www.openstreetmap.org/copyright",
+    cached: cacheIsFresh || stale,
+    cacheAgeSeconds: Number.isFinite(cachedAgeMs) ? Math.floor(cachedAgeMs / 1_000) : 0,
+    freshness: stale ? "stale_cache" : (cacheIsFresh ? "cached" : "fresh"),
+    note: "Map labels are community-contributed context only. They do not confirm visual identity, public access, trail or road conditions, closures, permissions, weather, tides, water safety, or emergency services. Not for navigation.",
+  };
+});
