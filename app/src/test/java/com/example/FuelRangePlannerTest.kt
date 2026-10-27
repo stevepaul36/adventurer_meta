@@ -21,7 +21,7 @@ class FuelRangePlannerTest {
         val advice = FuelRangePlanner.evaluate(profile, 5.0, now, now, 50.0)
         assertEquals(150.0, advice.estimatedTotalRangeKm!!, 0.001)
         assertEquals(90.0, advice.conservativeUsableRangeKm!!, 0.001)
-        assertEquals(FuelAdviceLevel.COMFORTABLE, advice.level)
+        assertEquals(FuelAdviceLevel.REFUEL_SOON, advice.level)
     }
 
     @Test
