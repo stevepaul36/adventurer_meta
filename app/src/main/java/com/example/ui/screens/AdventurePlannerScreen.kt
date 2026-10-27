@@ -147,18 +147,48 @@ fun AdventurePlannerScreen(
     var eventDescription by rememberSaveable { mutableStateOf("") }
     var localMetrics by remember { mutableStateOf(AdventureFunnelAnalytics.localSnapshot(context)) }
 
-    // Market is an editable preference seeded from the device country, never inferred from GPS.
+    // Market and provider preferences are local, editable settings. Locale only suggests a market;
+    // location permission is not needed and country selection is never inferred from GPS.
+    val marketPreferences = remember(context) {
+        context.getSharedPreferences("adventurer_market_preferences", android.content.Context.MODE_PRIVATE)
+    }
     val suggestedMarket = remember {
         AdventureMarket.suggestedFromCountryCode(Locale.getDefault().country) ?: AdventureMarket.CANADA
     }
-    var selectedMarketCode by rememberSaveable { mutableStateOf(suggestedMarket.name) }
+    var selectedMarketCode by rememberSaveable {
+        mutableStateOf(
+            runCatching {
+                marketPreferences.getString("selected_market", null)
+                    ?.let(AdventureMarket::valueOf)?.name ?: suggestedMarket.name
+            }.getOrDefault(suggestedMarket.name)
+        )
+    }
     var selectedRegionalCategoryCode by rememberSaveable {
-        mutableStateOf(RegionalServiceCategory.FOOD.name)
+        mutableStateOf(
+            runCatching {
+                marketPreferences.getString("selected_service_category", null)
+                    ?.let(RegionalServiceCategory::valueOf)?.name ?: RegionalServiceCategory.FOOD.name
+            }.getOrDefault(RegionalServiceCategory.FOOD.name)
+        )
     }
     val selectedMarket = AdventureMarket.valueOf(selectedMarketCode)
     val selectedRegionalCategory = RegionalServiceCategory.valueOf(selectedRegionalCategoryCode)
+    val preferredProviderKey = "preferred_provider_${selectedMarketCode}_${selectedRegionalCategoryCode}"
+    var preferredProviderId by rememberSaveable {
+        mutableStateOf(marketPreferences.getString(preferredProviderKey, "").orEmpty())
+    }
     val regionalProviders = remember(selectedMarket, selectedRegionalCategory) {
         RegionalProviderCatalog.forCategory(selectedMarket, selectedRegionalCategory)
+    }
+
+    LaunchedEffect(selectedMarketCode) {
+        marketPreferences.edit().putString("selected_market", selectedMarketCode).apply()
+    }
+    LaunchedEffect(selectedRegionalCategoryCode) {
+        marketPreferences.edit().putString("selected_service_category", selectedRegionalCategoryCode).apply()
+    }
+    LaunchedEffect(preferredProviderKey) {
+        preferredProviderId = marketPreferences.getString(preferredProviderKey, "").orEmpty()
     }
 
     LaunchedEffect(activityMode) {
@@ -323,7 +353,7 @@ fun AdventurePlannerScreen(
                         Text("Search live places in Maps", color = Color.White, fontWeight = FontWeight.Bold)
                     }
                     Text(
-                        "Opens external maps for current results. Verified offline POIs and trails are saved locally.",
+                        "Opens external Maps. Trip notes and checklists can be saved locally; map tiles and live conditions are not included in this search handoff.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -400,12 +430,27 @@ fun AdventurePlannerScreen(
                                     modifier = Modifier.padding(12.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text(
-                                        provider.name,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            provider.name,
+                                            modifier = Modifier.weight(1f),
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        if (preferredProviderId == provider.id) {
+                                            Icon(
+                                                Icons.Default.Star,
+                                                contentDescription = "Preferred provider",
+                                                tint = AmberGold,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
                                     Text(
                                         provider.summary,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -422,6 +467,22 @@ fun AdventurePlannerScreen(
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold
                                         )
+                                    }
+                                    TextButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onClick = {
+                                            preferredProviderId = provider.id
+                                            marketPreferences.edit().putString(preferredProviderKey, provider.id).apply()
+                                            Toast.makeText(context, "${provider.name} saved as your preferred provider.", Toast.LENGTH_SHORT).show()
+                                        }
+                                    ) {
+                                        Icon(
+                                            if (preferredProviderId == provider.id) Icons.Default.Star else Icons.Default.StarOutline,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(if (preferredProviderId == provider.id) "Preferred provider" else "Set as preferred")
                                     }
                                     OutlinedButton(
                                         modifier = Modifier.fillMaxWidth(),
