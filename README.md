@@ -102,7 +102,7 @@ The repository intentionally does **not** contain production `google-services.js
    ```
 8. Use a Google Play internal testing track and license testers to test purchase, cancel, restore, pending payment, expiry/refund, quota exhaustion, App Check rejection and offline/error recovery.
 
-More detail: [functions/README.md](functions/README.md) and [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
+More detail: [functions/README.md](functions/README.md), [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md), and the [Voice, Chat & Story Studio Reliability Plan](VOICE_AND_STORY_RELIABILITY_PLAN.md), including the physical-device acceptance checklist.
 
 ## Build and tests
 
