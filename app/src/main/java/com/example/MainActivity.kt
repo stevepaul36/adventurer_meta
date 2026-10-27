@@ -113,9 +113,9 @@ private data class NavTab(val screen: Screen, val label: Str, val selected: Imag
 
 private val NavTabs = listOf(
     NavTab(Screen.FEED, Str.NAV_FEED, Icons.Filled.Home, Icons.Outlined.Home, AdventureOrange),
-    NavTab(Screen.EXPLORE_PLAN, Str.NAV_EXPLORE, Icons.Filled.Explore, Icons.Outlined.Explore, AdventureOrange),
+    NavTab(Screen.JOURNEY, Str.NAV_JOURNEY, Icons.Filled.Explore, Icons.Outlined.Explore, AdventureOrange),
+    NavTab(Screen.EXPLORE_PLAN, Str.NAV_EXPLORE, Icons.Filled.Map, Icons.Outlined.Map, AdventureOrange),
     NavTab(Screen.VOICE_COMPANION, Str.NAV_VOICE, Icons.Filled.Mic, Icons.Outlined.Mic, AdventureOrange),
-    NavTab(Screen.LIVE_TRACKER, Str.NAV_RIDE, Icons.Filled.Speed, Icons.Outlined.Speed, AdventureOrange),
     NavTab(Screen.RADAR, Str.NAV_SOS, Icons.Filled.Emergency, Icons.Outlined.Emergency, Color(0xFFEF4444)),
     NavTab(Screen.PROFILE, Str.NAV_RIDER, Icons.Filled.Person, Icons.Outlined.Person, AmberGold),
 )
@@ -907,6 +907,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
             ) { screen ->
                 when (screen) {
                     Screen.FEED -> FeedScreen(viewModel = viewModel)
+                    Screen.JOURNEY -> JourneyScreen(viewModel = viewModel)
                     Screen.EXPLORE_PLAN -> AdventurePlannerScreen(viewModel = viewModel, plannerRepository = plannerRepository)
                     Screen.VOICE_COMPANION -> AdventureVoiceCompanionScreen(
                         viewModel = viewModel,
@@ -926,11 +927,13 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     Screen.PRO_PAYWALL -> ProPaywallScreen(viewModel = viewModel)
                 }
             }
-            if (currentScreen != Screen.VOICE_COMPANION) {
+            if (currentScreen != Screen.VOICE_COMPANION && currentScreen != Screen.JOURNEY) {
                 AdventureVoiceBubble(
                     controller = voiceController,
                     onRequestVoice = requestVoice,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 14.dp),
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 16.dp, bottom = 16.dp),
                 )
             }
         }

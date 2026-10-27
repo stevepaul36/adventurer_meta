@@ -1,8 +1,10 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.example.data.voice.AdventureVoiceController
 import com.example.data.voice.VoiceStartRequest
 import com.example.ui.theme.AdventureOrange
+import com.example.ui.theme.DangerRed
 
 /** Always-available in-app voice entry point; the controller remains mounted as screens change. */
 @Composable
@@ -38,25 +41,59 @@ fun AdventureVoiceBubble(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (state.isSpeaking) {
-            IconButton(onClick = { controller.stopSpeaking() }) {
-                Icon(Icons.Filled.Stop, contentDescription = "Stop Adventurer speaking", tint = Color.White)
+            IconButton(
+                onClick = { controller.stopSpeaking() },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(100.dp),
+                    color = DangerRed,
+                    shadowElevation = 6.dp
+                ) {
+                    Icon(
+                        Icons.Filled.Stop,
+                        contentDescription = "Stop Adventurer speaking",
+                        tint = Color.White,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
             }
+        }
+        val isHandsFree = state.handsFreeEnabled
+        val isListening = state.isListening
+        val bubbleColor = when {
+            isListening -> DangerRed
+            isHandsFree -> AdventureOrange
+            else -> MaterialTheme.colorScheme.surfaceVariant
+        }
+        val contentColor = when {
+            isListening || isHandsFree -> Color.White
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
         }
         Surface(
             onClick = { onRequestVoice(VoiceStartRequest.PUSH_TO_TALK) },
-            color = if (state.handsFreeEnabled) AdventureOrange else MaterialTheme.colorScheme.surfaceVariant,
+            color = bubbleColor,
             shape = RoundedCornerShape(100.dp),
-            shadowElevation = 8.dp,
+            shadowElevation = 6.dp,
+            border = if (!isHandsFree && !isListening) BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)) else null,
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(7.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Filled.Mic, contentDescription = null, tint = if (state.handsFreeEnabled) Color.Black else Color.White)
+                Icon(
+                    Icons.Filled.Mic,
+                    contentDescription = "Voice assistant",
+                    tint = if (!isHandsFree && !isListening) AdventureOrange else contentColor
+                )
                 Text(
-                    if (state.handsFreeEnabled) "Hey Adventurer" else "Voice",
-                    color = if (state.handsFreeEnabled) Color.Black else Color.White,
+                    text = when {
+                        isListening -> "Listening…"
+                        isHandsFree -> "Hey Adventurer"
+                        else -> "Voice"
+                    },
+                    color = contentColor,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.labelLarge,
                 )

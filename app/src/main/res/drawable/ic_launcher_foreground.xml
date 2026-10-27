@@ -1,53 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Mountain peak backdrop -->
-    <path
-        android:fillColor="#4DFF6B00"
-        android:pathData="M54,26 L76,60 L32,60 Z" />
-    <path
-        android:fillColor="#FF8C00"
-        android:pathData="M38,36 L54,60 L22,60 Z" />
-    <!-- Motorcycle wheels -->
-    <path
-        android:fillColor="#FFB300"
-        android:pathData="M72,70 m -8,0 a 8,8 0 1,0 16,0 a 8,8 0 1,0 -16,0" />
-    <path
-        android:fillColor="#0F172A"
-        android:pathData="M72,70 m -4,0 a 4,4 0 1,0 8,0 a 4,4 0 1,0 -8,0" />
-    <path
-        android:fillColor="#FFB300"
-        android:pathData="M36,70 m -8,0 a 8,8 0 1,0 16,0 a 8,8 0 1,0 -16,0" />
-    <path
-        android:fillColor="#0F172A"
-        android:pathData="M36,70 m -4,0 a 4,4 0 1,0 8,0 a 4,4 0 1,0 -8,0" />
-    <!-- Chassis / swingarm / tank / engine -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M36,70 L48,58 L62,58 L72,70 L58,70 L52,64 L42,70 Z" />
-    <path
-        android:fillColor="#FF9100"
-        android:pathData="M48,58 L54,50 L64,50 L68,58 Z" />
-    <!-- Fork & Handlebars -->
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5"
-        android:strokeLineCap="round"
-        android:pathData="M72,70 L64,48 M61,46 L67,50" />
-    <!-- Rider helmet & body -->
-    <path
-        android:fillColor="#FFAB00"
-        android:pathData="M50,42 m -5,0 a 5,5 0 1,0 10,0 a 5,5 0 1,0 -10,0" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M45,47 L53,46 L58,56 L47,56 Z" />
-    <!-- Speed/adventure trail -->
-    <path
-        android:strokeColor="#FF6D00"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:pathData="M20,68 L26,68 M16,72 L24,72 M22,76 L28,76" />
-</vector>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="66dp"
+        android:height="66dp"
+        android:drawable="@drawable/adventurer_app_icon_1793110761210"
+        android:gravity="center" />
+</layer-list>

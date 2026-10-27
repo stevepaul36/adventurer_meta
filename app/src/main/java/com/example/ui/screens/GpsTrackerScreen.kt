@@ -98,6 +98,12 @@ fun GpsTrackerScreen(
                 },
                 actions = {
                     IconButton(
+                        onClick = { viewModel.navigateTo(com.example.viewmodel.Screen.JOURNEY) },
+                        modifier = Modifier.testTag("gps_journey_shortcut")
+                    ) {
+                        Icon(Icons.Default.Explore, contentDescription = "Journey Command Center", tint = AdventureOrange)
+                    }
+                    IconButton(
                         onClick = { viewModel.navigateTo(com.example.viewmodel.Screen.RADAR) },
                         modifier = Modifier.testTag("gps_radar_sos_shortcut")
                     ) {

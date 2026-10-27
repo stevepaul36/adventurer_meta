@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 
 enum class Screen(val title: String, val isTopLevel: Boolean = false) {
     FEED("Feed", isTopLevel = true),
+    JOURNEY("Journey", isTopLevel = true),
     EXPEDITIONS("Expeditions"),
     EXPLORE_PLAN("Explore & Plan", isTopLevel = true),
     VOICE_COMPANION("Voice Companion", isTopLevel = true),
@@ -315,5 +316,394 @@ class AdventurerViewModel(
         if (_selectedMarker.value is MapMarkerItem.RiderDistress && (_selectedMarker.value as MapMarkerItem.RiderDistress).signal.isMySignal) {
             _selectedMarker.value = null
         }
+    }
+
+    // ==========================================
+    // JOURNEY COMMAND CENTER STATE & ACTIONS
+    // ==========================================
+
+    private val _fuelState = MutableStateFlow(FuelState())
+    val fuelState: StateFlow<FuelState> = _fuelState.asStateFlow()
+
+    private val _journeyStops = MutableStateFlow(
+        listOf(
+            JourneyStop(
+                id = "stop-1",
+                name = "Jispa Riverside Basecamp",
+                distanceFromStartKm = 0.0,
+                etaMinutes = 0,
+                altitudeM = 3200,
+                reminderNote = "Check tire pressure & top up engine oil before ascent",
+                isVisited = true,
+                status = ActionStatus.VERIFIED_COMPLETE
+            ),
+            JourneyStop(
+                id = "stop-2",
+                name = "Zingzingbar High Army Halt",
+                distanceFromStartKm = 32.4,
+                etaMinutes = 45,
+                altitudeM = 4270,
+                reminderNote = "Acclimatize 20m, sip hot ginger tea, check AMS symptoms",
+                isVisited = false,
+                status = ActionStatus.SUGGESTED
+            ),
+            JourneyStop(
+                id = "stop-3",
+                name = "Baralacha La Mountain Pass",
+                distanceFromStartKm = 54.8,
+                etaMinutes = 80,
+                altitudeM = 4890,
+                reminderNote = "Caution: water crossing and possible black ice on north face",
+                isVisited = false,
+                status = ActionStatus.SUGGESTED
+            ),
+            JourneyStop(
+                id = "stop-4",
+                name = "Sarchu Alpine Transition Camp",
+                distanceFromStartKm = 84.2,
+                etaMinutes = 135,
+                altitudeM = 4290,
+                reminderNote = "Check oxygen levels, register checkpost, pitch camp before twilight",
+                isVisited = false,
+                status = ActionStatus.SUGGESTED
+            ),
+            JourneyStop(
+                id = "stop-5",
+                name = "Nakee La & 21 Gata Loops",
+                distanceFromStartKm = 128.0,
+                etaMinutes = 210,
+                altitudeM = 4739,
+                reminderNote = "Maintain 2nd gear engine braking on switchbacks; leave water offering",
+                isVisited = false,
+                status = ActionStatus.SUGGESTED
+            )
+        )
+    )
+    val journeyStops: StateFlow<List<JourneyStop>> = _journeyStops.asStateFlow()
+
+    private val _journeyMemories = MutableStateFlow(
+        listOf(
+            JourneyMemory(
+                id = "mem-1",
+                title = "Sunrise Reflection on Deepak Taal",
+                locationName = "Deepak Taal · 3,750m",
+                altitudeM = 3750,
+                timestamp = "07:15 AM · Day 3",
+                reflection = "The dawn reflection of snow peaks in the still turquoise water was motionless. Engine ticking as it cooled in the crisp morning air, steam rising from our tin chai mugs.",
+                moodTag = "Golden Serenity ☀️",
+                gradientColorsHex = listOf(0xFFF97316, 0xFFEAB308)
+            ),
+            JourneyMemory(
+                id = "mem-2",
+                title = "Prayer Flags in Baralacha Wind",
+                locationName = "Baralacha La Summit · 4,890m",
+                altitudeM = 4890,
+                timestamp = "11:40 AM · Day 3",
+                reflection = "Fierce alpine gusts whipped prayer flags into a blur of color against deep indigo sky. Thin, deliberate breaths. We tied our club ribbon to the stone cairn and saluted the mountain gods.",
+                moodTag = "High Altitude Reverence 🏔️",
+                gradientColorsHex = listOf(0xFF38BDF8, 0xFF6366F1)
+            ),
+            JourneyMemory(
+                id = "mem-3",
+                title = "Warm Hearth at Batal Refuge",
+                locationName = "Batal Chandra Taal Bridge · 3,960m",
+                altitudeM = 3960,
+                timestamp = "06:30 PM · Yesterday",
+                reflection = "After wading two axle-deep freezing snowmelt streams, the warmth of Chacha's kerosene stove and a steaming plate of hot Rajma Chawal felt like the greatest luxury on Earth.",
+                moodTag = "Trail Brotherhood 🤝",
+                gradientColorsHex = listOf(0xFFEC4899, 0xFF8B5CF6)
+            )
+        )
+    )
+    val journeyMemories: StateFlow<List<JourneyMemory>> = _journeyMemories.asStateFlow()
+
+    private val _discoveryVenues = MutableStateFlow(
+        listOf(
+            // Food
+            DiscoveryVenue(
+                id = "ven-1",
+                name = "Chandra-Bhaga High Altitude Dhaba",
+                category = DiscoveryCategory.RESTAURANTS,
+                distanceKm = 3.2,
+                rating = 4.9,
+                altitudeM = 3350,
+                description = "World-famous piping hot Himalayan thukpa, mutton/veg momos & ginger lemon honey tea with heated hearth seating.",
+                amenities = listOf("Warm Hearth Seating", "Pure Spring Water", "Fast Trailside Service", "Biker Parking"),
+                menuItems = listOf(
+                    MenuItem("m1", "Steaming Himalayan Veg Thukpa", "Hand-pulled mountain noodles in herbal broth", 140, isVeg = true),
+                    MenuItem("m2", "Tibetan Steamed Momos (8 pcs)", "Stuffed with farm cabbage, paneer, and garlic dip", 120, isVeg = true),
+                    MenuItem("m3", "Butter Tea & Roasted Barley Tsampa", "Traditional Tibetan energy fuel for cold passes", 80, isVeg = true),
+                    MenuItem("m4", "Mountain Maggi with Crunchy Veggies", "Hot spicy comfort food with fried onions", 90, isVeg = true),
+                    MenuItem("m5", "Trail Electrolyte Pack & Dark Choc", "High-altitude hydration and quick glucose", 70, isVeg = true)
+                ),
+                locationDescription = "NH-3 Jispa Bypass"
+            ),
+            DiscoveryVenue(
+                id = "ven-2",
+                name = "Zingzingbar Army & Biker Refuge",
+                category = DiscoveryCategory.RESTAURANTS,
+                distanceKm = 32.0,
+                rating = 4.8,
+                altitudeM = 4270,
+                description = "High-mountain comfort station: piping hot dal tadka, tandoori rotis, and oxygen replenishment stop.",
+                amenities = listOf("Oxygen Cylinder Onsite", "Kerosene Heater", "Emergency Satellite Link"),
+                menuItems = listOf(
+                    MenuItem("m6", "Dal Tadka with Steaming Rice", "Slow-cooked yellow lentils with cumin and ghee", 160, isVeg = true),
+                    MenuItem("m7", "Hot Tawa Butter Roti (4 pcs)", "Freshly toasted whole wheat flatbreads", 80, isVeg = true),
+                    MenuItem("m8", "Ginger Honey Lemon Kahwa", "Kashmiri saffron and almond herbal brew", 75, isVeg = true),
+                    MenuItem("m9", "Boiled Farm Eggs with Black Pepper (2)", "Quick clean protein for mountain riding", 60, isVeg = false)
+                ),
+                locationDescription = "Zingzingbar Checkpoint"
+            ),
+            // Fuel
+            DiscoveryVenue(
+                id = "ven-3",
+                name = "Tandi Final IndianOil Pump",
+                category = DiscoveryCategory.FUEL,
+                distanceKm = 38.0,
+                rating = 4.9,
+                altitudeM = 3160,
+                description = "CRITICAL: Last official fuel station for the next 365 km until Karu/Leh. Fill tank and spare jerry cans.",
+                amenities = listOf("91 Octane Petrol", "Diesel", "Jerry Can Fill Allowed", "Air Pressure Check"),
+                locationDescription = "Confluence of Chandra & Bhaga rivers"
+            ),
+            DiscoveryVenue(
+                id = "ven-4",
+                name = "Jispa Emergency Fuel & Recovery Depot",
+                category = DiscoveryCategory.FUEL,
+                distanceKm = 4.1,
+                rating = 4.7,
+                altitudeM = 3250,
+                description = "Sealed 5L/10L petrol cans, jump start battery packs, tire vulcanizing, winch tow assistance.",
+                amenities = listOf("Sealed 5L Fuel Cans", "Jump Battery Packs", "Heavy Tow Straps", "24/7 Assistance"),
+                locationDescription = "Opposite Jispa Helipad"
+            ),
+            // Stays
+            DiscoveryVenue(
+                id = "ven-5",
+                name = "Padma Lodge & Jispa Riverside Glamping",
+                category = DiscoveryCategory.STAYS,
+                distanceKm = 2.8,
+                rating = 4.9,
+                altitudeM = 3200,
+                description = "Geodesic heated luxury domes by the river, 24/7 pressurized hot water, oxygen concentrators, and enclosed motorcycle parking.",
+                amenities = listOf("Heated Geodesic Domes", "Hot Water 24/7", "Oxygen Concentrator", "Secure Bike Bays"),
+                locationDescription = "Jispa Riverside Meadow"
+            ),
+            DiscoveryVenue(
+                id = "ven-6",
+                name = "Sarchu Wind Whispers Luxury Camp",
+                category = DiscoveryCategory.STAYS,
+                distanceKm = 84.0,
+                rating = 4.6,
+                altitudeM = 4290,
+                description = "Triple-layered insulated Swiss alpine tents with attached bath, heated blankets, and on-call mountain paramedic.",
+                amenities = listOf("Insulated Swiss Tents", "Electric Heating Blankets", "Medical Paramedic", "Dining Hall"),
+                locationDescription = "Sarchu Plateau Boundary"
+            ),
+            // Viewpoints
+            DiscoveryVenue(
+                id = "ven-7",
+                name = "Deepak Taal Emerald Mirror Lake",
+                category = DiscoveryCategory.VIEWPOINTS,
+                distanceKm = 18.4,
+                rating = 4.9,
+                altitudeM = 3750,
+                description = "Pristine high-altitude mirror lake reflecting glacier peaks. Perfect rest stop and photo overlook.",
+                amenities = listOf("Rest Area", "Scenic Overlook", "Photo Point", "Chai Shack"),
+                locationDescription = "Between Darcha & Patseo"
+            ),
+            DiscoveryVenue(
+                id = "ven-8",
+                name = "Suraj Taal (Lake of Sun God)",
+                category = DiscoveryCategory.VIEWPOINTS,
+                distanceKm = 51.2,
+                rating = 5.0,
+                altitudeM = 4883,
+                description = "Third highest lake in India, source of Bhaga river, jaw-dropping panoramic pass vista below Baralacha summit.",
+                amenities = listOf("Panoramic Vista", "Historical Landmark", "Prayer Flag Site"),
+                locationDescription = "3km below Baralacha La"
+            )
+        )
+    )
+    val discoveryVenues: StateFlow<List<DiscoveryVenue>> = _discoveryVenues.asStateFlow()
+
+    private val _selectedDiscoveryCategory = MutableStateFlow(DiscoveryCategory.RESTAURANTS)
+    val selectedDiscoveryCategory: StateFlow<DiscoveryCategory> = _selectedDiscoveryCategory.asStateFlow()
+
+    private val _venueSearchQuery = MutableStateFlow("")
+    val venueSearchQuery: StateFlow<String> = _venueSearchQuery.asStateFlow()
+
+    private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
+    val cartItems: StateFlow<List<CartItem>> = _cartItems.asStateFlow()
+
+    private val _activeDemoOrder = MutableStateFlow<DemoFoodOrder?>(null)
+    val activeDemoOrder: StateFlow<DemoFoodOrder?> = _activeDemoOrder.asStateFlow()
+
+    private val _voiceDockStateText = MutableStateFlow("All checkpoints loaded. Fuel safe margin is +112 km.")
+    val voiceDockStateText: StateFlow<String> = _voiceDockStateText.asStateFlow()
+
+    private val _voiceDockIsSpeaking = MutableStateFlow(false)
+    val voiceDockIsSpeaking: StateFlow<Boolean> = _voiceDockIsSpeaking.asStateFlow()
+
+    private val _voiceDockActionStatus = MutableStateFlow(ActionStatus.SUGGESTED)
+    val voiceDockActionStatus: StateFlow<ActionStatus> = _voiceDockActionStatus.asStateFlow()
+
+    fun setDiscoveryCategory(category: DiscoveryCategory) {
+        _selectedDiscoveryCategory.value = category
+    }
+
+    fun setVenueSearchQuery(query: String) {
+        _venueSearchQuery.value = query
+    }
+
+    fun updateFuelCalculator(
+        tankLiters: Double,
+        mileage: Double,
+        reserve: Double,
+        bufferPercent: Double,
+        distanceToNext: Double
+    ) {
+        _fuelState.value = FuelState(
+            fuelInTankLiters = tankLiters,
+            mileageKmPerLiter = mileage,
+            reserveCapacityLiters = reserve,
+            safetyBufferPercent = bufferPercent,
+            distanceToNextFuelKm = distanceToNext
+        )
+    }
+
+    fun addJourneyStop(name: String, km: Double, etaMin: Int, altitudeM: Int, reminder: String) {
+        val newStop = JourneyStop(
+            name = name.ifBlank { "Checkpoint" },
+            distanceFromStartKm = km,
+            etaMinutes = etaMin,
+            altitudeM = altitudeM,
+            reminderNote = reminder,
+            isVisited = false,
+            status = ActionStatus.SUGGESTED
+        )
+        _journeyStops.value = _journeyStops.value + newStop
+        _voiceDockStateText.value = "Added checkpoint: ${newStop.name}. Reminder set."
+        _voiceDockActionStatus.value = ActionStatus.VERIFIED_COMPLETE
+    }
+
+    fun editJourneyStop(id: String, name: String, km: Double, etaMin: Int, altitudeM: Int, reminder: String) {
+        _journeyStops.value = _journeyStops.value.map { stop ->
+            if (stop.id == id) {
+                stop.copy(
+                    name = name,
+                    distanceFromStartKm = km,
+                    etaMinutes = etaMin,
+                    altitudeM = altitudeM,
+                    reminderNote = reminder
+                )
+            } else stop
+        }
+        _voiceDockStateText.value = "Updated checkpoint $name."
+        _voiceDockActionStatus.value = ActionStatus.VERIFIED_COMPLETE
+    }
+
+    fun deleteJourneyStop(id: String) {
+        _journeyStops.value = _journeyStops.value.filterNot { it.id == id }
+    }
+
+    fun toggleStopVisited(id: String) {
+        _journeyStops.value = _journeyStops.value.map { stop ->
+            if (stop.id == id) {
+                val newVisited = !stop.isVisited
+                stop.copy(
+                    isVisited = newVisited,
+                    status = if (newVisited) ActionStatus.VERIFIED_COMPLETE else ActionStatus.SUGGESTED
+                )
+            } else stop
+        }
+    }
+
+    fun addJourneyMemory(title: String, location: String, altitudeM: Int, reflection: String, moodTag: String) {
+        val newMemory = JourneyMemory(
+            title = title.ifBlank { "Trail Moment" },
+            locationName = location.ifBlank { "High Mountain Road" },
+            altitudeM = altitudeM,
+            timestamp = "Today · Just logged",
+            reflection = reflection.ifBlank { "Spectacular mountain view." },
+            moodTag = moodTag.ifBlank { "Trail Joy ✨" },
+            gradientColorsHex = listOf(0xFFF97316, 0xFFEAB308)
+        )
+        _journeyMemories.value = listOf(newMemory) + _journeyMemories.value
+        _voiceDockStateText.value = "Logged memory: ${newMemory.title}. Stored in your travel journal."
+        _voiceDockActionStatus.value = ActionStatus.VERIFIED_COMPLETE
+    }
+
+    fun deleteJourneyMemory(id: String) {
+        _journeyMemories.value = _journeyMemories.value.filterNot { it.id == id }
+    }
+
+    fun addToCart(menuItem: MenuItem) {
+        val existing = _cartItems.value.find { it.menuItem.id == menuItem.id }
+        _cartItems.value = if (existing != null) {
+            _cartItems.value.map {
+                if (it.menuItem.id == menuItem.id) it.copy(quantity = it.quantity + 1) else it
+            }
+        } else {
+            _cartItems.value + CartItem(menuItem, 1)
+        }
+    }
+
+    fun updateCartQuantity(menuItemId: String, delta: Int) {
+        val updated = _cartItems.value.mapNotNull {
+            if (it.menuItem.id == menuItemId) {
+                val newQ = it.quantity + delta
+                if (newQ > 0) it.copy(quantity = newQ) else null
+            } else it
+        }
+        _cartItems.value = updated
+    }
+
+    fun clearCart() {
+        _cartItems.value = emptyList()
+    }
+
+    fun submitDemoOrder(venueName: String, deliveryHalt: String) {
+        val items = _cartItems.value
+        if (items.isEmpty()) return
+        val total = items.sumOf { it.menuItem.priceInr * it.quantity }
+        _activeDemoOrder.value = DemoFoodOrder(
+            venueName = venueName,
+            items = items,
+            subtotalInr = total,
+            deliveryHalt = deliveryHalt,
+            status = ActionStatus.AWAITING_CONFIRMATION,
+            isSimulation = true
+        )
+        _voiceDockStateText.value = "Cart ready for $venueName (₹$total). Please review and explicitly confirm the demo order."
+        _voiceDockActionStatus.value = ActionStatus.AWAITING_CONFIRMATION
+    }
+
+    fun confirmDemoOrder() {
+        _activeDemoOrder.value?.let { order ->
+            _activeDemoOrder.value = order.copy(
+                status = ActionStatus.VERIFIED_COMPLETE
+            )
+            _cartItems.value = emptyList()
+            _voiceDockStateText.value = "Demo order confirmed! Preparation simulation active at ${order.venueName}."
+            _voiceDockActionStatus.value = ActionStatus.VERIFIED_COMPLETE
+        }
+    }
+
+    fun cancelDemoOrder() {
+        _activeDemoOrder.value = null
+        _voiceDockStateText.value = "Demo order cancelled. No charges or dispatch created."
+        _voiceDockActionStatus.value = ActionStatus.SUGGESTED
+    }
+
+    fun triggerVoiceDockPrompt(prompt: String, status: ActionStatus = ActionStatus.SUGGESTED) {
+        _voiceDockIsSpeaking.value = true
+        _voiceDockStateText.value = prompt
+        _voiceDockActionStatus.value = status
+    }
+
+    fun stopVoiceDockSpeaking() {
+        _voiceDockIsSpeaking.value = false
     }
 }

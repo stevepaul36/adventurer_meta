@@ -94,17 +94,15 @@ fun FeedScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = AdventureOrange,
+                            color = Color(0xFF0F172A),
                             modifier = Modifier.size(36.dp)
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Terrain,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
+                            androidx.compose.foundation.Image(
+                                painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.adventurer_app_icon_1793110761210),
+                                contentDescription = "Adventurer Logo",
+                                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
@@ -170,6 +168,18 @@ fun FeedScreen(
                         }
                     }
 
+                    // Create Post quick top action
+                    IconButton(
+                        onClick = { viewModel.setShowCreatePost(true) },
+                        modifier = Modifier.testTag("create_post_top_action")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PostAdd,
+                            contentDescription = Str.POST.get(currentLang),
+                            tint = AdventureOrange
+                        )
+                    }
+
                     // Emergency SOS quick icon
                     IconButton(
                         onClick = { viewModel.setShowSosAlert(true) },
@@ -188,15 +198,22 @@ fun FeedScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
+            FloatingActionButton(
                 onClick = { viewModel.setShowCreatePost(true) },
-                expanded = !listState.canScrollBackward,
-                icon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                text = { Text(Str.POST.get(currentLang), fontWeight = FontWeight.Bold) },
                 containerColor = AdventureOrange,
                 contentColor = Color.White,
-                modifier = Modifier.testTag("create_post_fab")
-            )
+                shape = CircleShape,
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
+                modifier = Modifier
+                    .size(56.dp)
+                    .testTag("create_post_fab")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = Str.POST.get(currentLang),
+                    modifier = Modifier.size(26.dp)
+                )
+            }
         },
         containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
@@ -206,7 +223,7 @@ fun FeedScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentPadding = PaddingValues(bottom = 90.dp),
+            contentPadding = PaddingValues(bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Expedition Live Stories Strip
@@ -381,6 +398,7 @@ fun FeedScreen(
                             HoldToStartRideButton(onRideStarted = {
                                 AdventureFunnelAnalytics.log(context, "activity_started", mapOf("activity_type" to activityMode.name))
                                 viewModel.startRide()
+                                viewModel.navigateTo(Screen.JOURNEY)
                             })
                         }
                     }

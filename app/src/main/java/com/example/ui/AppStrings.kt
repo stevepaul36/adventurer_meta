@@ -13,6 +13,7 @@ enum class Str(val en: String, val hi: String, val mr: String, val kn: String, v
     NAV_VOICE("Voice", "आवाज़", "आवाज", "ಧ್ವನಿ", "குரல்"),
     QUICK_EXPEDITIONS("Expeditions", "अभियान", "मोहीमा", "ಅಭಿಯಾನಗಳು", "பயணங்கள்"),
     NAV_PASSES("Passes", "दर्रे", "खिंडी", "ಘಾಟ್‌ಗಳು", "கணவாய்கள்"),
+    NAV_JOURNEY("Journey", "यात्रा", "प्रवास", "ಪ್ರಯಾಣ", "பயணம்"),
     NAV_RIDE("Ride", "राइड", "राइड", "ರೈಡ್", "ரைடு"),
     NAV_SOS("SOS & Help", "SOS मदद", "SOS मदत", "SOS ಸಹಾಯ", "SOS உதவி"),
     NAV_RIDER("Rider", "राइडर", "रायडर", "ರೈಡರ್", "ரைடர்"),
