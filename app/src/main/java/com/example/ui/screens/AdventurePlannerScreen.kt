@@ -39,6 +39,9 @@ import com.example.data.planning.AdventureCreatorDraftEntity
 import com.example.data.planning.AdventurePlaceBookmarkEntity
 import com.example.data.planning.AdventurePlannerRepository
 import com.example.data.planning.AdventureTripPlanEntity
+import com.example.data.providers.AdventureMarket
+import com.example.data.providers.RegionalProviderCatalog
+import com.example.data.providers.RegionalServiceCategory
 import com.example.ui.components.ExpeditionGearPackListCard
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
@@ -143,6 +146,50 @@ fun AdventurePlannerScreen(
     var eventDate by rememberSaveable { mutableStateOf("") }
     var eventDescription by rememberSaveable { mutableStateOf("") }
     var localMetrics by remember { mutableStateOf(AdventureFunnelAnalytics.localSnapshot(context)) }
+
+    // Market and provider preferences are local, editable settings. Locale only suggests a market;
+    // location permission is not needed and country selection is never inferred from GPS.
+    val marketPreferences = remember(context) {
+        context.getSharedPreferences("adventurer_market_preferences", android.content.Context.MODE_PRIVATE)
+    }
+    val suggestedMarket = remember {
+        AdventureMarket.suggestedFromCountryCode(Locale.getDefault().country) ?: AdventureMarket.CANADA
+    }
+    var selectedMarketCode by rememberSaveable {
+        mutableStateOf(
+            runCatching {
+                marketPreferences.getString("selected_market", null)
+                    ?.let(AdventureMarket::valueOf)?.name ?: suggestedMarket.name
+            }.getOrDefault(suggestedMarket.name)
+        )
+    }
+    var selectedRegionalCategoryCode by rememberSaveable {
+        mutableStateOf(
+            runCatching {
+                marketPreferences.getString("selected_service_category", null)
+                    ?.let(RegionalServiceCategory::valueOf)?.name ?: RegionalServiceCategory.FOOD.name
+            }.getOrDefault(RegionalServiceCategory.FOOD.name)
+        )
+    }
+    val selectedMarket = AdventureMarket.valueOf(selectedMarketCode)
+    val selectedRegionalCategory = RegionalServiceCategory.valueOf(selectedRegionalCategoryCode)
+    val preferredProviderKey = "preferred_provider_${selectedMarketCode}_${selectedRegionalCategoryCode}"
+    var preferredProviderId by rememberSaveable {
+        mutableStateOf(marketPreferences.getString(preferredProviderKey, "").orEmpty())
+    }
+    val regionalProviders = remember(selectedMarket, selectedRegionalCategory) {
+        RegionalProviderCatalog.forCategory(selectedMarket, selectedRegionalCategory)
+    }
+
+    LaunchedEffect(selectedMarketCode) {
+        marketPreferences.edit().putString("selected_market", selectedMarketCode).apply()
+    }
+    LaunchedEffect(selectedRegionalCategoryCode) {
+        marketPreferences.edit().putString("selected_service_category", selectedRegionalCategoryCode).apply()
+    }
+    LaunchedEffect(preferredProviderKey) {
+        preferredProviderId = marketPreferences.getString(preferredProviderKey, "").orEmpty()
+    }
 
     LaunchedEffect(activityMode) {
         if (selectedActivities.isEmpty()) selectedActivities = setOf(activityMode)
@@ -291,7 +338,7 @@ fun AdventurePlannerScreen(
                             val term = destinationQuery.trim()
                             if (term.isBlank()) Toast.makeText(context, "Enter a destination or interest to search.", Toast.LENGTH_SHORT).show()
                             else {
-                                val uri = Uri.parse("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(term + " outdoor places"))
+                                val uri = Uri.parse(RegionalProviderCatalog.googleMapsSearchUrl("$term outdoor places", selectedMarket))
                                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
                                     .onFailure { Toast.makeText(context, "No browser or map app can open this search.", Toast.LENGTH_LONG).show() }
                                 AdventureFunnelAnalytics.log(context, "destination_map_search_opened", mapOf("entry_point" to "explore_planner"))
@@ -306,7 +353,172 @@ fun AdventurePlannerScreen(
                         Text("Search live places in Maps", color = Color.White, fontWeight = FontWeight.Bold)
                     }
                     Text(
-                        "Opens external maps for current results. Verified offline POIs and trails are saved locally.",
+                        "Opens external Maps. Trip notes and checklists can be saved locally; map tiles and live conditions are not included in this search handoff.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            // Market-aware, explicit external provider handoffs.
+            item(key = "regional-provider-handoffs") {
+                PlannerPanelCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Public, contentDescription = null, tint = AdventureOrange)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Services for your market",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        "Choose India or Canada to see relevant services. This preference does not use your location.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AdventureMarket.values().forEach { market ->
+                            FilterChip(
+                                selected = selectedMarket == market,
+                                onClick = { selectedMarketCode = market.name },
+                                label = { Text("${market.countryName} · ${market.currencyCode}") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AdventureOrange,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        RegionalServiceCategory.values().forEach { category ->
+                            FilterChip(
+                                selected = selectedRegionalCategory == category,
+                                onClick = { selectedRegionalCategoryCode = category.name },
+                                label = { Text(category.label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = HighAltitudeCyan,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        regionalProviders.forEach { provider ->
+                            Card(
+                                modifier = Modifier.width(252.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            provider.name,
+                                            modifier = Modifier.weight(1f),
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        if (preferredProviderId == provider.id) {
+                                            Icon(
+                                                Icons.Default.Star,
+                                                contentDescription = "Preferred provider",
+                                                tint = AmberGold,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        provider.summary,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Surface(
+                                        color = AmberGold.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Text(
+                                            "EXTERNAL HANDOFF ONLY",
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            color = AmberGold,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    TextButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onClick = {
+                                            preferredProviderId = provider.id
+                                            marketPreferences.edit().putString(preferredProviderKey, provider.id).apply()
+                                            Toast.makeText(context, "${provider.name} saved as your preferred provider.", Toast.LENGTH_SHORT).show()
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Star,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(if (preferredProviderId == provider.id) "Preferred provider" else "Set as preferred")
+                                    }
+                                    OutlinedButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onClick = {
+                                            runCatching {
+                                                context.startActivity(
+                                                    Intent(Intent.ACTION_VIEW, Uri.parse(provider.websiteUrl))
+                                                )
+                                            }.onSuccess {
+                                                AdventureFunnelAnalytics.log(
+                                                    context,
+                                                    "regional_provider_handoff_opened",
+                                                    mapOf(
+                                                        "market" to selectedMarket.countryCode,
+                                                        "category" to selectedRegionalCategory.name,
+                                                        "provider_id" to provider.id
+                                                    )
+                                                )
+                                                refreshMetrics()
+                                            }.onFailure {
+                                                Toast.makeText(
+                                                    context,
+                                                    "No browser or compatible app could open this provider.",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
+                                        }
+                                    ) {
+                                        Text("Open provider")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Text(
+                        "Opening a provider is not a booking or order. Prices, availability, cart contents and receipts remain with that provider until an approved integration can verify them.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -407,7 +619,7 @@ fun AdventurePlannerScreen(
                                 TextButton(onClick = {
                                     val term = (destination.ifBlank { destinationQuery } + " " + idea.title).trim()
                                     if (term.isNotBlank()) runCatching {
-                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(term))))
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(RegionalProviderCatalog.googleMapsSearchUrl(term, selectedMarket))))
                                     }
                                 }) { Text("Check provider", color = HighAltitudeCyan) }
                             }
