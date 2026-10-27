@@ -38,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.voice.AdventureGuideMode
@@ -52,9 +51,6 @@ import com.example.data.voice.VoiceStartRequest
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
 import com.example.viewmodel.AdventurerViewModel
-
-private val VoicePanel = Color(0xFF131B2A)
-private val VoiceMuted = Color(0xFF94A3B8)
 
 @Composable
 fun AdventureVoiceCompanionScreen(
@@ -88,24 +84,24 @@ fun AdventureVoiceCompanionScreen(
                 Text("Adventure Voice Companion", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                 Text(
                     "Use your voice to navigate Adventurer, control a session, and hear an activity-aware briefing.",
-                    color = VoiceMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
         }
 
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = VoicePanel), shape = RoundedCornerShape(22.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(22.dp)) {
                 Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Surface(
-                            color = if (state.handsFreeEnabled) AdventureOrange else Color(0xFF263246),
+                            color = if (state.handsFreeEnabled) AdventureOrange else MaterialTheme.colorScheme.surfaceVariant,
                             shape = CircleShape,
                         ) {
                             Icon(
                                 if (state.isSpeaking) Icons.Filled.VolumeUp else Icons.Filled.Mic,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = if (state.handsFreeEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(12.dp),
                             )
                         }
@@ -119,7 +115,7 @@ fun AdventureVoiceCompanionScreen(
                                 },
                                 fontWeight = FontWeight.Bold,
                             )
-                            Text(state.status, color = VoiceMuted, style = MaterialTheme.typography.bodySmall)
+                            Text(state.status, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -212,9 +208,9 @@ fun AdventureVoiceCompanionScreen(
                         Text(it, color = AmberGold, style = MaterialTheme.typography.bodySmall)
                     }
                     if (liveState.latestTranscript.isNotBlank()) {
-                        Surface(color = Color(0xFF0F172A), shape = RoundedCornerShape(12.dp)) {
+                        Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(12.dp)) {
                             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text("Latest spoken response", fontWeight = FontWeight.Bold, color = Color.White)
+                                Text("Latest spoken response", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 Text(liveState.latestTranscript.take(900), color = VoiceMuted, style = MaterialTheme.typography.bodyMedium)
                             }
                         }
