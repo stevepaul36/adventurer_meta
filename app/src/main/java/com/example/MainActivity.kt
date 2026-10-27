@@ -146,6 +146,21 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
 
     LaunchedEffect(voiceController, viewModel) {
         voiceController.updateLanguage(viewModel.currentLang.value.code)
+
+        fun vehicleIsMoving(): Boolean {
+            val ride = viewModel.telemetry.value
+            return AdventureVoiceSafetyPolicy.isVehicleInMotion(
+                VoiceMotionSnapshot(
+                    activityType = ride.activityType,
+                    isRecording = ride.isRecording,
+                    isPaused = ride.isPaused,
+                    hasGpsFix = ride.hasGpsFix,
+                    isDemo = ride.isDemo,
+                    speedKmH = ride.currentSpeedKmH,
+                )
+            )
+        }
+
         voiceController.setCommandHandler { command: ParsedAdventureVoiceCommand ->
             if (command.action != AdventureVoiceAction.IGNORED && command.action != AdventureVoiceAction.UNKNOWN) {
                 // Never log the recognized words, query string, or location—only the coarse action.
@@ -295,6 +310,12 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
     val telemetry by viewModel.telemetry.collectAsState()
     val activityMode by viewModel.activityMode.collectAsState()
     val lang by viewModel.currentLang.collectAsState()
+
+    LaunchedEffect(currentScreen) {
+        if (currentScreen == Screen.VOICE_COMPANION) {
+            AdventureFunnelAnalytics.log(context, "voice_assistant_open")
+        }
+    }
 
     LaunchedEffect(lang) {
         voiceController.updateLanguage(lang.code)
