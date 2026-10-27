@@ -23,6 +23,10 @@ object AdventureFunnelAnalytics {
         "safety_check_in_completed",
         "creator_guide_draft_created",
         "community_event_draft_created",
+        "voice_assistant_open",
+        "voice_push_to_talk_started",
+        "voice_hands_free_enabled",
+        "voice_command_executed",
     )
 
     fun log(context: Context, eventName: String, params: Map<String, Any> = emptyMap()) {

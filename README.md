@@ -6,6 +6,10 @@ Adventurer is evolving from a motorcycle-first prototype into a multi-activity a
 
 ## Product features
 
+- **Adventure Voice Companion (new prototype slice):** optional “Hey Adventurer” phrase while the app is foregrounded, one-shot talk button, spoken navigation across main screens, activity switching, current-session status, activity-aware briefings, TTS styles, stop-speaking control, Tour/Wander interaction styles, and external map search by voice. Commands use a small deterministic parser; they do not ask an LLM to invent app actions.
+- **Voice platform limits:** this is foreground-only and user-armed. Android's standard SpeechRecognizer is not an OS-level wake-word service and is not designed for unlimited background listening. Device speech recognition may use network services. Live realtime speech-to-speech, interrupt-by-speaking barge-in, verified nearby POI research, and background hotword listening are not connected in this slice.
+
+
 - **Ride telemetry HUD:** speed, altitude, elapsed time, distance and sensor-based lean-angle foundation.
 - **Expedition concepts:** routes, contingency plans, high-altitude guidance and trip-budget tools.
 - **Roadside radar/SOS UI:** roadside service concepts and one-tap safety UI; live dispatch workflows require backend integration.

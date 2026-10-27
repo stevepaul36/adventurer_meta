@@ -14,6 +14,7 @@ enum class Screen(val title: String, val isTopLevel: Boolean = false) {
     FEED("Feed", isTopLevel = true),
     EXPEDITIONS("Expeditions"),
     EXPLORE_PLAN("Explore & Plan", isTopLevel = true),
+    VOICE_COMPANION("Voice Companion", isTopLevel = true),
     RADAR("Roadside Radar", isTopLevel = true),
     LIVE_TRACKER("Live Telemetry", isTopLevel = true),
     STORY_STUDIO("AI Story Studio"),
@@ -109,6 +110,26 @@ class AdventurerViewModel(
             return true
         }
         return false
+    }
+
+    private val voiceTopLevelScreens = listOf(
+        Screen.FEED,
+        Screen.EXPLORE_PLAN,
+        Screen.VOICE_COMPANION,
+        Screen.LIVE_TRACKER,
+        Screen.RADAR,
+        Screen.PROFILE,
+    )
+
+    fun navigateToNextTopLevel() {
+        val index = voiceTopLevelScreens.indexOf(_currentScreen.value)
+        navigateTo(voiceTopLevelScreens[(index + 1).mod(voiceTopLevelScreens.size)])
+    }
+
+    fun navigateToPreviousTopLevel() {
+        val index = voiceTopLevelScreens.indexOf(_currentScreen.value)
+        val normalized = if (index < 0) 0 else index
+        navigateTo(voiceTopLevelScreens[(normalized - 1 + voiceTopLevelScreens.size).mod(voiceTopLevelScreens.size)])
     }
 
     fun setActivityMode(mode: ActivityType) {

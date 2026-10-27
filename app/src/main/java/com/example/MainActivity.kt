@@ -1,8 +1,14 @@
 package com.example
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
@@ -33,8 +39,15 @@ import androidx.compose.ui.platform.testTag
 import com.example.analytics.AdventureFunnelAnalytics
 import com.example.data.planning.AdventurePlannerRepository
 import com.example.data.model.ActivityType
+import com.example.data.voice.AdventureVoiceAction
+import com.example.data.voice.AdventureVoiceController
+import com.example.data.voice.AdventureGuideMode
+import com.example.data.voice.ParsedAdventureVoiceCommand
+import com.example.data.voice.VoiceCommandReply
+import com.example.data.voice.VoiceStartRequest
 import com.example.data.model.FeedItem
 import com.example.data.billing.AdventurerProBilling
+import com.example.ui.components.AdventureVoiceBubble
 import com.example.ui.components.CommentsBottomSheet
 import com.example.ui.components.CreatePostDialog
 import com.example.ui.components.SafetySosDialog
@@ -72,6 +85,7 @@ private data class NavTab(val screen: Screen, val label: Str, val selected: Imag
 private val NavTabs = listOf(
     NavTab(Screen.FEED, Str.NAV_FEED, Icons.Filled.Home, Icons.Outlined.Home, AdventureOrange),
     NavTab(Screen.EXPLORE_PLAN, Str.NAV_EXPLORE, Icons.Filled.Explore, Icons.Outlined.Explore, AdventureOrange),
+    NavTab(Screen.VOICE_COMPANION, Str.NAV_VOICE, Icons.Filled.Mic, Icons.Outlined.Mic, AdventureOrange),
     NavTab(Screen.LIVE_TRACKER, Str.NAV_RIDE, Icons.Filled.Speed, Icons.Outlined.Speed, AdventureOrange),
     NavTab(Screen.RADAR, Str.NAV_SOS, Icons.Filled.Emergency, Icons.Outlined.Emergency, Color(0xFFEF4444)),
     NavTab(Screen.PROFILE, Str.NAV_RIDER, Icons.Filled.Person, Icons.Outlined.Person, AmberGold),
@@ -82,6 +96,184 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val plannerRepository = remember(context) { AdventurePlannerRepository(context.applicationContext) }
     val locationManager = remember { com.example.data.location.LocationManager(context.applicationContext) }
+    val voiceController = remember(context) { AdventureVoiceController(context) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, voiceController) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> voiceController.setForegroundActive(true)
+                Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> voiceController.setForegroundActive(false)
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        voiceController.setForegroundActive(lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            voiceController.shutdown()
+        }
+    }
+
+    var pendingVoiceStart by remember { mutableStateOf(VoiceStartRequest.PUSH_TO_TALK) }
+    val voicePermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            when (pendingVoiceStart) {
+                VoiceStartRequest.PUSH_TO_TALK -> voiceController.startOneShot()
+                VoiceStartRequest.HANDS_FREE -> voiceController.enableHandsFree()
+            }
+        } else voiceController.permissionDenied()
+    }
+    val requestVoice: (VoiceStartRequest) -> Unit = { request ->
+        pendingVoiceStart = request
+        AdventureFunnelAnalytics.log(
+            context,
+            if (request == VoiceStartRequest.HANDS_FREE) "voice_hands_free_enabled" else "voice_push_to_talk_started"
+        )
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            when (request) {
+                VoiceStartRequest.PUSH_TO_TALK -> voiceController.startOneShot()
+                VoiceStartRequest.HANDS_FREE -> voiceController.enableHandsFree()
+            }
+        } else voicePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+    }
+
+    LaunchedEffect(voiceController, viewModel) {
+        voiceController.updateLanguage(viewModel.currentLang.value.code)
+        voiceController.setCommandHandler { command: ParsedAdventureVoiceCommand ->
+            if (command.action != AdventureVoiceAction.IGNORED && command.action != AdventureVoiceAction.UNKNOWN) {
+                // Never log the recognized words, query string, or location—only the coarse action.
+                AdventureFunnelAnalytics.log(context, "voice_command_executed", mapOf("command_type" to command.action.name))
+            }
+            when (command.action) {
+                AdventureVoiceAction.HELP -> VoiceCommandReply("You can say: open Explore, open Story Studio, go back, next screen, switch to trekking, give me an activity briefing, read my trip status, pause recording, or search for a place.")
+                AdventureVoiceAction.BACK -> VoiceCommandReply(if (viewModel.navigateBack()) "Going back." else "You're already at the home screen.")
+                AdventureVoiceAction.NEXT_SCREEN -> {
+                    viewModel.navigateToNextTopLevel()
+                    VoiceCommandReply("Opening the next main screen.")
+                }
+                AdventureVoiceAction.PREVIOUS_SCREEN -> {
+                    viewModel.navigateToPreviousTopLevel()
+                    VoiceCommandReply("Opening the previous main screen.")
+                }
+                AdventureVoiceAction.OPEN_FEED -> {
+                    viewModel.navigateTo(Screen.FEED)
+                    VoiceCommandReply("Opening your adventure feed.")
+                }
+                AdventureVoiceAction.OPEN_EXPLORE -> {
+                    viewModel.navigateTo(Screen.EXPLORE_PLAN)
+                    VoiceCommandReply("Opening Explore and Plan.")
+                }
+                AdventureVoiceAction.OPEN_TRACKER -> {
+                    viewModel.navigateTo(Screen.LIVE_TRACKER)
+                    VoiceCommandReply("Opening your activity tracker.")
+                }
+                AdventureVoiceAction.OPEN_VOICE -> {
+                    viewModel.navigateTo(Screen.VOICE_COMPANION)
+                    VoiceCommandReply("Opening the Voice Companion.")
+                }
+                AdventureVoiceAction.OPEN_STORY_STUDIO -> {
+                    viewModel.navigateTo(Screen.STORY_STUDIO)
+                    VoiceCommandReply("Opening Story Studio. Your existing activity-aware story tools are ready.")
+                }
+                AdventureVoiceAction.OPEN_RADAR -> {
+                    viewModel.navigateTo(Screen.RADAR)
+                    VoiceCommandReply("Opening Roadside Radar and Safety Help.")
+                }
+                AdventureVoiceAction.OPEN_PROFILE -> {
+                    viewModel.navigateTo(Screen.PROFILE)
+                    VoiceCommandReply("Opening your profile.")
+                }
+                AdventureVoiceAction.START_ACTIVITY -> {
+                    if (viewModel.telemetry.value.isRecording) {
+                        VoiceCommandReply("An activity is already recording. Say pause recording, or open tracker for controls.")
+                    } else {
+                        val hasLocation = viewModel.locationManager?.hasLocationPermission() == true
+                        viewModel.startRide()
+                        VoiceCommandReply(
+                            if (hasLocation) "Activity recording started. Keep your attention on the environment."
+                            else "A demo session was started because location permission is unavailable. Enable location before relying on a real GPS track."
+                        )
+                    }
+                }
+                AdventureVoiceAction.PAUSE_ACTIVITY -> {
+                    val ride = viewModel.telemetry.value
+                    if (!ride.isRecording) VoiceCommandReply("There is no active session to pause.")
+                    else if (ride.isPaused) VoiceCommandReply("Your session is already paused.")
+                    else {
+                        viewModel.pauseRide()
+                        VoiceCommandReply("Session paused.")
+                    }
+                }
+                AdventureVoiceAction.RESUME_ACTIVITY -> {
+                    val ride = viewModel.telemetry.value
+                    if (!ride.isRecording) VoiceCommandReply("There is no active session to resume.")
+                    else if (!ride.isPaused) VoiceCommandReply("Your session is already running.")
+                    else {
+                        viewModel.resumeRide()
+                        VoiceCommandReply("Session resumed.")
+                    }
+                }
+                AdventureVoiceAction.END_ACTIVITY -> {
+                    viewModel.navigateTo(Screen.LIVE_TRACKER)
+                    VoiceCommandReply("Opening the tracker so you can finish the session with its controls. I won't discard trip data by voice.")
+                }
+                AdventureVoiceAction.ACTIVITY_BRIEFING -> {
+                    val activity = viewModel.activityMode.value
+                    val detail = if (voiceController.state.value.guideMode == AdventureGuideMode.TOUR) {
+                        "${activity.displayName}. ${activity.homeHint} ${activity.trackerSubtitle}"
+                    } else "${activity.displayName}. ${activity.homeHint}"
+                    VoiceCommandReply("Activity briefing. ${detail.take(360)}")
+                }
+                AdventureVoiceAction.RIDE_STATUS -> {
+                    val ride = viewModel.telemetry.value
+                    if (!ride.isRecording) VoiceCommandReply("No activity is recording right now. The selected activity is ${viewModel.activityMode.value.displayName}.")
+                    else {
+                        val minutes = ride.elapsedSeconds / 60
+                        val gpsNote = if (ride.hasGpsFix && !ride.isDemo) " GPS is connected." else " GPS fix is not confirmed; don't rely on this as a real route."
+                        VoiceCommandReply("Your ${ride.activityType.displayName} session is ${if (ride.isPaused) "paused" else "recording"}. ${String.format(java.util.Locale.US, "%.1f", ride.distanceKm)} kilometres recorded over ${minutes} minutes.${gpsNote}")
+                    }
+                }
+                AdventureVoiceAction.SAFETY_HELP -> {
+                    viewModel.navigateTo(Screen.RADAR)
+                    VoiceCommandReply("Opening Safety and Help. I will not trigger an SOS from speech alone; confirm emergency actions on screen.")
+                }
+                AdventureVoiceAction.NEARBY_CONTEXT -> VoiceCommandReply("I don't have a verified live nearby-place feed connected yet, so I can't identify an object reliably from “what's that”. Say “search for” and a place name to open a map search.")
+                AdventureVoiceAction.SEARCH_PLACE -> {
+                    val query = command.query.orEmpty().trim()
+                    if (query.isBlank()) VoiceCommandReply("Please say the place name after “search for”.")
+                    else {
+                        val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encode(query)}"))
+                        VoiceCommandReply("Opening an external map search for $query. Adventurer hasn't verified these results or current conditions.", afterSpeech = {
+                            runCatching { context.startActivity(mapIntent) }
+                        })
+                    }
+                }
+                AdventureVoiceAction.SELECT_ACTIVITY -> {
+                    val activity = command.activity
+                    if (activity == null) VoiceCommandReply("I couldn't match that activity. Try motorcycling, cycling, trekking, camping, fishing, scuba, kayaking, or exploring.")
+                    else {
+                        viewModel.setActivityMode(activity)
+                        VoiceCommandReply("Activity changed to ${activity.displayName}.")
+                    }
+                }
+                AdventureVoiceAction.GUIDED_MODE -> {
+                    voiceController.setGuideMode(AdventureGuideMode.TOUR)
+                    VoiceCommandReply("Tour mode selected. Ask for an activity briefing whenever you want a longer guide summary.")
+                }
+                AdventureVoiceAction.WANDER_MODE -> {
+                    voiceController.setGuideMode(AdventureGuideMode.WANDER)
+                    VoiceCommandReply("Wander mode selected. I'll keep answers concise and wait for you to ask.")
+                }
+                AdventureVoiceAction.STOP_SPEAKING, AdventureVoiceAction.DISABLE_HANDS_FREE, AdventureVoiceAction.REPEAT_LAST, AdventureVoiceAction.WAKE_ONLY, AdventureVoiceAction.IGNORED -> VoiceCommandReply("", silent = true)
+                AdventureVoiceAction.UNKNOWN -> VoiceCommandReply("I didn't understand that. Try open Explore, go back, switch to trekking, give me an activity briefing, or search for a place.")
+            }
+        }
+    }
+
+    LaunchedEffect(lang) {
+        voiceController.updateLanguage(lang.code)
+    }
 
     LaunchedEffect(locationManager) {
         viewModel.attachLocationManager(locationManager)
@@ -182,6 +374,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                 when (screen) {
                     Screen.FEED -> FeedScreen(viewModel = viewModel)
                     Screen.EXPLORE_PLAN -> AdventurePlannerScreen(viewModel = viewModel, plannerRepository = plannerRepository)
+                    Screen.VOICE_COMPANION -> AdventureVoiceCompanionScreen(viewModel = viewModel, controller = voiceController, onRequestVoice = requestVoice)
                     Screen.EXPEDITIONS -> ExpeditionsScreen(viewModel = viewModel)
                     Screen.RADAR -> RoadsideRadarScreen(viewModel = viewModel)
                     Screen.LIVE_TRACKER -> GpsTrackerScreen(viewModel = viewModel)
@@ -191,6 +384,13 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     Screen.PROFILE -> ProfileScreen(viewModel = viewModel)
                     Screen.PRO_PAYWALL -> ProPaywallScreen(viewModel = viewModel)
                 }
+            }
+            if (currentScreen != Screen.VOICE_COMPANION) {
+                AdventureVoiceBubble(
+                    controller = voiceController,
+                    onRequestVoice = requestVoice,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 14.dp),
+                )
             }
         }
     }
