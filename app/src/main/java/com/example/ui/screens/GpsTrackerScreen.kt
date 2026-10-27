@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,7 @@ import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
 import com.example.ui.theme.DangerRed
 import com.example.ui.theme.HighAltitudeCyan
+import com.example.analytics.AdventureFunnelAnalytics
 import com.example.viewmodel.AdventurerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +44,7 @@ fun GpsTrackerScreen(
 ) {
     BackHandler { viewModel.navigateBack() }
 
+    val context = LocalContext.current
     val telemetry by viewModel.telemetry.collectAsState()
     val selectedActivityMode by viewModel.activityMode.collectAsState()
     val activityType = if (telemetry.isRecording) telemetry.activityType else selectedActivityMode
@@ -383,7 +386,10 @@ fun GpsTrackerScreen(
             if (!telemetry.isRecording) {
                 item {
                     Button(
-                        onClick = { viewModel.startRide() },
+                        onClick = {
+                            AdventureFunnelAnalytics.log(context, "activity_started", mapOf("activity_type" to selectedActivityMode.name))
+                            viewModel.startRide()
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange),
                         shape = RoundedCornerShape(12.dp)

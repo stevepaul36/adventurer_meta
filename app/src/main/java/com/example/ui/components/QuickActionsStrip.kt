@@ -39,6 +39,7 @@ fun QuickActionsStrip(
     lang: SupportedLang = SupportedLang.ENGLISH,
 ) {
     val items = listOf(
+        QuickActionItem(Screen.EXPEDITIONS, Str.QUICK_EXPEDITIONS, Icons.Default.Terrain, Color(0xFF38BDF8)),
         QuickActionItem(Screen.STORY_STUDIO, Str.QUICK_STUDIO, Icons.Default.AutoAwesome, Color(0xFFC084FC)),
         QuickActionItem(Screen.CLUBS, Str.QUICK_CLUBS, Icons.Default.Groups, Color(0xFF38BDF8)),
         QuickActionItem(Screen.GAMIFICATION, Str.QUICK_TROPHIES, Icons.Default.EmojiEvents, AmberGold),

@@ -2,8 +2,9 @@
 
 Use this document when continuing the current repository in Google AI Studio or Android Studio. Do not regenerate the app from scratch or discard this branch.
 
-- Branch: feat/multi-adventure-platform
+- Branch for this feature: feat/adventurer-trip-planning-safety-funnel
 - Product blueprint: MULTI_ADVENTURE_PRODUCT_BLUEPRINT.md
+- Differentiators & experiments: PRODUCT_DIFFERENTIATORS_AND_EXPERIMENTS.md
 - Base branch: main
 - Android app: app/
 - Cloud Functions backend: functions/
@@ -71,3 +72,16 @@ Use a Gemini Developer API key for GEMINI_API_KEY and a RevenueCat secret API ke
 ## Honest current scope
 
 This branch is a release foundation, not a published live product. Social/feed and several community views remain mock-backed; anonymous Firebase Auth is a per-install identity, not complete account linking. Firebase/RevenueCat setup and signed store distribution must be completed and verified in your own projects.
+
+
+## Explore & Plan implementation notes
+
+The current feature branch introduces a Room-backed local planner, a destination search handoff to an external map/search provider, multi-day trip drafts, saved stop ideas, safety-plan fields/manual check-in timestamps, JSON plan export, local guide/event drafts, activity-aware story templates, and product funnel event instrumentation.
+
+Keep the status truthful:
+- Local stop ideas are not verified POIs; do not describe them as official/confirmed.
+- The maps button opens an external provider. No in-app routing engine or licensed offline map tiles are bundled yet.
+- Check-in timestamps are local records. There is no scheduler or outbound contact/SOS delivery in this release.
+- Guide/event drafts are local drafts, not published community data. Do not activate checkout, payouts or public RSVPs without server-side authorization, moderation, payments and legal review.
+- Firebase Analytics events must remain coarse; never send exact coordinates, destination labels, trusted-contact labels, full tracks or private trip notes.
+- Keep story AI prompt templates activity-aware but grounded only in supplied footage and user-entered facts.

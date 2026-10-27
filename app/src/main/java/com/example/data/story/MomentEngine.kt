@@ -1,5 +1,6 @@
 package com.example.data.story
 
+import com.example.data.model.ActivityType
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
@@ -285,24 +286,51 @@ object StoryTemplate {
     const val TITLE_CARD_SEC = 0.0
 
     /** Offline story built only from what the analysis actually found — no invented facts. */
-    fun build(title: String, location: String, moments: List<StudioMoment>, sourceSec: Double): StoryCopy {
-        val place = location.trim().ifEmpty { "the open road" }
-        val name = title.trim().ifEmpty { "A ride to remember" }
+    fun build(
+        title: String,
+        location: String,
+        moments: List<StudioMoment>,
+        sourceSec: Double,
+        activityType: ActivityType = ActivityType.Motorcycling,
+        template: AdventureStoryTemplate = AdventureStoryTemplates.byId("epic_journey"),
+    ): StoryCopy {
+        val place = location.trim().ifEmpty { "the planned destination" }
+        val name = title.trim().ifEmpty { "An adventure to remember" }
         val reelSec = moments.sumOf { it.durationSec }
         val highlights = moments.map { it.label.lowercase() }.distinct().take(3)
         val list = when (highlights.size) {
-            0 -> "the road ahead"
+            0 -> "the selected moments"
             1 -> highlights[0]
             else -> highlights.dropLast(1).joinToString(", ") + " and " + highlights.last()
         }
+        val activityNoun = when (activityType) {
+            ActivityType.Motorcycling -> "motorcycle ride"
+            ActivityType.Cycling -> "cycling adventure"
+            ActivityType.Walking -> "walk"
+            ActivityType.Trekking -> "hike or trek"
+            ActivityType.CarTrips -> "road trip"
+            ActivityType.Camping -> "camping trip"
+            ActivityType.Fishing -> "fishing outing"
+            ActivityType.Hunting -> "outdoor field trip"
+            ActivityType.ScubaDiving -> "dive trip"
+            ActivityType.Snorkeling -> "snorkelling trip"
+            ActivityType.KayakingPaddling -> "paddling trip"
+            ActivityType.BoatingSailing -> "boating trip"
+            ActivityType.IslandExploration -> "island adventure"
+            ActivityType.DestinationExploration -> "destination exploration"
+            ActivityType.WildlifeExploration -> "nature-watching trip"
+            ActivityType.ClimbingCaving -> "climbing or caving trip"
+            ActivityType.Hybrid -> "multi-activity adventure"
+        }
         val placeTags = place.split(' ', ',').filter { it.isNotBlank() }.take(2)
             .map { "#" + it.filter(Char::isLetterOrDigit) }.filter { it.length > 1 }
+        val modeTag = "#" + activityType.displayName.replace(Regex("[^A-Za-z0-9]"), "")
         return StoryCopy(
-            caption = "$name — ${formatTime(sourceSec)} of riding through $place, cut to ${formatTime(reelSec)}. Featuring $list.",
-            diary = "$name.\n\nThis ride through $place produced ${formatTime(sourceSec)} of footage. " +
-                "RideStory picked ${moments.size} moments worth keeping — $list — and stitched them into a ${formatTime(reelSec)} reel.\n\n" +
-                "Add your own notes: who you rode with, where you stopped for chai, and what you'd tell the next rider on this route.",
-            hashtags = listOf("#RideStory", "#AdventureRiding", "#RideSafe") + placeTags,
+            caption = "$name — a $activityNoun through $place, cut to ${formatTime(reelSec)}. Featuring $list.",
+            diary = "$name.\n\nThis $activityNoun through $place produced ${formatTime(sourceSec)} of footage. " +
+                "The selected moments — $list — were assembled into a ${formatTime(reelSec)} reel. " +
+                "${template.description}\n\nAdd your own observations, people, stops and details before sharing.",
+            hashtags = listOf("#Adventurer", modeTag, "#ExploreResponsibly") + placeTags,
             chapterTitles = moments.map { it.label },
             narration = "$name. $place. " + moments.joinToString(". ") { it.label } + ".",
             fromAi = false,

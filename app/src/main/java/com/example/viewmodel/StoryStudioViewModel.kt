@@ -8,6 +8,8 @@ import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.model.ActivityType
+import com.example.data.story.AdventureStoryTemplates
 import com.example.data.story.AnalysisResult
 import com.example.data.story.MetaAiClient
 import com.example.data.story.MomentPicker
@@ -34,7 +36,9 @@ data class StudioState(
     val sourceName: String = "",
     val info: VideoAnalyzer.VideoInfo? = null,
     val title: String = "My ride, my story",
-    val location: String = "Western Ghats, India",
+    val location: String = "",
+    val activityType: ActivityType = ActivityType.Motorcycling,
+    val templateId: String = "epic_journey",
     val language: SupportedLang = SupportedLang.ENGLISH,
     val targetSec: Int = 60,
     val aspect: ReelExporter.Aspect = ReelExporter.Aspect.VERTICAL,
@@ -92,8 +96,20 @@ class StoryStudioViewModel(app: Application) : AndroidViewModel(app) {
         return FileProvider.getUriForFile(getApplication(), "${getApplication<Application>().packageName}.fileprovider", file)
     }
 
-    fun setTitle(v: String) = _state.update { it.copy(title = v.take(80)) }
-    fun setLocation(v: String) = _state.update { it.copy(location = v.take(80)) }
+    fun setTitle(v: String) = _state.update { it.copy(title = v.take(80), story = null) }
+    fun setLocation(v: String) = _state.update { it.copy(location = v.take(80), story = null) }
+    fun setActivityType(v: ActivityType) = _state.update {
+        if (it.activityType == v) it else {
+            val supported = AdventureStoryTemplates.forActivity(v)
+            val nextTemplate = supported.firstOrNull { template -> template.id == it.templateId }?.id
+                ?: supported.firstOrNull()?.id
+                ?: "epic_journey"
+            it.copy(activityType = v, templateId = nextTemplate, story = null)
+        }
+    }
+    fun setTemplate(id: String) = _state.update {
+        if (it.templateId == id) it else it.copy(templateId = id, story = null)
+    }
     fun setLanguage(v: SupportedLang) = _state.update { it.copy(language = v) }
     fun setAspect(v: ReelExporter.Aspect) = _state.update { it.copy(aspect = v, reel = null) }
     fun setTarget(sec: Int) = _state.update { s ->
@@ -119,12 +135,14 @@ class StoryStudioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun enhanceWithAi() {
-        val s = _state.value
+    fun enhanceWithAi(activityType: ActivityType? = null) {
+        val current = _state.value
+        val s = if (activityType != null) current.copy(activityType = activityType) else current
+        if (s.activityType != current.activityType) _state.value = s
         if (!ai.isConfigured || s.moments.isEmpty()) return
         launchTask(StudioBusy.AI_LABELING, "Asking ${ai.visionModel} to review ${minOf(12, s.moments.size)} keyframes") {
             progress(0.3f, "Asking ${ai.visionModel} to review keyframes")
-            val labels = ai.labelMoments(s.moments, s.location).associateBy { it.id }
+            val labels = ai.labelMoments(s.moments, s.location, s.activityType.displayName).associateBy { it.id }
             val merged = s.moments.map { m ->
                 val l = labels[m.id] ?: return@map m
                 m.copy(
@@ -155,23 +173,26 @@ class StoryStudioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun writeStory() {
-        val s = _state.value
+    fun writeStory(activityType: ActivityType? = null) {
+        val current = _state.value
+        val s = if (activityType != null) current.copy(activityType = activityType) else current
+        if (s.activityType != current.activityType) _state.value = s
         val clips = s.selected
         if (clips.isEmpty()) return
         val sourceSec = s.analysis?.durationSec ?: 0.0
-        launchTask(StudioBusy.WRITING, "Writing your story") {
+        val template = AdventureStoryTemplates.byId(s.templateId)
+        launchTask(StudioBusy.WRITING, "Writing your ${s.activityType.displayName.lowercase()} story") {
             val story = if (ai.isConfigured) {
                 try {
-                    ai.writeStory(s.title, s.location, s.language.displayName, clips, sourceSec)
+                    ai.writeStory(s.title, s.location, s.language.displayName, s.activityType.displayName, template, clips, sourceSec)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     _state.update { it.copy(error = "AI story failed, used the offline template: ${e.message}") }
-                    StoryTemplate.build(s.title, s.location, clips, sourceSec)
+                    StoryTemplate.build(s.title, s.location, clips, sourceSec, s.activityType, template)
                 }
             } else {
-                StoryTemplate.build(s.title, s.location, clips, sourceSec)
+                StoryTemplate.build(s.title, s.location, clips, sourceSec, s.activityType, template)
             }
             _state.update { it.copy(story = story) }
         }

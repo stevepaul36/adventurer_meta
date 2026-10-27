@@ -30,6 +30,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import com.example.analytics.AdventureFunnelAnalytics
+import com.example.data.planning.AdventurePlannerRepository
 import com.example.data.model.ActivityType
 import com.example.data.model.FeedItem
 import com.example.data.billing.AdventurerProBilling
@@ -51,6 +53,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
+        AdventureFunnelAnalytics.log(this, "adventure_app_open")
         setContent {
             AdventurerTheme(darkTheme = true) {
                 AdventurerApp(viewModel = viewModel)
@@ -68,7 +71,7 @@ private data class NavTab(val screen: Screen, val label: Str, val selected: Imag
 
 private val NavTabs = listOf(
     NavTab(Screen.FEED, Str.NAV_FEED, Icons.Filled.Home, Icons.Outlined.Home, AdventureOrange),
-    NavTab(Screen.EXPEDITIONS, Str.NAV_PASSES, Icons.Filled.Terrain, Icons.Outlined.Terrain, AdventureOrange),
+    NavTab(Screen.EXPLORE_PLAN, Str.NAV_EXPLORE, Icons.Filled.Explore, Icons.Outlined.Explore, AdventureOrange),
     NavTab(Screen.LIVE_TRACKER, Str.NAV_RIDE, Icons.Filled.Speed, Icons.Outlined.Speed, AdventureOrange),
     NavTab(Screen.RADAR, Str.NAV_SOS, Icons.Filled.Emergency, Icons.Outlined.Emergency, Color(0xFFEF4444)),
     NavTab(Screen.PROFILE, Str.NAV_RIDER, Icons.Filled.Person, Icons.Outlined.Person, AmberGold),
@@ -77,6 +80,7 @@ private val NavTabs = listOf(
 @Composable
 fun AdventurerApp(viewModel: AdventurerViewModel) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val plannerRepository = remember(context) { AdventurePlannerRepository(context.applicationContext) }
     val locationManager = remember { com.example.data.location.LocationManager(context.applicationContext) }
 
     LaunchedEffect(locationManager) {
@@ -177,6 +181,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
             ) { screen ->
                 when (screen) {
                     Screen.FEED -> FeedScreen(viewModel = viewModel)
+                    Screen.EXPLORE_PLAN -> AdventurePlannerScreen(viewModel = viewModel, plannerRepository = plannerRepository)
                     Screen.EXPEDITIONS -> ExpeditionsScreen(viewModel = viewModel)
                     Screen.RADAR -> RoadsideRadarScreen(viewModel = viewModel)
                     Screen.LIVE_TRACKER -> GpsTrackerScreen(viewModel = viewModel)

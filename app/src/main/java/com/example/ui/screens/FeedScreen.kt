@@ -14,11 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.analytics.AdventureFunnelAnalytics
 import com.example.data.model.*
 import com.example.data.repository.formatRideDuration
 import com.example.ui.Str
@@ -35,6 +37,7 @@ fun FeedScreen(
     viewModel: AdventurerViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val feedItems by viewModel.feed.collectAsState()
     val activityMode by viewModel.activityMode.collectAsState()
     val currentLang by viewModel.currentLang.collectAsState()
@@ -208,7 +211,10 @@ fun FeedScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.width(12.dp))
-                            HoldToStartRideButton(onRideStarted = { viewModel.startRide() })
+                            HoldToStartRideButton(onRideStarted = {
+                                AdventureFunnelAnalytics.log(context, "activity_started", mapOf("activity_type" to activityMode.name))
+                                viewModel.startRide()
+                            })
                         }
                     }
                 }
