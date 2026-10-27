@@ -62,6 +62,7 @@ import com.example.ui.components.AdventureVoiceBubble
 import com.example.ui.components.CommentsBottomSheet
 import com.example.ui.components.CreatePostDialog
 import com.example.ui.components.SafetySosDialog
+import com.example.ui.theme.DangerRed
 import com.example.ui.screens.*
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AdventurerTheme
@@ -86,7 +87,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         AdventureFunnelAnalytics.log(this, "adventure_app_open")
         setContent {
-            AdventurerTheme(darkTheme = true) {
+            val isDarkMode by viewModel.isDarkMode.collectAsState()
+            AdventurerTheme(darkTheme = isDarkMode) {
                 AdventurerApp(viewModel = viewModel)
             }
         }
@@ -814,8 +816,9 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                 }
                 AnimatedVisibility(visible = showBottomBar, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
                     NavigationBar(
-                        containerColor = Color(0xFF0F172A),
-                        contentColor = Color.White,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        tonalElevation = 6.dp,
                         modifier = Modifier.testTag("main_bottom_nav")
                     ) {
                         NavTabs.forEach { tab ->
@@ -825,7 +828,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                                 onClick = { viewModel.navigateTo(tab.screen) },
                                 icon = {
                                     BadgedBox(badge = {
-                                        if (tab.screen == Screen.LIVE_TRACKER && telemetry.isRecording) Badge(containerColor = Color(0xFFEF4444))
+                                        if (tab.screen == Screen.LIVE_TRACKER && telemetry.isRecording) Badge(containerColor = DangerRed)
                                     }) {
                                         // The label below already names the tab, so the icon is decorative.
                                         Icon(if (selected) tab.selected else tab.unselected, contentDescription = null)
@@ -835,15 +838,16 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                                     Text(
                                         if (tab.screen == Screen.LIVE_TRACKER && activityMode != ActivityType.Motorcycling) "Track"
                                         else tab.label.get(lang),
-                                        maxLines = 1
+                                        maxLines = 1,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                                     )
                                 },
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = Color.Black,
+                                    selectedIconColor = tab.accent,
                                     selectedTextColor = tab.accent,
-                                    indicatorColor = tab.accent,
-                                    unselectedIconColor = Color(0xFF94A3B8),
-                                    unselectedTextColor = Color(0xFF94A3B8)
+                                    indicatorColor = tab.accent.copy(alpha = 0.18f),
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 modifier = Modifier.testTag("nav_${tab.screen.name.lowercase()}")
                             )
@@ -852,7 +856,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                 }
             }
         },
-        containerColor = Color(0xFF0B0F17)
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(
             modifier = Modifier

@@ -108,7 +108,7 @@ fun RoadsideRadarScreen(
                 title = {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("SOS & Roadside Radar", fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("SOS & Roadside Radar", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
@@ -126,7 +126,7 @@ fun RoadsideRadarScreen(
                         Text(
                             text = "Nearby rescue services & riders in distress",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF94A3B8)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
@@ -138,10 +138,10 @@ fun RoadsideRadarScreen(
                         Icon(Icons.Default.Emergency, contentDescription = "Broadcast SOS", tint = DangerRed)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B0F17))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
-        containerColor = Color(0xFF0B0F17),
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { innerPadding ->
         Column(
@@ -277,11 +277,14 @@ fun RoadsideRadarScreen(
                             Card(
                                 modifier = Modifier.fillMaxWidth().testTag("find_nearby_card"),
                                 shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A))
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                border = CardDefaults.outlinedCardBorder().copy(
+                                    brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.outline)
+                                )
                             ) {
                                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    Text("Find help near you", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                                    Text("Opens your maps app with real places around your current location.", style = MaterialTheme.typography.bodySmall, color = Color(0xFF94A3B8))
+                                    Text("Find help near you", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    Text("Opens your maps app with real places around your current location.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     val options = listOf(
                                         Triple(StationType.MECHANIC, "Mechanic", Icons.Default.Build),
                                         Triple(StationType.PUNCTURE, "Puncture", Icons.Default.TireRepair),
@@ -408,8 +411,8 @@ private fun ViewModeSegmentedSelector(
 ) {
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFF131B2A),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF1E293B)),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = modifier
     ) {
         Row(
@@ -434,7 +437,7 @@ private fun ViewModeSegmentedSelector(
                     Icon(
                         Icons.Default.Radar,
                         contentDescription = null,
-                        tint = if (mapSelected) Color.Black else Color(0xFF94A3B8),
+                        tint = if (mapSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -442,7 +445,7 @@ private fun ViewModeSegmentedSelector(
                         text = "Map Radar",
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (mapSelected) Color.Black else Color(0xFF94A3B8)
+                        color = if (mapSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (distressCount > 0) {
                         Spacer(modifier = Modifier.width(6.dp))
@@ -478,7 +481,7 @@ private fun ViewModeSegmentedSelector(
                     Icon(
                         Icons.Default.ListAlt,
                         contentDescription = null,
-                        tint = if (listSelected) Color.Black else Color(0xFF94A3B8),
+                        tint = if (listSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -486,7 +489,7 @@ private fun ViewModeSegmentedSelector(
                         text = "Directory & Safety",
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (listSelected) Color.Black else Color(0xFF94A3B8)
+                        color = if (listSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -589,9 +592,9 @@ fun StationCard(
             .fillMaxWidth()
             .testTag("station_card_${station.id}"),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = CardDefaults.outlinedCardBorder().copy(
-            brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF334155))
+            brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.outline)
         )
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -696,9 +699,9 @@ fun SafetyTipCard(tip: com.example.data.model.MountainSafetyTip) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = CardDefaults.outlinedCardBorder().copy(
-            brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF334155))
+            brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.outline)
         )
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -711,7 +714,7 @@ fun SafetyTipCard(tip: com.example.data.model.MountainSafetyTip) {
                     text = tip.title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = { expanded = !expanded }) {

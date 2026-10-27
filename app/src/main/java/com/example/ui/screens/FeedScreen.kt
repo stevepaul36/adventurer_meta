@@ -1,10 +1,16 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -12,8 +18,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -27,6 +36,8 @@ import com.example.ui.Str
 import com.example.ui.components.*
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
+import com.example.ui.theme.DangerRed
+import com.example.ui.theme.HighAltitudeCyan
 import com.example.viewmodel.AdventurerViewModel
 import com.example.viewmodel.Screen
 import com.example.viewmodel.SupportedLang
@@ -43,8 +54,38 @@ fun FeedScreen(
     val currentLang by viewModel.currentLang.collectAsState()
     val currentScreen by viewModel.currentScreen.collectAsState()
     val telemetry by viewModel.telemetry.collectAsState()
+    val isDarkMode by viewModel.isDarkMode.collectAsState()
     var showLangDropdown by remember { mutableStateOf(false) }
+    var selectedTerrain by remember { mutableStateOf("All Terrains") }
     val listState = rememberLazyListState()
+
+    val rotationAngle by animateFloatAsState(
+        targetValue = if (isDarkMode) 180f else 0f,
+        animationSpec = spring(),
+        label = "theme_rotation"
+    )
+
+    val filteredFeedItems = remember(feedItems, selectedTerrain) {
+        if (selectedTerrain == "All Terrains") feedItems
+        else {
+            val keyword = when (selectedTerrain) {
+                "🏔️ High Pass" -> "pass"
+                "🌲 Forest & Gravel" -> "trail"
+                "🌊 Coastal Highway" -> "coast"
+                "🏜️ Desert Dunes" -> "desert"
+                "🪨 Singletrack" -> "ridge"
+                else -> ""
+            }
+            val matched = feedItems.filter { item ->
+                when (item) {
+                    is FeedItem.PostItem -> item.post.caption.contains(keyword, true) || item.post.user.name.contains(keyword, true)
+                    is FeedItem.StoryItem -> item.story.title.contains(keyword, true) || item.story.description.contains(keyword, true)
+                    is FeedItem.RideShareItem -> item.rideShare.title.contains(keyword, true) || item.rideShare.user.name.contains(keyword, true)
+                }
+            }
+            if (matched.isEmpty()) feedItems else matched
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -52,16 +93,16 @@ fun FeedScreen(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(10.dp),
                             color = AdventureOrange,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(36.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    imageVector = Icons.Default.TwoWheeler,
+                                    imageVector = Icons.Default.Terrain,
                                     contentDescription = null,
-                                    tint = Color.Black,
-                                    modifier = Modifier.size(20.dp)
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
@@ -70,29 +111,43 @@ fun FeedScreen(
                             Text(
                                 text = "Adventurer",
                                 style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = Str.TAGLINE.get(currentLang),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = AmberGold
+                                color = AdventureOrange
                             )
                         }
                     }
                 },
                 actions = {
+                    // Bright Daylight / Tactical Dark Mode Toggle
+                    IconButton(
+                        onClick = { viewModel.toggleDarkMode() },
+                        modifier = Modifier
+                            .rotate(rotationAngle)
+                            .testTag("theme_toggle_button")
+                    ) {
+                        Icon(
+                            imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = if (isDarkMode) "Switch to Bright Daylight mode" else "Switch to Night mode",
+                            tint = if (isDarkMode) AmberGold else Color(0xFFD97706)
+                        )
+                    }
+
                     // Language switcher button
                     Box {
                         TextButton(
                             onClick = { showLangDropdown = true },
                             modifier = Modifier.testTag("language_switch_button")
                         ) {
-                            Icon(Icons.Default.Translate, contentDescription = null, tint = Color(0xFFCBD5E1), modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Translate, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 currentLang.localName,
-                                color = Color(0xFFCBD5E1),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.labelMedium,
                                 modifier = Modifier.semantics { contentDescription = "Language: ${currentLang.displayName}. Change language" }
                             )
@@ -100,11 +155,11 @@ fun FeedScreen(
                         DropdownMenu(
                             expanded = showLangDropdown,
                             onDismissRequest = { showLangDropdown = false },
-                            modifier = Modifier.background(Color(0xFF1E293B))
+                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                         ) {
                             SupportedLang.values().forEach { lang ->
                                 DropdownMenuItem(
-                                    text = { Text("${lang.localName} · ${lang.displayName}", color = Color.White) },
+                                    text = { Text("${lang.localName} · ${lang.displayName}", color = MaterialTheme.colorScheme.onSurface) },
                                     trailingIcon = { if (lang == currentLang) Icon(Icons.Default.Check, contentDescription = "Selected", tint = AdventureOrange) },
                                     onClick = {
                                         viewModel.setLanguage(lang)
@@ -123,11 +178,13 @@ fun FeedScreen(
                         Icon(
                             imageVector = Icons.Default.Sos,
                             contentDescription = "Emergency SOS",
-                            tint = Color(0xFFEF4444)
+                            tint = DangerRed
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B0F17))
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         },
         floatingActionButton = {
@@ -137,11 +194,11 @@ fun FeedScreen(
                 icon = { Icon(Icons.Default.Edit, contentDescription = null) },
                 text = { Text(Str.POST.get(currentLang), fontWeight = FontWeight.Bold) },
                 containerColor = AdventureOrange,
-                contentColor = Color.Black,
+                contentColor = Color.White,
                 modifier = Modifier.testTag("create_post_fab")
             )
         },
-        containerColor = Color(0xFF0B0F17),
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { innerPadding ->
         LazyColumn(
@@ -152,32 +209,136 @@ fun FeedScreen(
             contentPadding = PaddingValues(bottom = 90.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Hero: start a ride, or jump back into the one in progress
+            // Expedition Live Stories Strip
+            item {
+                ExpeditionStoriesStrip(
+                    onAddStoryClick = { viewModel.setShowCreatePost(true) },
+                    onStoryClick = { story ->
+                        viewModel.navigateTo(Screen.STORY_STUDIO)
+                    },
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+
+            // Alpine Weather & Telemetry Bar
+            item {
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    AlpineWeatherTelemetryBar()
+                }
+            }
+
+            // Interactive Activity Mode Switcher Strip
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    Text(
+                        text = "EXPLORE BY ACTIVITY",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = AdventureOrange,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ActivityType.values().forEach { mode ->
+                            val isSelected = activityMode == mode
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { viewModel.setActivityMode(mode) },
+                                label = {
+                                    Text(
+                                        text = mode.displayName,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                },
+                                leadingIcon = {
+                                    val icon = when (mode) {
+                                        ActivityType.Motorcycling -> Icons.Default.TwoWheeler
+                                        ActivityType.Cycling -> Icons.Default.DirectionsBike
+                                        ActivityType.Walking, ActivityType.Trekking -> Icons.Default.Hiking
+                                        ActivityType.CarTrips -> Icons.Default.DirectionsCar
+                                        ActivityType.Camping -> Icons.Default.Cabin
+                                        ActivityType.Fishing -> Icons.Default.Water
+                                        ActivityType.ScubaDiving, ActivityType.Snorkeling -> Icons.Default.ScubaDiving
+                                        ActivityType.KayakingPaddling, ActivityType.BoatingSailing -> Icons.Default.Kayaking
+                                        else -> Icons.Default.Explore
+                                    }
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AdventureOrange,
+                                    selectedLabelColor = Color.White,
+                                    selectedLeadingIconColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    labelColor = MaterialTheme.colorScheme.onSurface,
+                                    iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = isSelected,
+                                    borderColor = if (isSelected) AdventureOrange else MaterialTheme.colorScheme.outline
+                                ),
+                                modifier = Modifier.testTag("mode_chip_${mode.name.lowercase()}")
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Season Altitude Profile & Interactive Sparkline Card
+            item {
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    ExpeditionElevationSparklineCard()
+                }
+            }
+
+            // Hero: start an adventure, or jump back into active recording
             item {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
                     shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
                     border = CardDefaults.outlinedCardBorder().copy(
                         brush = Brush.horizontalGradient(
-                            listOf(AdventureOrange.copy(alpha = 0.6f), AmberGold.copy(alpha = 0.3f))
+                            listOf(AdventureOrange.copy(alpha = 0.8f), AmberGold.copy(alpha = 0.5f))
                         )
                     )
                 ) {
                     if (telemetry.isRecording) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(18.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(Str.RIDE_ACTIVE.get(currentLang), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text(
+                                    Str.RIDE_ACTIVE.get(currentLang),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     "%.1f km · %s%s".format(telemetry.distanceKm, formatRideDuration(telemetry.elapsedSeconds), if (telemetry.isPaused) " · paused" else ""),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = AmberGold
+                                    color = AdventureOrange,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                             Button(
@@ -186,28 +347,34 @@ fun FeedScreen(
                                 shape = RoundedCornerShape(14.dp),
                                 modifier = Modifier.height(52.dp)
                             ) {
-                                Icon(Icons.Default.Speed, contentDescription = null, tint = Color.Black)
+                                Icon(Icons.Default.Speed, contentDescription = null, tint = Color.White)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (telemetry.activityType == ActivityType.Motorcycling) Str.OPEN_HUD.get(currentLang) else "Open tracker", color = Color.Black, fontWeight = FontWeight.Bold)
+                                Text(
+                                    if (telemetry.activityType == ActivityType.Motorcycling) Str.OPEN_HUD.get(currentLang) else "Open tracker",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     } else {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(18.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = if (activityMode == ActivityType.Motorcycling) Str.HERO_TITLE.get(currentLang) else activityMode.homeTitle,
                                     style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
                                     text = if (activityMode == ActivityType.Motorcycling) Str.HERO_BODY.get(currentLang) else activityMode.homeHint,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF94A3B8)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             Spacer(modifier = Modifier.width(12.dp))
@@ -226,7 +393,7 @@ fun FeedScreen(
                     Str.EXPLORE.get(currentLang),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
@@ -238,19 +405,36 @@ fun FeedScreen(
                 )
             }
 
-            if (feedItems.isEmpty()) {
+            // Terrain & Trail Filter Chips
+            item {
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Text(
+                        text = "TERRAIN & TRAIL SURFACE",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = HighAltitudeCyan,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                    FeedTerrainFilterRow(
+                        selectedTerrain = selectedTerrain,
+                        onTerrainSelected = { selectedTerrain = it }
+                    )
+                }
+            }
+
+            if (filteredFeedItems.isEmpty()) {
                 item {
                     Text(
                         Str.FEED_EMPTY.get(currentLang),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF94A3B8),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth().padding(32.dp)
                     )
                 }
             }
 
             // Feed items
-            itemsIndexed(feedItems) { index, item ->
+            itemsIndexed(filteredFeedItems) { index, item ->
                 Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                     when (item) {
                         is FeedItem.PostItem -> {

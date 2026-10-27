@@ -181,18 +181,31 @@ fun AiStoryStudioScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B0F17)),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
             )
         },
-        containerColor = Color(0xFF0B0F17),
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier,
     ) { innerPadding ->
         Column(Modifier.fillMaxSize().padding(innerPadding)) {
-            TabRow(selectedTabIndex = tab, containerColor = Panel, contentColor = AdventureOrange, divider = { HorizontalDivider(color = PanelBorder) }) {
+            TabRow(
+                selectedTabIndex = tab,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = AdventureOrange,
+                divider = { HorizontalDivider(color = MaterialTheme.colorScheme.outline) }
+            ) {
                 listOf("1 · Footage", "2 · Highlights", "3 · Story").forEachIndexed { i, title ->
-                    Tab(selected = tab == i, onClick = { tab = i }, text = {
-                        Text(title, fontWeight = if (tab == i) FontWeight.Bold else FontWeight.Normal, color = if (tab == i) AdventureOrange else Muted)
-                    })
+                    Tab(
+                        selected = tab == i,
+                        onClick = { tab = i },
+                        text = {
+                            Text(
+                                title,
+                                fontWeight = if (tab == i) FontWeight.Bold else FontWeight.Normal,
+                                color = if (tab == i) AdventureOrange else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
                 }
             }
 
@@ -680,19 +693,20 @@ private fun EmptyCard(message: String, action: String?, onAction: () -> Unit) {
 }
 
 @Composable
-private fun PanelCard(border: Color = PanelBorder, content: @Composable ColumnScope.() -> Unit) {
+private fun PanelCard(border: Color? = null, content: @Composable ColumnScope.() -> Unit) {
+    val borderColor = border ?: MaterialTheme.colorScheme.outline
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Panel),
-        border = CardDefaults.outlinedCardBorder().copy(brush = SolidColor(border)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = CardDefaults.outlinedCardBorder().copy(brush = SolidColor(borderColor)),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
     }
 }
 
 @Composable
-private fun FieldLabel(text: String) = Text(text, style = MaterialTheme.typography.labelSmall, color = Muted)
+private fun FieldLabel(text: String) = Text(text, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
 @Composable
 private fun StudioTextField(label: String, value: String, onChange: (String) -> Unit) {
@@ -704,9 +718,13 @@ private fun StudioTextField(label: String, value: String, onChange: (String) -> 
 
 @Composable
 private fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = Color.White, unfocusedTextColor = Color.White,
-    focusedBorderColor = AdventureOrange, unfocusedBorderColor = PanelBorder,
-    focusedLabelColor = AdventureOrange, unfocusedLabelColor = Muted, cursorColor = AdventureOrange,
+    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+    focusedBorderColor = AdventureOrange,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+    focusedLabelColor = AdventureOrange,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    cursorColor = AdventureOrange,
 )
 
 @Composable
@@ -714,10 +732,14 @@ private fun <T> ChipRow(options: List<T>, selected: T, label: (T) -> String, onS
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { o ->
             FilterChip(
-                selected = o == selected, onClick = { onSelect(o) }, label = { Text(label(o)) },
+                selected = o == selected,
+                onClick = { onSelect(o) },
+                label = { Text(label(o)) },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = AdventureOrange, selectedLabelColor = Color.Black,
-                    containerColor = Color(0xFF1E293B), labelColor = Color.White,
+                    selectedContainerColor = AdventureOrange,
+                    selectedLabelColor = Color.White,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    labelColor = MaterialTheme.colorScheme.onSurface,
                 ),
             )
         }

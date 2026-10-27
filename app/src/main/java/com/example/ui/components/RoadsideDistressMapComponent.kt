@@ -46,8 +46,10 @@ fun RoadsideDistressMapComponent(
     selectedMarker: MapMarkerItem?,
     onMarkerSelected: (MapMarkerItem?) -> Unit,
     onBroadcastSosClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isDarkMode: Boolean = MaterialTheme.colorScheme.background.luminance() < 0.5f
 ) {
+    val isDark = isDarkMode
     // Map Viewport Transformations
     var panOffsetX by remember { mutableStateOf(0f) }
     var panOffsetY by remember { mutableStateOf(0f) }
@@ -94,12 +96,15 @@ fun RoadsideDistressMapComponent(
     // Calculated marker positions for hit-testing and tap selection
     val markerScreenPositions = remember { mutableStateMapOf<String, Pair<Offset, MapMarkerItem>>() }
 
+    val mapBgColor = if (isDark) Color(0xFF080D1A) else Color(0xFFF8FAFC)
+    val mapBorderColor = if (isDark) Color(0xFF1E293B) else Color(0xFFCBD5E1)
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF080D1A))
-            .border(1.dp, Color(0xFF1E293B), RoundedCornerShape(16.dp))
+            .background(mapBgColor)
+            .border(1.dp, mapBorderColor, RoundedCornerShape(16.dp))
             .testTag("roadside_distress_map_canvas")
     ) {
         Canvas(
@@ -136,7 +141,8 @@ fun RoadsideDistressMapComponent(
                 baseRadius = baseRadius,
                 kmToPx = kmToPx,
                 mapStyleMode = mapStyleMode,
-                textMeasurer = textMeasurer
+                textMeasurer = textMeasurer,
+                isDark = isDark
             )
 
             // 2. Draw Highway Route Path (Trans-Himalayan Trail vector)
@@ -288,11 +294,12 @@ private fun DrawScope.drawMapBackgroundGrid(
     baseRadius: Float,
     kmToPx: Float,
     mapStyleMode: Int,
-    textMeasurer: TextMeasurer
+    textMeasurer: TextMeasurer,
+    isDark: Boolean = true
 ) {
-    val radarRingColor = Color(0xFF1E293B)
-    val axisColor = Color(0xFF19253B)
-    val distanceLabelColor = Color(0xFF64748B)
+    val radarRingColor = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
+    val axisColor = if (isDark) Color(0xFF19253B) else Color(0xFFCBD5E1)
+    val distanceLabelColor = if (isDark) Color(0xFF64748B) else Color(0xFF475569)
 
     // Concentric Range Rings (2.5km, 5km, 10km, 15km, 20km)
     val rangesKm = listOf(2.5f, 5.0f, 10.0f, 15.0f, 20.0f)
@@ -331,7 +338,7 @@ private fun DrawScope.drawMapBackgroundGrid(
     )
 
     // Cardinal directions
-    val cardinalStyle = TextStyle(color = Color(0xFF94A3B8), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+    val cardinalStyle = TextStyle(color = if (isDark) Color(0xFF94A3B8) else Color(0xFF334155), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
     drawText(textMeasurer.measure("N", cardinalStyle), topLeft = Offset(center.x - 5f, center.y - baseRadius - 20f))
     drawText(textMeasurer.measure("S", cardinalStyle), topLeft = Offset(center.x - 4f, center.y + baseRadius + 4f))
     drawText(textMeasurer.measure("E", cardinalStyle), topLeft = Offset(center.x + baseRadius + 6f, center.y - 7f))
@@ -618,8 +625,8 @@ private fun MapTopStatusBanner(
 ) {
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = Color(0xFF0F172A).copy(alpha = 0.88f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155)),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = modifier
     ) {
         Row(
@@ -647,7 +654,7 @@ private fun MapTopStatusBanner(
                 modifier = Modifier
                     .width(1.dp)
                     .height(12.dp)
-                    .background(Color(0xFF334155))
+                    .background(MaterialTheme.colorScheme.outline)
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -674,13 +681,13 @@ private fun TacticalMapButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
-    tint: Color = Color.White
+    tint: Color = MaterialTheme.colorScheme.onSurface
 ) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(10.dp),
-        color = Color(0xFF0F172A).copy(alpha = 0.9f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155)),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier.size(38.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {

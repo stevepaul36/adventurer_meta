@@ -81,7 +81,7 @@ fun GpsTrackerScreen(
                             Text(
                                 text = if (telemetry.isRecording) "LIVE ${activityType.displayName.uppercase()} TRACKER" else "START ${activityType.displayName.uppercase()} SESSION",
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = activityType.trackerSubtitle,
@@ -93,7 +93,7 @@ fun GpsTrackerScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 actions = {
@@ -104,10 +104,10 @@ fun GpsTrackerScreen(
                         Icon(Icons.Default.Emergency, contentDescription = "SOS & Roadside Radar", tint = DangerRed)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B0F17))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
-        containerColor = Color(0xFF0B0F17),
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { innerPadding ->
         LazyColumn(
@@ -122,18 +122,21 @@ fun GpsTrackerScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2637))
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        border = CardDefaults.outlinedCardBorder().copy(
+                            brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.outline)
+                        )
                     ) {
                         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Enable location for activity tracking", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("Enable location for activity tracking", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                             Text(
                                 "Without location permission, the app can show demo motion. Demo speed/distance/lean are simulated, not GPS-recorded.",
-                                color = Color(0xFFCBD5E1), style = MaterialTheme.typography.bodySmall
+                                color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall
                             )
                             Button(onClick = requestLocationPermission, colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange)) {
-                                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Black)
+                                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.White)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Enable GPS", color = Color.Black)
+                                Text("Enable GPS", color = Color.White, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -141,11 +144,12 @@ fun GpsTrackerScreen(
             }
             if (telemetry.isDemo && telemetry.isRecording) {
                 item {
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF3A2A17))) {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = AmberGold.copy(alpha = 0.15f))) {
                         Text(
                             "DEMO MODE — movement and telemetry are simulated. Grant location permission to record actual GPS data.",
-                            color = Color(0xFFFDE68A), modifier = Modifier.padding(12.dp),
-                            style = MaterialTheme.typography.bodySmall
+                            color = AmberGold, modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -163,10 +167,10 @@ fun GpsTrackerScreen(
                         .fillMaxWidth()
                         .testTag("speedometer_hud_card"),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = CardDefaults.outlinedCardBorder().copy(
                         brush = Brush.verticalGradient(
-                            listOf(AdventureOrange.copy(alpha = 0.6f), Color(0xFF1E293B))
+                            listOf(AdventureOrange.copy(alpha = 0.6f), MaterialTheme.colorScheme.outline)
                         )
                     )
                 ) {
@@ -256,9 +260,9 @@ fun GpsTrackerScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = CardDefaults.outlinedCardBorder().copy(
-                        brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF334155))
+                        brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.outline)
                     )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -465,7 +469,7 @@ fun GpsTrackerScreen(
                     val wp = telemetry.markedWaypoints[i]
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFF131B2A),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -548,7 +552,7 @@ fun GpsTrackerScreen(
                     Text("Cancel", color = Color(0xFF94A3B8))
                 }
             },
-            containerColor = Color(0xFF131B2A),
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(16.dp)
         )
     }

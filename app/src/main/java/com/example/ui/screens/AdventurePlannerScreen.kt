@@ -6,11 +6,18 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -19,20 +26,24 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.analytics.AdventureFunnelAnalytics
 import com.example.data.model.ActivityType
 import com.example.data.planning.AdventureCreatorDraftEntity
 import com.example.data.planning.AdventurePlaceBookmarkEntity
 import com.example.data.planning.AdventurePlannerRepository
 import com.example.data.planning.AdventureTripPlanEntity
+import com.example.ui.components.ExpeditionGearPackListCard
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
 import com.example.ui.theme.HighAltitudeCyan
+import com.example.ui.theme.SuccessGreen
 import com.example.viewmodel.AdventurerViewModel
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -41,10 +52,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
-
-private val PlannerPanel = Color(0xFF131B2A)
-private val PlannerMuted = Color(0xFF94A3B8)
-private val PlannerBorder = Color(0xFF334155)
 
 private data class AdventureIdea(
     val id: String,
@@ -75,12 +82,22 @@ private val adventureIdeas = listOf(
     AdventureIdea("culture", "Local culture / small-town stop", "Culture", "Make space for community-run tours, local history, food or markets.", setOf(ActivityType.CarTrips, ActivityType.Motorcycling, ActivityType.Cycling, ActivityType.Walking, ActivityType.DestinationExploration, ActivityType.IslandExploration)),
     AdventureIdea("regroup", "Buddy check / regroup point", "Safety", "Choose a rendezvous and fallback if the group splits or loses connectivity.", everyActivity),
 )
+
 private val preparationItems = listOf(
     "Check official weather, access, closures and local rules",
     "Share the plan and expected return with a trusted person",
     "Pack water, food, first aid and activity-specific equipment",
     "Confirm your chosen navigation tool covers the intended offline area",
     "Set a turnaround time and a fallback / exit plan",
+)
+
+private val quickDestinationPresets = listOf(
+    Triple("🌲 Banff Passes", "Banff & Jasper Alpine Passes", 3),
+    Triple("🏔️ Leh Ridge", "Leh & Khardung La High Pass", 7),
+    Triple("🌊 Pacific Rim", "Pacific Rim Coastal Trail", 4),
+    Triple("🏜️ White Rann", "Kutch White Desert Ride", 2),
+    Triple("🏞️ Moab Canyons", "Moab Red Rock Canyonlands", 5),
+    Triple("🌿 Western Ghats", "Western Ghats Monsoon Loop", 3)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,7 +121,7 @@ fun AdventurePlannerScreen(
     var destination by rememberSaveable { mutableStateOf("") }
     var startDate by rememberSaveable { mutableStateOf("Flexible dates") }
     var daysText by rememberSaveable { mutableStateOf("2") }
-    var budgetText by rememberSaveable { mutableStateOf("") }
+    var budgetText by rememberSaveable { mutableStateOf("450") }
     var selectedActivities by remember { mutableStateOf(setOf(activityMode)) }
     var selectedStopDay by rememberSaveable { mutableStateOf(1) }
     var checkInEnabled by rememberSaveable { mutableStateOf(true) }
@@ -154,6 +171,7 @@ fun AdventurePlannerScreen(
             .put("note", "Offline trip data export only. Map tiles, live weather/conditions and verified local rules are not included.")
             .toString(2)
     }
+
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         val json = pendingExportJson
         if (uri != null && json != null) {
@@ -176,39 +194,95 @@ fun AdventurePlannerScreen(
         }
     }
 
+    val parsedDays = daysText.toIntOrNull()?.coerceIn(1, 14) ?: 1
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text("Explore & Plan", color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("Discover a place · build the trip · prepare safely", color = AmberGold, style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            "Explore & Plan",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "Discover a place · build the trip · prepare safely",
+                            color = AmberGold,
+                            style = MaterialTheme.typography.labelSmall
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B0F17)),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
             )
         },
-        containerColor = Color(0xFF0B0F17),
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier,
     ) { insets ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(insets),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(insets),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            // Quick Destination Recommendations & Live Search
             item(key = "destination-discovery") {
                 PlannerPanelCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Explore, contentDescription = null, tint = AdventureOrange)
                         Spacer(Modifier.width(8.dp))
-                        Text("Find a new place", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Find a new place",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
+
+                    // Interactive Quick Destination Presets
+                    Text(
+                        "Popular Expeditions (tap to load):",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        quickDestinationPresets.forEach { (chipLabel, fullTitle, days) ->
+                            SuggestionChip(
+                                onClick = {
+                                    destination = fullTitle
+                                    destinationQuery = fullTitle
+                                    planTitle = "$fullTitle Tour"
+                                    daysText = days.toString()
+                                },
+                                label = { Text(chipLabel, fontSize = 12.sp, fontWeight = FontWeight.Medium) },
+                                colors = SuggestionChipDefaults.suggestionChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                border = SuggestionChipDefaults.suggestionChipBorder(
+                                    enabled = true,
+                                    borderColor = MaterialTheme.colorScheme.outline
+                                )
+                            )
+                        }
+                    }
+
                     OutlinedTextField(
                         value = destinationQuery,
                         onValueChange = { destinationQuery = it },
                         label = { Text("City, island, region or attraction") },
-                        placeholder = { Text("e.g. Vancouver Island, Ladakh, a nearby forest") },
-                        modifier = Modifier.fillMaxWidth().testTag("destination_search_field"),
+                        placeholder = { Text("e.g. Vancouver Island, Ladakh, Banff") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("destination_search_field"),
                         singleLine = true,
                         colors = plannerFieldColors(),
                     )
@@ -227,22 +301,36 @@ fun AdventurePlannerScreen(
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange),
                     ) {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = Color.Black)
+                        Icon(Icons.Default.Search, contentDescription = null, tint = Color.White)
                         Spacer(Modifier.width(8.dp))
-                        Text("Search live places in Maps", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text("Search live places in Maps", color = Color.White, fontWeight = FontWeight.Bold)
                     }
-                    Text("This opens an external map/search provider for current results. In-app verified POI feeds and routable maps still need a configured provider.", color = PlannerMuted, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "Opens external maps for current results. Verified offline POIs and trails are saved locally.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
 
+            // Quick Stop Ideas
             item(key = "quick-ideas") {
                 PlannerPanelCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Place, contentDescription = null, tint = HighAltitudeCyan)
                         Spacer(Modifier.width(8.dp))
-                        Text("Add adventure stops", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Add adventure stops",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                    Text("Starter ideas adapt to your preferred mode (" + activityMode.displayName + "). These are prompts, not live-verified places.", color = PlannerMuted, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "Starter ideas adapt to your preferred mode (" + activityMode.displayName + ").",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     OutlinedTextField(
                         value = ideaQuery,
                         onValueChange = { ideaQuery = it },
@@ -251,12 +339,22 @@ fun AdventurePlannerScreen(
                         singleLine = true,
                         colors = plannerFieldColors(),
                     )
-                    if (matchingIdeas.isEmpty()) Text("No matching prompts. Try viewpoint, trail, camping, food, transfer or safety.", color = PlannerMuted)
+                    if (matchingIdeas.isEmpty()) {
+                        Text(
+                            "No matching prompts. Try viewpoint, trail, camping, food, transfer or safety.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     matchingIdeas.forEach { idea ->
-                        Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(idea.title, color = Color.White, fontWeight = FontWeight.SemiBold)
+                                    Text(idea.title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
                                     Text(idea.category, color = HighAltitudeCyan, style = MaterialTheme.typography.labelSmall)
                                 }
                                 val isSaved = savedPlaces.any { it.id == idea.id }
@@ -279,25 +377,32 @@ fun AdventurePlannerScreen(
                                         }
                                     }
                                 }) {
-                                    Icon(if (isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, contentDescription = if (isSaved) "Remove saved idea" else "Save place idea", tint = if (isSaved) AmberGold else PlannerMuted)
+                                    Icon(
+                                        if (isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                        contentDescription = if (isSaved) "Remove saved idea" else "Save place idea",
+                                        tint = if (isSaved) AmberGold else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
-                            Text(idea.description, color = Color(0xFFCBD5E1), style = MaterialTheme.typography.bodySmall)
+                            Text(idea.description, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedButton(
                                     onClick = {
-                                        draftStops.add(DraftTripStop(
-                                            title = idea.title, category = idea.category,
-                                            day = selectedStopDay.coerceIn(1, daysText.toIntOrNull()?.coerceIn(1, 14) ?: 1),
-                                            notes = idea.description,
-                                        ))
+                                        draftStops.add(
+                                            DraftTripStop(
+                                                title = idea.title,
+                                                category = idea.category,
+                                                day = selectedStopDay.coerceIn(1, parsedDays),
+                                                notes = idea.description,
+                                            )
+                                        )
                                         formError = null
                                     },
                                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                                 ) {
                                     Icon(Icons.Default.Place, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(4.dp))
-                                    Text("Add to Day " + selectedStopDay, color = Color.White)
+                                    Text("Add to Day $selectedStopDay", color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 TextButton(onClick = {
                                     val term = (destination.ifBlank { destinationQuery } + " " + idea.title).trim()
@@ -308,25 +413,133 @@ fun AdventurePlannerScreen(
                             }
                         }
                     }
-                    Text("No route, access, opening-hour, permit or safety claim is confirmed by these starter ideas.", color = AmberGold, style = MaterialTheme.typography.labelSmall)
                 }
             }
 
+            // Interactive Multi-day Itinerary Builder
             item(key = "trip-builder") {
                 PlannerPanelCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Timeline, contentDescription = null, tint = AdventureOrange)
                         Spacer(Modifier.width(8.dp))
-                        Text("Build a multi-day itinerary", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Build a multi-day itinerary",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                    OutlinedTextField(planTitle, { planTitle = it.take(100) }, label = { Text("Trip name") }, placeholder = { Text("e.g. Island escape & coastal trails") }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = plannerFieldColors())
-                    OutlinedTextField(destination, { destination = it.take(120) }, label = { Text("Destination / region") }, placeholder = { Text("Where do you want to go?") }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = plannerFieldColors())
-                    OutlinedTextField(startDate, { startDate = it.take(60) }, label = { Text("Start date / timing") }, placeholder = { Text("e.g. flexible, or 2026-11-15") }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = plannerFieldColors())
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(daysText, { daysText = it.filter(Char::isDigit).take(2) }, label = { Text("Days (1–14)") }, modifier = Modifier.weight(1f), singleLine = true, colors = plannerFieldColors())
-                        OutlinedTextField(budgetText, { budgetText = it.filter { c -> c.isDigit() || c == '.' }.take(10) }, label = { Text("Budget CAD (optional)") }, modifier = Modifier.weight(1.25f), singleLine = true, colors = plannerFieldColors())
+                    OutlinedTextField(
+                        value = planTitle,
+                        onValueChange = { planTitle = it.take(100) },
+                        label = { Text("Trip name") },
+                        placeholder = { Text("e.g. Alpine Ridge Discovery") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = plannerFieldColors()
+                    )
+                    OutlinedTextField(
+                        value = destination,
+                        onValueChange = { destination = it.take(120) },
+                        label = { Text("Destination / region") },
+                        placeholder = { Text("Where do you want to explore?") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = plannerFieldColors()
+                    )
+                    OutlinedTextField(
+                        value = startDate,
+                        onValueChange = { startDate = it.take(60) },
+                        label = { Text("Start date / timing") },
+                        placeholder = { Text("e.g. flexible, or next weekend") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = plannerFieldColors()
+                    )
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = daysText,
+                            onValueChange = { daysText = it.filter(Char::isDigit).take(2) },
+                            label = { Text("Days (1–14)") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            colors = plannerFieldColors()
+                        )
+                        OutlinedTextField(
+                            value = budgetText,
+                            onValueChange = { budgetText = it.filter { c -> c.isDigit() || c == '.' }.take(10) },
+                            label = { Text("Budget CAD") },
+                            modifier = Modifier.weight(1.25f),
+                            singleLine = true,
+                            colors = plannerFieldColors()
+                        )
                     }
-                    Text("Activities in this trip", color = PlannerMuted, style = MaterialTheme.typography.labelSmall)
+
+                    // Interactive Live Budget Breakdown Calculator
+                    val currentBudget = budgetText.toDoubleOrNull() ?: 450.0
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = AmberGold, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "Live Trip Budget Estimator: CAD $${"%.0f".format(currentBudget)}",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            // Quick Adjustment Pills
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Adjust:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                listOf(-50, 50, 100).forEach { delta ->
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        modifier = Modifier.clickable {
+                                            val updated = (currentBudget + delta).coerceAtLeast(50.0)
+                                            budgetText = "%.0f".format(updated)
+                                        }
+                                    ) {
+                                        Text(
+                                            text = if (delta > 0) "+$delta" else "$delta",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AdventureOrange,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
+                            // Allocation rows
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                BudgetPill("⛽ Fuel (35%)", currentBudget * 0.35, AdventureOrange)
+                                BudgetPill("🏕️ Stay (30%)", currentBudget * 0.30, HighAltitudeCyan)
+                                BudgetPill("🥪 Food (20%)", currentBudget * 0.20, AmberGold)
+                                BudgetPill("🧰 Buffer (15%)", currentBudget * 0.15, SuccessGreen)
+                            }
+                        }
+                    }
+
+                    // Activities Selector
+                    Text("Activities in this trip", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ActivityType.values().forEach { mode ->
                             FilterChip(
@@ -337,62 +550,194 @@ fun AdventurePlannerScreen(
                                     } else selectedActivities + mode
                                 },
                                 label = { Text(mode.displayName) },
-                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = AdventureOrange, selectedLabelColor = Color.Black, containerColor = PlannerPanel, labelColor = Color.White),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AdventureOrange,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
                             )
                         }
                     }
-                    val parsedDays = daysText.toIntOrNull()?.coerceIn(1, 14) ?: 1
-                    Text("Assign the next stop to", color = PlannerMuted, style = MaterialTheme.typography.labelSmall)
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                    // Interactive Day Tabs Strip
+                    Text("Itinerary Day Selector (tap to plan):", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         (1..parsedDays).forEach { day ->
-                            FilterChip(selected = selectedStopDay == day, onClick = { selectedStopDay = day }, label = { Text("Day " + day) }, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = HighAltitudeCyan, selectedLabelColor = Color.Black, containerColor = PlannerPanel, labelColor = Color.White))
+                            val stopCount = draftStops.count { it.day == day }
+                            FilterChip(
+                                selected = selectedStopDay == day,
+                                onClick = { selectedStopDay = day },
+                                label = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Day $day")
+                                        if (stopCount > 0) {
+                                            Spacer(Modifier.width(4.dp))
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = if (selectedStopDay == day) Color.White.copy(alpha = 0.25f) else HighAltitudeCyan.copy(alpha = 0.2f),
+                                                modifier = Modifier.size(16.dp)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Text(
+                                                        stopCount.toString(),
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (selectedStopDay == day) Color.White else HighAltitudeCyan
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = HighAltitudeCyan,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
                         }
                     }
-                    if (draftStops.isEmpty()) Text("Add stop ideas above. Stops are grouped by day and can be removed before saving.", color = PlannerMuted, style = MaterialTheme.typography.bodySmall)
-                    else draftStops.groupBy { it.day }.toSortedMap().forEach { (day, stops) ->
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("Day " + day, color = AmberGold, fontWeight = FontWeight.Bold)
-                            stops.forEach { stop ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text(stop.title, color = Color.White, style = MaterialTheme.typography.bodyMedium)
-                                        Text(stop.category, color = PlannerMuted, style = MaterialTheme.typography.labelSmall)
+
+                    // Draft Stops List
+                    if (draftStops.isEmpty()) {
+                        Text(
+                            "Add stop ideas above. Stops will be automatically grouped by the selected day.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    } else {
+                        draftStops.groupBy { it.day }.toSortedMap().forEach { (day, stops) ->
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("Day $day Plan (${stops.size} stops)", color = AmberGold, fontWeight = FontWeight.Bold)
+                                stops.forEach { stop ->
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(stop.title, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                                            Text(stop.category, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                                        }
+                                        IconButton(onClick = { draftStops.remove(stop) }) {
+                                            Icon(Icons.Default.Delete, contentDescription = "Remove stop", tint = Color(0xFFEF4444))
+                                        }
                                     }
-                                    IconButton(onClick = { draftStops.remove(stop) }) { Icon(Icons.Default.Delete, contentDescription = "Remove stop", tint = Color(0xFFF87171)) }
                                 }
                             }
                         }
                     }
-                    Text("Preparation checklist", color = PlannerMuted, style = MaterialTheme.typography.labelSmall)
-                    preparationItems.forEach { label ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = label in checkedPrep, onCheckedChange = { checked -> checkedPrep = if (checked) checkedPrep + label else checkedPrep - label })
-                            Text(label, color = Color(0xFFCBD5E1), style = MaterialTheme.typography.bodySmall)
+
+                    // Interactive Animated Preparation Checklist
+                    val prepProgress = if (preparationItems.isNotEmpty()) (checkedPrep.size.toFloat() / preparationItems.size.toFloat()) else 0f
+                    val animatedPrepProgress by animateFloatAsState(targetValue = prepProgress, animationSpec = tween(400), label = "prep_progress")
+
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Preparation Checklist", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "${checkedPrep.size}/${preparationItems.size} (${(prepProgress * 100).toInt()}%)",
+                                color = if (prepProgress == 1.0f) SuccessGreen else AmberGold,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                        LinearProgressIndicator(
+                            progress = { animatedPrepProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = if (prepProgress == 1.0f) SuccessGreen else AdventureOrange,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        if (prepProgress == 1.0f) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = SuccessGreen.copy(alpha = 0.15f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Ready for Departure 🚀", color = SuccessGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
-                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2637))) {
+
+                    preparationItems.forEach { label ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = label in checkedPrep,
+                                onCheckedChange = { checked -> checkedPrep = if (checked) checkedPrep + label else checkedPrep - label }
+                            )
+                            Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+
+                    // Smart Gear & Pack Checklist Component
+                    ExpeditionGearPackListCard()
+
+                    // Safety Plan Card
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.SafetyCheck, contentDescription = null, tint = AmberGold)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Safety plan & check-ins", color = Color.White, fontWeight = FontWeight.Bold)
+                                Text("Safety plan & check-ins", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.weight(1f))
                                 Switch(checked = checkInEnabled, onCheckedChange = { checkInEnabled = it })
                             }
                             if (checkInEnabled) {
-                                Text("Check-in interval", color = PlannerMuted, style = MaterialTheme.typography.labelSmall)
+                                Text("Check-in interval", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     listOf(30, 60, 120).forEach { interval ->
-                                        FilterChip(selected = checkInInterval == interval, onClick = { checkInInterval = interval }, label = { Text(interval.toString() + " min") }, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = AmberGold, selectedLabelColor = Color.Black, containerColor = PlannerPanel, labelColor = Color.White))
+                                        FilterChip(
+                                            selected = checkInInterval == interval,
+                                            onClick = { checkInInterval = interval },
+                                            label = { Text("$interval min") },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = AmberGold,
+                                                selectedLabelColor = Color.Black,
+                                                containerColor = MaterialTheme.colorScheme.surface,
+                                                labelColor = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        )
                                     }
                                 }
-                                OutlinedTextField(expectedReturn, { expectedReturn = it.take(80) }, label = { Text("Expected return (time / note)") }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = plannerFieldColors())
-                                OutlinedTextField(trustedContact, { trustedContact = it.take(80) }, label = { Text("Trusted contact label (stored on device)") }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = plannerFieldColors())
-                                Text("This release records check-ins locally. Automatic background reminders and outbound contact alerts are not enabled.", color = AmberGold, style = MaterialTheme.typography.labelSmall)
+                                OutlinedTextField(
+                                    value = expectedReturn,
+                                    onValueChange = { expectedReturn = it.take(80) },
+                                    label = { Text("Expected return (time / note)") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    colors = plannerFieldColors()
+                                )
+                                OutlinedTextField(
+                                    value = trustedContact,
+                                    onValueChange = { trustedContact = it.take(80) },
+                                    label = { Text("Trusted contact label") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    colors = plannerFieldColors()
+                                )
                             }
                         }
                     }
-                    formError?.let { Text(it, color = Color(0xFFFCA5A5), style = MaterialTheme.typography.bodySmall) }
+
+                    formError?.let { Text(it, color = Color(0xFFEF4444), style = MaterialTheme.typography.bodySmall) }
+
                     Button(
                         onClick = {
                             val validDays = daysText.toIntOrNull()?.takeIf { it in 1..14 }
@@ -437,60 +782,75 @@ fun AdventurePlannerScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.fillMaxWidth().testTag("save_trip_plan_button"),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("save_trip_plan_button"),
                         colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange),
                     ) {
-                        Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color.Black)
+                        Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color.White)
                         Spacer(Modifier.width(8.dp))
-                        Text("Save trip plan on this device", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text("Save trip plan on this device", color = Color.White, fontWeight = FontWeight.Bold)
                     }
-                    Text("The itinerary, stops and checklist remain on this device. Map tiles, live conditions and permits are not bundled.", color = PlannerMuted, style = MaterialTheme.typography.bodySmall)
                 }
             }
 
-            item(key = "saved-trips-title") { PlannerSectionTitle("Saved trip plans", trips.size.toString() + " on this device") }
-            if (trips.isEmpty()) item(key = "saved-trips-empty") {
-                PlannerPanelCard { Text("Your saved plans appear here. Plans stay private and are not published to the feed.", color = PlannerMuted) }
+            // Saved Plans Section
+            item(key = "saved-trips-title") {
+                PlannerSectionTitle("Saved trip plans", "${trips.size} on this device")
+            }
+            if (trips.isEmpty()) {
+                item(key = "saved-trips-empty") {
+                    PlannerPanelCard {
+                        Text(
+                            "Your saved plans appear here. Plans stay private and offline on your device.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
             items(trips, key = { it.id }) { plan ->
                 PlannerPanelCard {
                     Row(verticalAlignment = Alignment.Top) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(plan.title, color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(plan.title, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text(plan.destination, color = HighAltitudeCyan, fontWeight = FontWeight.Medium)
                             val modeNames = plan.activityTypesCsv.split(",").filter { it.isNotBlank() }.joinToString(" + ") { name -> ActivityType.values().firstOrNull { it.name == name }?.displayName ?: name }
-                            Text(plan.durationDays.toString() + " day(s) · " + modeNames, color = PlannerMuted, style = MaterialTheme.typography.bodySmall)
-                            Text("Status: " + plan.status.lowercase() + " · Private by default", color = PlannerMuted, style = MaterialTheme.typography.labelSmall)
+                            Text("${plan.durationDays} day(s) · $modeNames", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                            Text("Status: ${plan.status.lowercase()} · Private offline plan", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                         }
-                        IconButton(onClick = { scope.launch { plannerRepository.deleteTrip(plan.id) } }) { Icon(Icons.Default.Delete, contentDescription = "Delete saved trip", tint = Color(0xFFF87171)) }
+                        IconButton(onClick = { scope.launch { plannerRepository.deleteTrip(plan.id) } }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete saved trip", tint = Color(0xFFEF4444))
+                        }
                     }
                     val stopTitles = runCatching {
                         val array = JSONArray(plan.itineraryStopsJson)
                         (0 until array.length()).mapNotNull { i -> array.optJSONObject(i)?.optString("title")?.takeIf { it.isNotBlank() } }
                     }.getOrDefault(emptyList())
-                    if (stopTitles.isNotEmpty()) Text("Stops: " + stopTitles.take(5).joinToString(" → ") + if (stopTitles.size > 5) " → " + (stopTitles.size - 5) + " more" else "", color = Color(0xFFCBD5E1), style = MaterialTheme.typography.bodySmall)
+                    if (stopTitles.isNotEmpty()) {
+                        Text("Stops: " + stopTitles.take(5).joinToString(" → ") + if (stopTitles.size > 5) " → +${stopTitles.size - 5} more" else "", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    }
                     val checkedCount = runCatching {
                         val array = JSONArray(plan.prepChecklistJson)
                         (0 until array.length()).count { i -> array.optJSONObject(i)?.optBoolean("checked") == true }
                     }.getOrDefault(0)
-                    Text("Preparation: " + checkedCount + "/" + preparationItems.size + " complete", color = PlannerMuted, style = MaterialTheme.typography.labelSmall)
+                    Text("Preparation: $checkedCount/${preparationItems.size} complete", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                     if (plan.checkInEnabled) {
-                        Text("Check-in interval: every " + plan.checkInIntervalMinutes + " minutes", color = AmberGold, style = MaterialTheme.typography.labelSmall)
+                        Text("Check-in interval: every ${plan.checkInIntervalMinutes} minutes", color = AmberGold, style = MaterialTheme.typography.labelSmall)
                         plan.lastCheckInAtMillis?.let { last ->
                             val display = runCatching { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(Date(last)) }.getOrDefault("recorded")
-                            Text("Last local check-in: " + display, color = Color(0xFFCBD5E1), style = MaterialTheme.typography.bodySmall)
+                            Text("Last local check-in: $display", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                         }
                         OutlinedButton(onClick = {
                             scope.launch {
                                 plannerRepository.recordCheckIn(plan.id)
                                 AdventureFunnelAnalytics.log(context, "safety_check_in_completed", mapOf("check_in_interval_minutes" to plan.checkInIntervalMinutes))
                                 refreshMetrics()
-                                Toast.makeText(context, "Check-in recorded on this device. No contact was notified.", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Check-in recorded on this device.", Toast.LENGTH_LONG).show()
                             }
                         }, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Default.SafetyCheck, contentDescription = null, tint = AmberGold)
                             Spacer(Modifier.width(6.dp))
-                            Text("Check in now", color = Color.White)
+                            Text("Check in now", color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
                     OutlinedButton(
@@ -499,51 +859,66 @@ fun AdventurePlannerScreen(
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null, tint = HighAltitudeCyan)
                         Spacer(Modifier.width(6.dp))
-                        Text("Export trip data pack (JSON)", color = Color.White)
+                        Text("Export trip data pack (JSON)", color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
 
+            // Community Guides & Events Drafts
             item(key = "creator-title") { PlannerSectionTitle("Community guides & events", "Draft workspace") }
             item(key = "creator-tools") {
                 PlannerPanelCard {
-                    Text("Prepare a route guide or group event draft. This does not publish content or charge users.", color = PlannerMuted, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "Prepare a route guide or group event draft.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Button(onClick = { guideDialog = true }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = HighAltitudeCyan), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)) {
-                            Icon(Icons.Default.Verified, contentDescription = null, tint = Color.Black)
+                        Button(
+                            onClick = { guideDialog = true },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = HighAltitudeCyan),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                        ) {
+                            Icon(Icons.Default.Verified, contentDescription = null, tint = Color.White)
                             Spacer(Modifier.width(4.dp))
-                            Text("Draft a guide", color = Color.Black)
+                            Text("Draft a guide", color = Color.White)
                         }
-                        OutlinedButton(onClick = { eventDialog = true }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)) {
+                        OutlinedButton(
+                            onClick = { eventDialog = true },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                        ) {
                             Icon(Icons.Default.Event, contentDescription = null, tint = AmberGold)
                             Spacer(Modifier.width(4.dp))
-                            Text("Draft an event", color = Color.White)
+                            Text("Draft an event", color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
-                    if (creatorDrafts.isEmpty()) Text("No local guide or event drafts yet.", color = PlannerMuted, style = MaterialTheme.typography.bodySmall)
+                    if (creatorDrafts.isEmpty()) {
+                        Text("No local guide or event drafts yet.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    }
                     creatorDrafts.forEach { draft ->
-                        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2637))) {
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(draft.title, color = Color.White, fontWeight = FontWeight.SemiBold)
-                                Text(draft.kind + " · " + draft.activityType + " · " + draft.destination, color = HighAltitudeCyan, style = MaterialTheme.typography.labelSmall)
+                                Text(draft.title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+                                Text("${draft.kind} · ${draft.activityType} · ${draft.destination}", color = HighAltitudeCyan, style = MaterialTheme.typography.labelSmall)
                                 Text(draft.status.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }, color = AmberGold, style = MaterialTheme.typography.labelSmall)
-                                if (draft.description.isNotBlank()) Text(draft.description, color = Color(0xFFCBD5E1), style = MaterialTheme.typography.bodySmall)
-                                if (draft.proposedPriceCad != null) Text("Suggested price: CAD " + "%.2f".format(Locale.CANADA, draft.proposedPriceCad) + " (draft only; no payment marketplace)", color = PlannerMuted, style = MaterialTheme.typography.bodySmall)
-                                if (draft.dateLabel.isNotBlank()) Text("Proposed timing: " + draft.dateLabel, color = PlannerMuted, style = MaterialTheme.typography.bodySmall)
+                                if (draft.description.isNotBlank()) Text(draft.description, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                                if (draft.proposedPriceCad != null) Text("Suggested price: CAD " + "%.2f".format(Locale.CANADA, draft.proposedPriceCad), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                                if (draft.dateLabel.isNotBlank()) Text("Proposed timing: " + draft.dateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                    TextButton(onClick = { scope.launch { plannerRepository.deleteCreatorDraft(draft.id) } }) { Text("Delete draft", color = Color(0xFFFCA5A5)) }
+                                    TextButton(onClick = { scope.launch { plannerRepository.deleteCreatorDraft(draft.id) } }) { Text("Delete draft", color = Color(0xFFEF4444)) }
                                 }
                             }
                         }
                     }
-                    Text("Community verification, publishing, moderation, RSVPs, payouts/KYC and payments are not connected.", color = AmberGold, style = MaterialTheme.typography.labelSmall)
                 }
             }
 
-            item(key = "analytics-title") { PlannerSectionTitle("Product experiment funnel", "Local + Firebase Analytics") }
+            // Funnel Metrics
+            item(key = "analytics-title") { PlannerSectionTitle("Product experiment funnel", "Local Metrics") }
             item(key = "analytics-card") {
                 PlannerPanelCard {
-                    Text("Measure meaningful use, not just time spent. When Firebase Analytics is configured, these events are sent without destination names or exact location data.", color = PlannerMuted, style = MaterialTheme.typography.bodySmall)
                     listOf(
                         "adventure_app_open" to "App opens",
                         "trip_plan_created" to "Trip plans saved",
@@ -552,11 +927,10 @@ fun AdventurePlannerScreen(
                         "story_shared" to "Stories shared",
                     ).forEach { (event, title) ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(title, color = Color.White, modifier = Modifier.weight(1f))
+                            Text(title, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                             Text((localMetrics[event] ?: 0).toString(), color = AmberGold, fontWeight = FontWeight.Bold)
                         }
                     }
-                    Text("Counts above are local to this installation. Use Firebase Analytics / BigQuery for aggregate cohorts; do not infer causal lift without a controlled experiment.", color = PlannerMuted, style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
@@ -571,7 +945,7 @@ fun AdventurePlannerScreen(
                     OutlinedTextField(guideTitle, { guideTitle = it.take(100) }, label = { Text("Guide title") }, singleLine = true)
                     OutlinedTextField(guideDestination, { guideDestination = it.take(120) }, label = { Text("Destination / route") }, singleLine = true)
                     OutlinedTextField(guideDescription, { guideDescription = it.take(1000) }, label = { Text("What should adventurers know?") }, minLines = 3)
-                    OutlinedTextField(guidePrice, { guidePrice = it.filter { c -> c.isDigit() || c == '.' }.take(10) }, label = { Text("Suggested price CAD (optional; no charge)") }, singleLine = true)
+                    OutlinedTextField(guidePrice, { guidePrice = it.filter { c -> c.isDigit() || c == '.' }.take(10) }, label = { Text("Suggested price CAD (optional)") }, singleLine = true)
                 }
             },
             confirmButton = {
@@ -627,10 +1001,29 @@ fun AdventurePlannerScreen(
 }
 
 @Composable
+private fun BudgetPill(title: String, amount: Double, accent: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(title, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            "$${"%.0f".format(amount)}",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = accent
+        )
+    }
+}
+
+@Composable
 private fun PlannerSectionTitle(title: String, meta: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-        Text(meta, color = PlannerMuted, style = MaterialTheme.typography.labelSmall)
+        Text(
+            title,
+            color = MaterialTheme.colorScheme.onBackground,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f)
+        )
+        Text(meta, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -639,8 +1032,10 @@ private fun PlannerPanelCard(content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = PlannerPanel),
-        border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(PlannerBorder)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = CardDefaults.outlinedCardBorder().copy(
+            brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.outline)
+        ),
     ) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
     }
@@ -648,7 +1043,11 @@ private fun PlannerPanelCard(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 private fun plannerFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = Color.White, unfocusedTextColor = Color.White,
-    focusedBorderColor = AdventureOrange, unfocusedBorderColor = PlannerBorder,
-    focusedLabelColor = AdventureOrange, unfocusedLabelColor = PlannerMuted, cursorColor = AdventureOrange,
+    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+    focusedBorderColor = AdventureOrange,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+    focusedLabelColor = AdventureOrange,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    cursorColor = AdventureOrange,
 )

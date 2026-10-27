@@ -1,7 +1,6 @@
 package com.example.ui.theme
 
 import android.app.Activity
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -23,6 +22,8 @@ private val DarkColorScheme = darkColorScheme(
     onSecondaryContainer = AmberGoldLight,
     tertiary = HighAltitudeCyan,
     onTertiary = DarkBackground,
+    tertiaryContainer = Color(0xFF0C4A6E),
+    onTertiaryContainer = HighAltitudeCyanLight,
     background = DarkBackground,
     onBackground = TextPrimary,
     surface = DarkSurface,
@@ -36,29 +37,31 @@ private val DarkColorScheme = darkColorScheme(
 
 private val LightColorScheme = lightColorScheme(
     primary = AdventureOrange,
-    onPrimary = TextPrimary,
-    primaryContainer = AdventureOrangeLight,
-    onPrimaryContainer = DarkBackground,
-    secondary = AmberGoldDark,
-    onSecondary = TextPrimary,
-    secondaryContainer = AmberGoldLight,
-    onSecondaryContainer = DarkBackground,
-    tertiary = MountainStream,
-    onTertiary = TextPrimary,
-    background = TextPrimary,
-    onBackground = DarkBackground,
-    surface = Color(0xFFF1F5F9),
-    onSurface = DarkBackground,
-    surfaceVariant = Color(0xFFE2E8F0),
-    onSurfaceVariant = DarkSurfaceVariant,
-    outline = Color(0xFFCBD5E1),
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFFFEDE6),
+    onPrimaryContainer = AdventureOrangeDark,
+    secondary = AmberGold,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFFEF3C7),
+    onSecondaryContainer = AmberGoldDark,
+    tertiary = HighAltitudeCyan,
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFE0F2FE),
+    onTertiaryContainer = Color(0xFF0369A1),
+    background = LightBackground,
+    onBackground = TextPrimaryLight,
+    surface = LightSurface,
+    onSurface = TextPrimaryLight,
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = TextSecondaryLight,
+    outline = LightSurfaceBorder,
     error = DangerRed,
-    onError = TextPrimary
+    onError = Color.White
 )
 
 @Composable
 fun AdventurerTheme(
-    darkTheme: Boolean = true, // Default to sleek outdoor dark mode
+    darkTheme: Boolean = false, // Defaults to bright daylight outdoor theme
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme

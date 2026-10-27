@@ -82,6 +82,17 @@ class AdventurerViewModel(
     private val _showBroadcastModal = MutableStateFlow(false)
     val showBroadcastModal: StateFlow<Boolean> = _showBroadcastModal.asStateFlow()
 
+    private val _isDarkMode = MutableStateFlow(false)
+    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
+
+    fun toggleDarkMode() {
+        _isDarkMode.value = !_isDarkMode.value
+    }
+
+    fun setDarkMode(dark: Boolean) {
+        _isDarkMode.value = dark
+    }
+
     init {
         // Wall-clock time runs independently of GPS cadence. Simulation is demo-only.
         viewModelScope.launch {

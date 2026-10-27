@@ -41,19 +41,33 @@ fun ClubsScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Motorcycle Riding Clubs", fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("Brotherhoods, Collective Mileage & Pass Chats", style = MaterialTheme.typography.labelSmall, color = HighAltitudeCyan)
+                        Text(
+                            "Adventure Riding Clubs",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "Brotherhoods, Collective Mileage & Trail Chats",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = HighAltitudeCyan
+                        )
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B0F17))
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         },
-        containerColor = Color(0xFF0B0F17),
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { innerPadding ->
         LazyColumn(
@@ -88,9 +102,9 @@ fun ClubCard(
             .fillMaxWidth()
             .testTag("club_card_${club.id}"),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = CardDefaults.outlinedCardBorder().copy(
-            brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF334155))
+            brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.outline)
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -108,27 +122,40 @@ fun ClubCard(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(club.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                    Text("📍 ${club.city} • ${club.memberCount} Riders", style = MaterialTheme.typography.labelSmall, color = AmberGold)
+                    Text(
+                        club.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        "📍 ${club.city} • ${club.memberCount} Riders",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AmberGold
+                    )
                 }
 
                 Button(
                     onClick = onJoinToggle,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (club.isJoined) Color(0xFF1E293B) else AdventureOrange
+                        containerColor = if (club.isJoined) MaterialTheme.colorScheme.surfaceVariant else AdventureOrange
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
                         text = if (club.isJoined) "Joined" else "Join Club",
-                        color = if (club.isJoined) Color.White else Color.Black,
+                        color = if (club.isJoined) MaterialTheme.colorScheme.onSurfaceVariant else Color.White,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
-            Text(club.tagLine, style = MaterialTheme.typography.bodySmall, color = Color(0xFFCBD5E1))
+            Text(
+                club.tagLine,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             // Club Goals
             if (club.goals.isNotEmpty()) {
@@ -136,7 +163,7 @@ fun ClubCard(
                 club.goals.forEach { goal ->
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF1E293B),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
@@ -146,17 +173,27 @@ fun ClubCard(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(goal.name, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                                Text("${goal.current} / ${goal.target} ${goal.unit}", style = MaterialTheme.typography.labelSmall, color = AmberGold)
+                                Text(
+                                    goal.name,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    "${goal.current} / ${goal.target} ${goal.unit}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = AmberGold
+                                )
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                             LinearProgressIndicator(
                                 progress = { goal.progressPercent },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(6.dp),
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
                                 color = AdventureOrange,
-                                trackColor = Color(0xFF0F172A)
+                                trackColor = MaterialTheme.colorScheme.surface
                             )
                         }
                     }
@@ -171,7 +208,12 @@ fun ClubCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Club Radio / Trail Chat (${club.chatMessages.size})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(
+                        "Club Radio / Trail Chat (${club.chatMessages.size})",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     TextButton(onClick = { expandedChat = !expandedChat }) {
                         Text(if (expandedChat) "Hide" else "Open Chat", color = AdventureOrange)
                     }
@@ -182,15 +224,15 @@ fun ClubCard(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFF0B0F17), RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
                             .padding(10.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         club.chatMessages.forEach { msg ->
                             Row(verticalAlignment = Alignment.Top) {
                                 Text("${msg.user.name}: ", fontWeight = FontWeight.Bold, color = AmberGold, style = MaterialTheme.typography.labelSmall)
-                                Text(msg.message, color = Color.White, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                                Text(msg.timestamp, color = Color(0xFF64748B), style = MaterialTheme.typography.labelSmall)
+                                Text(msg.message, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                Text(msg.timestamp, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                             }
                         }
 
@@ -205,9 +247,10 @@ fun ClubCard(
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White,
-                                    focusedBorderColor = AdventureOrange
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    focusedBorderColor = AdventureOrange,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
                                 )
                             )
                             Spacer(modifier = Modifier.width(6.dp))

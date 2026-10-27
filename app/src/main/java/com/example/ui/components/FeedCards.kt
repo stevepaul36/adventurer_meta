@@ -3,6 +3,7 @@ package com.example.ui.components
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,8 +21,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -31,6 +34,7 @@ import coil.compose.AsyncImage
 import com.example.data.model.*
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
+import com.example.ui.theme.DangerRed
 import com.example.ui.theme.HighAltitudeCyan
 
 @Composable
@@ -44,10 +48,11 @@ fun PostCard(
         modifier = modifier
             .fillMaxWidth()
             .testTag("post_card_${post.id}"),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         border = CardDefaults.outlinedCardBorder().copy(
-            brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF1E293B))
+            brush = SolidColor(MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -60,7 +65,7 @@ fun PostCard(
                     model = post.user.avatarUrl,
                     contentDescription = post.user.name,
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(46.dp)
                         .clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
@@ -70,12 +75,12 @@ fun PostCard(
                         text = post.user.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "${post.user.bikeModel} • ${post.timestamp}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -86,20 +91,20 @@ fun PostCard(
             Text(
                 text = post.caption,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFFE2E8F0)
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             // Optional Ride Telemetry Badge
             post.rideStats?.let { stats ->
                 Spacer(modifier = Modifier.height(10.dp))
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFF1E293B)
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -119,39 +124,45 @@ fun PostCard(
                     contentDescription = "Post image",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(220.dp)
-                        .clip(RoundedCornerShape(12.dp)),
+                        .height(230.dp)
+                        .clip(RoundedCornerShape(14.dp)),
                     contentScale = ContentScale.Crop
                 )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Interaction Bar
+            // Interaction Bar with interactive spring bounce
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 val heartTint by animateColorAsState(
-                    targetValue = if (post.isLikedByMe) Color(0xFFEF4444) else Color(0xFF94A3B8),
+                    targetValue = if (post.isLikedByMe) DangerRed else MaterialTheme.colorScheme.onSurfaceVariant,
                     animationSpec = spring(),
                     label = "heart_tint"
                 )
+                val likeScale by animateFloatAsState(
+                    targetValue = if (post.isLikedByMe) 1.22f else 1.0f,
+                    animationSpec = spring(dampingRatio = 0.45f, stiffness = 400f),
+                    label = "like_scale"
+                )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onLikeClick) {
+                    IconButton(onClick = onLikeClick, modifier = Modifier.scale(likeScale)) {
                         Icon(
                             imageVector = if (post.isLikedByMe) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
                             contentDescription = if (post.isLikedByMe) "Unlike, ${post.likes} likes" else "Like, ${post.likes} likes",
                             tint = heartTint,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                     Text(
                         text = "${post.likes}",
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (post.isLikedByMe) Color(0xFFEF4444) else Color(0xFF94A3B8)
+                        fontWeight = FontWeight.Bold,
+                        color = if (post.isLikedByMe) DangerRed else MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.width(16.dp))
@@ -160,14 +171,15 @@ fun PostCard(
                         Icon(
                             imageVector = Icons.Outlined.ChatBubbleOutline,
                             contentDescription = "Comments",
-                            tint = Color(0xFF94A3B8),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                     Text(
                         text = "${post.comments.size}",
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color(0xFF94A3B8)
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -182,7 +194,7 @@ fun PostCard(
                     Icon(
                         imageVector = Icons.Outlined.Share,
                         contentDescription = "Share",
-                        tint = Color(0xFF94A3B8),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -202,10 +214,11 @@ fun RideShareCard(
         modifier = modifier
             .fillMaxWidth()
             .testTag("rideshare_card_${rideShare.id}"),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         border = CardDefaults.outlinedCardBorder().copy(
-            brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF334155))
+            brush = SolidColor(MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -217,7 +230,7 @@ fun RideShareCard(
                     model = rideShare.user.avatarUrl,
                     contentDescription = rideShare.user.name,
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(44.dp)
                         .clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
@@ -227,12 +240,12 @@ fun RideShareCard(
                         text = rideShare.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = AmberGold
+                        color = AdventureOrange
                     )
                     Text(
                         text = "Mapped by ${rideShare.user.name} • ${rideShare.timestamp}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -244,7 +257,7 @@ fun RideShareCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(180.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(14.dp))
             ) {
                 AsyncImage(
                     model = rideShare.mapImageUrl,
@@ -303,11 +316,16 @@ fun RideShareCard(
                         Icon(
                             imageVector = if (rideShare.isLikedByMe) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
                             contentDescription = if (rideShare.isLikedByMe) "Unlike, ${rideShare.likes} likes" else "Like, ${rideShare.likes} likes",
-                            tint = if (rideShare.isLikedByMe) Color(0xFFEF4444) else Color(0xFF94A3B8),
+                            tint = if (rideShare.isLikedByMe) DangerRed else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Text(text = "${rideShare.likes}", style = MaterialTheme.typography.labelMedium, color = Color(0xFF94A3B8))
+                    Text(
+                        text = "${rideShare.likes}",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
                     Spacer(modifier = Modifier.width(16.dp))
 
@@ -315,20 +333,25 @@ fun RideShareCard(
                         Icon(
                             imageVector = Icons.Outlined.ChatBubbleOutline,
                             contentDescription = "Comments",
-                            tint = Color(0xFF94A3B8),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Text(text = "${rideShare.comments.size}", style = MaterialTheme.typography.labelMedium, color = Color(0xFF94A3B8))
+                    Text(
+                        text = "${rideShare.comments.size}",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 AssistChip(
                     onClick = { /* Export GPX */ },
-                    label = { Text("Export GPX", color = HighAltitudeCyan) },
+                    label = { Text("Export GPX", color = HighAltitudeCyan, fontWeight = FontWeight.Bold) },
                     leadingIcon = {
                         Icon(Icons.Default.Download, contentDescription = null, tint = HighAltitudeCyan, modifier = Modifier.size(14.dp))
                     },
-                    colors = AssistChipDefaults.assistChipColors(containerColor = Color(0xFF1E293B))
+                    colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 )
             }
         }
@@ -346,10 +369,11 @@ fun RideStoryCard(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .testTag("ride_story_card_${story.id}"),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         border = CardDefaults.outlinedCardBorder().copy(
-            brush = androidx.compose.ui.graphics.SolidColor(AdventureOrange.copy(alpha = 0.5f))
+            brush = SolidColor(AdventureOrange.copy(alpha = 0.5f))
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -360,7 +384,7 @@ fun RideStoryCard(
             ) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = AdventureOrange.copy(alpha = 0.2f)
+                    color = AdventureOrange.copy(alpha = 0.15f)
                 ) {
                     Text(
                         text = "FEATURED EXPEDITION STORY",
@@ -373,7 +397,7 @@ fun RideStoryCard(
                 Text(
                     text = story.date,
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF94A3B8)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -383,7 +407,7 @@ fun RideStoryCard(
                 text = story.title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -391,7 +415,7 @@ fun RideStoryCard(
             Text(
                 text = story.description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFFCBD5E1)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -401,7 +425,7 @@ fun RideStoryCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(14.dp))
             ) {
                 AsyncImage(
                     model = story.coverImageUrl,
@@ -450,14 +474,15 @@ private fun StatPill(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = AmberGold,
+            tint = AdventureOrange,
             modifier = Modifier.size(14.dp)
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = Color.White
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
