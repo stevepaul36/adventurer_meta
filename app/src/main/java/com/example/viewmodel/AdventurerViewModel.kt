@@ -12,7 +12,8 @@ import kotlinx.coroutines.launch
 
 enum class Screen(val title: String, val isTopLevel: Boolean = false) {
     FEED("Feed", isTopLevel = true),
-    EXPEDITIONS("Expeditions", isTopLevel = true),
+    EXPEDITIONS("Expeditions"),
+    EXPLORE_PLAN("Explore & Plan", isTopLevel = true),
     RADAR("Roadside Radar", isTopLevel = true),
     LIVE_TRACKER("Live Telemetry", isTopLevel = true),
     STORY_STUDIO("AI Story Studio"),

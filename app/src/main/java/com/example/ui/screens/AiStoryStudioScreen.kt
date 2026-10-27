@@ -52,6 +52,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.data.model.ActivityType
 import com.example.data.billing.AdventurerProBilling
+import com.example.analytics.AdventureFunnelAnalytics
+import com.example.data.story.AdventureStoryTemplates
 import com.example.data.story.AnalysisResult
 import com.example.data.story.ReelExporter
 import com.example.data.story.StoryTemplate
@@ -89,6 +91,16 @@ fun AiStoryStudioScreen(
     val activityMode by viewModel.activityMode.collectAsState()
     val proState by AdventurerProBilling.state.collectAsState()
     var tab by rememberSaveable { mutableStateOf(0) }
+    var lastLoggedReelPath by rememberSaveable { mutableStateOf("") }
+
+    LaunchedEffect(activityMode) { studio.setActivityType(activityMode) }
+    LaunchedEffect(state.reel?.absolutePath) {
+        val path = state.reel?.absolutePath.orEmpty()
+        if (path.isNotBlank() && path != lastLoggedReelPath) {
+            AdventureFunnelAnalytics.log(context, "story_exported", mapOf("activity_type" to activityMode.name, "target_seconds" to state.targetSec))
+            lastLoggedReelPath = path
+        }
+    }
 
     // --- Pick / record source video
     var pendingCapture by rememberSaveable { mutableStateOf<Uri?>(null) }
@@ -208,6 +220,7 @@ fun AiStoryStudioScreen(
                     1 -> highlightsTab(
                         state = state,
                         studio = studio,
+                        activityMode = activityMode,
                         onGoToFootage = { tab = 0 },
                         onShare = { shareReel(context, studio.reelShareUri(), state) },
                         onSave = {
@@ -216,11 +229,12 @@ fun AiStoryStudioScreen(
                                 Toast.makeText(context, if (ok) "Saved to Movies/Adventurer" else "Couldn't save — use Share instead", Toast.LENGTH_SHORT).show()
                             }
                         },
-                        onWriteStory = { tab = 2; if (state.story == null) studio.writeStory() },
+                        onWriteStory = { tab = 2; if (state.story == null) studio.writeStory(activityMode) },
                     )
                     else -> storyTab(
                         state = state,
                         studio = studio,
+                        activityMode = activityMode,
                         speaking = speaking,
                         onSpeak = {
                             val story = state.story ?: return@storyTab
@@ -247,6 +261,7 @@ fun AiStoryStudioScreen(
                         onPost = { caption ->
                             val cover = state.selected.firstOrNull()?.thumbnailPath?.let { Uri.fromFile(File(it)).toString() }
                             viewModel.createPost(caption = caption, imageUrl = cover)
+                            AdventureFunnelAnalytics.log(context, "story_shared", mapOf("share_target" to "in_app_feed", "activity_type" to activityMode.name))
                             Toast.makeText(context, "Story posted to your feed", Toast.LENGTH_SHORT).show()
                             viewModel.navigateTo(Screen.FEED)
                         },
@@ -339,6 +354,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.footageTab(
 private fun androidx.compose.foundation.lazy.LazyListScope.highlightsTab(
     state: StudioState,
     studio: StoryStudioViewModel,
+    activityMode: ActivityType,
     onGoToFootage: () -> Unit,
     onShare: () -> Unit,
     onSave: () -> Unit,
@@ -348,7 +364,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.highlightsTab(
     if (analysis == null) {
         item {
             EmptyCard(
-                if (state.busy == StudioBusy.ANALYZING) "Scanning your footage…" else "Pick or record a ride video, then tap “Find the best moments”.",
+                if (state.busy == StudioBusy.ANALYZING) "Scanning your footage…" else "Pick or record adventure footage, then tap “Find the best moments”.",
                 if (state.busy == null) "Go to footage" else null, onGoToFootage,
             )
         }
@@ -369,7 +385,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.highlightsTab(
             Timeline(analysis, state.moments, Modifier.fillMaxWidth().height(72.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(
-                    onClick = studio::enhanceWithAi,
+                    onClick = { studio.enhanceWithAi(activityMode) },
                     enabled = state.aiConfigured && state.busy == null,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9333EA)),
                     shape = RoundedCornerShape(10.dp),
@@ -429,14 +445,35 @@ private fun androidx.compose.foundation.lazy.LazyListScope.highlightsTab(
 private fun androidx.compose.foundation.lazy.LazyListScope.storyTab(
     state: StudioState,
     studio: StoryStudioViewModel,
+    activityMode: ActivityType,
     speaking: Boolean,
     onSpeak: () -> Unit,
     onCopy: (String) -> Unit,
     onPost: (String) -> Unit,
     onGoToHighlights: () -> Unit,
 ) {
+    item {
+        PanelCard {
+            Text("Story template · " + activityMode.displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+            Text("Choose a style before writing. The template changes the narration structure; only selected footage and supplied facts are used.", color = Muted, style = MaterialTheme.typography.bodySmall)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AdventureStoryTemplates.forActivity(activityMode).forEach { template ->
+                    FilterChip(
+                        selected = state.templateId == template.id,
+                        onClick = { studio.setTemplate(template.id) },
+                        label = { Text(template.title) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AdventureOrange, selectedLabelColor = Color.Black,
+                            containerColor = Panel, labelColor = Color.White,
+                        ),
+                    )
+                }
+            }
+            Text(AdventureStoryTemplates.byId(state.templateId).description, color = Muted, style = MaterialTheme.typography.labelSmall)
+        }
+    }
     if (state.selected.isEmpty()) {
-        item { EmptyCard("Your story is written from the moments you keep. Analyse a ride first.", "Go to highlights", onGoToHighlights) }
+        item { EmptyCard("Your story is written from the moments you keep. Analyse your footage first.", "Go to highlights", onGoToHighlights) }
         return
     }
     item {
@@ -447,7 +484,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.storyTab(
                 style = MaterialTheme.typography.labelSmall, color = Muted,
             )
             Button(
-                onClick = studio::writeStory,
+                onClick = { studio.writeStory(activityMode) },
                 enabled = state.busy == null,
                 colors = ButtonDefaults.buttonColors(containerColor = HighAltitudeCyan),
                 shape = RoundedCornerShape(10.dp),
@@ -703,5 +740,6 @@ private fun shareReel(context: Context, uri: Uri?, state: StudioState) {
         putExtra(Intent.EXTRA_TEXT, text)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(send, "Share your ride reel"))
+    AdventureFunnelAnalytics.log(context, "story_share_sheet_opened", mapOf("share_target" to "android_share_sheet"))
+    context.startActivity(Intent.createChooser(send, "Share your adventure reel"))
 }

@@ -12,6 +12,19 @@ Adventurer is evolving from a motorcycle-first prototype into a multi-activity a
 - **AI Ride Story Studio:** select a video, ask AI for candidate highlights, edit timestamps, generate captions and export a local MP4 using Media3 Transformer or save EDL JSON.
 - **Adventurer Pro:** RevenueCat subscription paywall, store-priced purchase flow, restore purchases, and Pro gating for AI generation.
 
+## Current implementation: Explore & Plan experiment
+
+The current feature branch adds an initial **Explore & Plan** screen and a useful local-first workflow:
+
+- Search a destination or interest by opening an external maps/search provider. This is not an in-app verified-place API yet.
+- Build a multi-day draft, choose multiple activity types, add activity-relevant stop ideas, and save it locally with Room.
+- Store a preparation checklist, expected return and trusted-contact label with the draft.
+- Record a manual local check-in, export the plan/checklist as JSON, and create local route-guide/event drafts.
+- Choose activity-specific Story Studio templates; generate an editable story from user-selected moments using the configured model or an offline template.
+- Record privacy-conscious funnel events locally and, when Firebase Analytics is configured, send aggregate action events without destinations, exact coordinates, contact labels or route geometry.
+
+**Important limits:** this first slice does not yet include downloadable offline map tiles, authoritative trail/road/weather/tide/permit feeds, background SOS/check-in delivery, publicly shared/verifiable community places, publishing/RSVPs for events, a paid guide marketplace, payments/KYC, or bike-computer/OBD/dive-computer hardware integrations. It labels plan data as local and provider-dependent rather than implying those services are live.
+
 ## Multi-adventure product scope
 
 The app should share one trip and story system across activities instead of treating everything as a motorcycle ride. The profile's preferred mode list is being expanded, but each activity-specific workflow must still be implemented and validated before it is advertised as supported.

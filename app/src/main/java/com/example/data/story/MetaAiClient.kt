@@ -47,14 +47,14 @@ class MetaAiClient(
     )
 
     /** Vision pass: label, score and privacy-check each moment from its keyframe. */
-    suspend fun labelMoments(moments: List<StudioMoment>, location: String): List<MomentLabel> = withContext(Dispatchers.IO) {
+    suspend fun labelMoments(moments: List<StudioMoment>, location: String, activityName: String = "adventure"): List<MomentLabel> = withContext(Dispatchers.IO) {
         val batch = moments.filter { it.thumbnailPath != null }.take(12)
         require(batch.isNotEmpty()) { "No keyframes to send" }
         val content = JSONArray().put(
             JSONObject().put("type", "text").put(
                 "text",
-                "You are the editor for RideStory AI, which turns long motorcycle ride footage into short highlight reels. " +
-                    "The ride took place around: ${location.ifBlank { "unknown" }}. Below are ${batch.size} keyframes, one per candidate moment. " +
+                "You are the editor for Adventurer, which turns outdoor adventure and travel footage into short, truthful highlight reels. " +
+                    "Activity: ${activityName.take(60)}. Destination context supplied by the user: ${location.ifBlank { "not specified" }}. Below are ${batch.size} keyframes, one per candidate moment. " +
                     "For every image return an object with: \"index\" (1-based), \"label\" (3-6 vivid words, no emojis), " +
                     "\"description\" (one sentence of what is visible), \"score\" (0-10: how good this moment is for a highlight reel — scenery, action, emotion, clarity), " +
                     "\"tags\" (up to 4 lowercase words like scenic, mountains, coast, forest, ghat, city, group, action, chai-stop, landmark, sunset, rain, night), " +
@@ -86,13 +86,16 @@ class MetaAiClient(
     }
 
     /** Writes caption, diary, hashtags, chapter titles and a voice-over script from the selected moments. */
-    suspend fun writeStory(title: String, location: String, language: String, moments: List<StudioMoment>, sourceSec: Double): StoryCopy =
+    suspend fun writeStory(title: String, location: String, language: String, activityName: String, template: AdventureStoryTemplate, moments: List<StudioMoment>, sourceSec: Double): StoryCopy =
         withContext(Dispatchers.IO) {
             val reelSec = moments.sumOf { it.durationSec }
             val prompt = buildString {
-                appendLine("Write social copy for a ride highlight reel.")
+                appendLine("Write social copy for an adventure-travel reel.")
                 appendLine("Title: $title")
-                appendLine("Location: $location")
+                appendLine("Location / trip context: ${location.ifBlank { "not provided" }}")
+                appendLine("Activity: $activityName")
+                appendLine("Story template: ${template.title}")
+                appendLine("Template guidance: ${template.promptGuidance}")
                 appendLine("Source footage: ${sourceSec.toInt()} s; reel: ${reelSec.toInt()} s; clips: ${moments.size}.")
                 appendLine("Moments in order:")
                 moments.forEach { m -> appendLine("- ${m.peakSec.toInt()}s: ${m.label}${if (m.aiLabeled) " — ${m.description}" else ""}") }
@@ -102,7 +105,7 @@ class MetaAiClient(
                 append("\"chapters\": string[] (one short title per moment, same order), \"narration\": string (a 20-40 second voice-over script)}")
             }
             val messages = JSONArray()
-                .put(JSONObject().put("role", "system").put("content", "You are a travel storyteller for adventure riders in India. Respond with ONLY valid JSON."))
+                .put(JSONObject().put("role", "system").put("content", "You are a careful storyteller for outdoor adventures and travel anywhere in the world. Use only provided facts. Respond with ONLY valid JSON."))
                 .put(JSONObject().put("role", "user").put("content", prompt))
             val o = JSONObject(AiJson.extract(chat(textModel, messages, 0.8, 1500)))
             fun strings(key: String) = o.optJSONArray(key)?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList()

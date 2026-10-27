@@ -6,6 +6,21 @@ Adventurer helps people **discover, plan, experience, document, and share outdoo
 
 Motorcycling remains a strong initial use case, not the product boundary. The long-term experience shares a single trip, route, media and safety foundation while each activity gets its own truthful metrics and domain-specific safeguards.
 
+## Current branch delivery slice
+
+- [x] Add a dedicated Explore & Plan navigation destination.
+- [x] Persist private trip drafts, multi-day stop lists, checklists, safety-plan fields, saved-place ideas and creator guide/event drafts in local Room storage.
+- [x] Export a saved plan and its safety/checklist fields to a JSON trip pack, explicitly excluding map tiles and live conditions.
+- [x] Record a manual check-in timestamp locally and show that it does not send a notification.
+- [x] Add activity-specific Story Studio templates and generalize AI/offline copy by activity.
+- [x] Instrument app-open, plan-created, activity-started, story-exported/shared, place-saved, local check-in and creator-draft events.
+- [ ] Connect a real place/routing provider and show source + freshness for every route/POI result.
+- [ ] Package lawful, licensed offline map regions and test full navigation without network.
+- [ ] Add background check-in reminders and explicit, consent-based outbound contact workflows.
+- [ ] Back community place reports/guides/events with authorized server data, moderation and verification.
+- [ ] Implement A/B assignment and aggregate cohort reporting before interpreting conversion/retention experiments.
+- [ ] Add sensor integrations only through supported, documented device APIs.
+
 ## Activity coverage
 
 | Activity / journey | Core user need | Domain-specific features |

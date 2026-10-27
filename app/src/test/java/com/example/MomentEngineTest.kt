@@ -1,5 +1,7 @@
 package com.example
 
+import com.example.data.model.ActivityType
+import com.example.data.story.AdventureStoryTemplates
 import com.example.data.story.AiJson
 import com.example.data.story.FrameMeasurer
 import com.example.data.story.FrameMetrics
@@ -89,6 +91,30 @@ class MomentEngineTest {
         assertEquals(selected.size, story.chapterTitles.size)
         assertTrue(story.caption.startsWith("Ghat run"))
         assertEquals(selected.size, StoryTemplate.reelChapterTimes(selected).size)
+    }
+
+    @Test
+    fun storyTemplatesAndOfflineCopyAreActivitySpecific() {
+        val (frames, duration) = syntheticRide()
+        val selected = MomentPicker.pick(frames, duration, 30.0).moments.filter { it.selected }
+        val roadTripTemplate = AdventureStoryTemplates.byId("road_trip")
+
+        assertTrue(AdventureStoryTemplates.forActivity(ActivityType.CarTrips).any { it.id == roadTripTemplate.id })
+        assertTrue(AdventureStoryTemplates.forActivity(ActivityType.ScubaDiving).any { it.id == "water_log" })
+
+        val roadTripStory = StoryTemplate.build(
+            title = "Coastal escape",
+            location = "Vancouver Island",
+            moments = selected,
+            sourceSec = duration,
+            activityType = ActivityType.CarTrips,
+            template = roadTripTemplate,
+        )
+
+        assertTrue(roadTripStory.caption.contains("road trip"))
+        assertTrue(roadTripStory.caption.contains("Vancouver Island"))
+        assertFalse(roadTripStory.caption.contains("riding through"))
+        assertTrue(roadTripStory.hashtags.contains("#Adventurer"))
     }
 
     @Test
