@@ -68,6 +68,26 @@ data class RealtimeAdventureState(
 
 typealias RealtimeAdventureToolHandler = suspend (name: String, arguments: Map<String, Any?>) -> Map<String, Any?>
 
+/** Small bounded FIFO so fast typed messages cannot race an in-flight realtime response. */
+internal class PendingTextTurnQueue(private val capacity: Int = 3) {
+    private val lock = Any()
+    private val turns = ArrayDeque<String>()
+
+    init { require(capacity > 0) { "capacity must be positive" } }
+
+    fun offer(text: String): Boolean = synchronized(lock) {
+        val safe = text.trim().take(500)
+        if (safe.isEmpty() || turns.size >= capacity) false
+        else { turns.addLast(safe); true }
+    }
+
+    fun poll(): String? = synchronized(lock) {
+        if (turns.isEmpty()) null else turns.removeFirst()
+    }
+
+    fun clear() = synchronized(lock) { turns.clear() }
+}
+
 internal object RealtimeVoiceInterruptionPolicy {
     fun responseIdsToSuppress(activeResponseId: String?, playbackResponseId: String?): List<String> =
         listOfNotNull(activeResponseId, playbackResponseId)
@@ -113,7 +133,7 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
     @Volatile private var responseInFlight: Boolean = false
     private val cancelledResponseIds = mutableSetOf<String>()
     private val pendingContextNotes = ArrayDeque<String>()
-    private val pendingTextTurns = ArrayDeque<String>()
+    private val pendingTextTurns = PendingTextTurnQueue()
     @Volatile private var pendingSessionUpdate: RealtimeAdventureContext? = null
     @Volatile private var playbackStartHeadPosition: Int = -1
     @Volatile private var playbackResponseId: String? = null
@@ -291,9 +311,7 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
         val safeText = text.trim().take(500)
         if (safeText.isEmpty() || !_state.value.isConnected || !acceptingAudio.get()) return false
         if (responseInFlight || _state.value.isSpeaking) {
-            val queued = synchronized(pendingTextTurns) {
-                if (pendingTextTurns.size >= 3) false else { pendingTextTurns.addLast(safeText); true }
-            }
+            val queued = pendingTextTurns.offer(safeText)
             if (queued) _state.update { it.copy(status = "Message queued; finishing the current reply first.") }
             return queued
         }
@@ -315,9 +333,7 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
     }
 
     private fun flushNextTextTurn() {
-        val next = synchronized(pendingTextTurns) {
-            if (pendingTextTurns.isEmpty()) null else pendingTextTurns.removeFirst()
-        } ?: return
+        val next = pendingTextTurns.poll() ?: return
         sendTextTurnNow(next)
     }
 
@@ -331,7 +347,7 @@ class AdventureRealtimeVoiceSession(context: Context) : Closeable {
         activeAssistantItemId = null
         playbackResponseId = null
         synchronized(pendingContextNotes) { pendingContextNotes.clear() }
-        synchronized(pendingTextTurns) { pendingTextTurns.clear() }
+        pendingTextTurns.clear()
         pendingSessionUpdate = null
         synchronized(cancelledResponseIds) { cancelledResponseIds.clear() }
         runCatching { audioRecord?.stop() }
