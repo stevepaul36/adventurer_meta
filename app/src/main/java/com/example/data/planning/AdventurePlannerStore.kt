@@ -9,6 +9,8 @@ import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Upsert
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
@@ -24,7 +26,9 @@ data class AdventureTripPlanEntity(
     val activityTypesCsv: String,
     val startDateLabel: String,
     val durationDays: Int,
-    val budgetCad: Double?,
+    /** An amount in budgetCurrencyCode; never assume it is CAD or convert it implicitly. */
+    val budgetAmount: Double?,
+    val budgetCurrencyCode: String = "CAD",
     val itineraryStopsJson: String,
     val prepChecklistJson: String,
     val checkInEnabled: Boolean,
@@ -58,7 +62,9 @@ data class AdventureCreatorDraftEntity(
     val destination: String,
     val activityType: String,
     val description: String,
-    val proposedPriceCad: Double? = null,
+    /** Optional suggested amount in proposedPriceCurrencyCode, not a booking price. */
+    val proposedPriceAmount: Double? = null,
+    val proposedPriceCurrencyCode: String = "CAD",
     val dateLabel: String = "",
     val status: String = "LOCAL_DRAFT",
     val createdAtMillis: Long = System.currentTimeMillis(),
@@ -106,13 +112,99 @@ interface AdventurePlannerDao {
         AdventurePlaceBookmarkEntity::class,
         AdventureCreatorDraftEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class AdventurePlannerDatabase : RoomDatabase() {
     abstract fun adventurePlannerDao(): AdventurePlannerDao
 
     companion object {
+        /**
+         * Version 1 stored all prices in fields named *Cad. Preserve those amounts as CAD;
+         * this migration does not apply a conversion or change existing user-entered numbers.
+         */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE adventure_trip_plans_new (
+                        id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        destination TEXT NOT NULL,
+                        activityTypesCsv TEXT NOT NULL,
+                        startDateLabel TEXT NOT NULL,
+                        durationDays INTEGER NOT NULL,
+                        budgetAmount REAL,
+                        budgetCurrencyCode TEXT NOT NULL,
+                        itineraryStopsJson TEXT NOT NULL,
+                        prepChecklistJson TEXT NOT NULL,
+                        checkInEnabled INTEGER NOT NULL,
+                        checkInIntervalMinutes INTEGER NOT NULL,
+                        expectedReturnLabel TEXT NOT NULL,
+                        trustedContactLabel TEXT NOT NULL,
+                        lastCheckInAtMillis INTEGER,
+                        visibility TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        createdAtMillis INTEGER NOT NULL,
+                        updatedAtMillis INTEGER NOT NULL,
+                        PRIMARY KEY(id)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    INSERT INTO adventure_trip_plans_new (
+                        id, title, destination, activityTypesCsv, startDateLabel, durationDays,
+                        budgetAmount, budgetCurrencyCode, itineraryStopsJson, prepChecklistJson,
+                        checkInEnabled, checkInIntervalMinutes, expectedReturnLabel, trustedContactLabel,
+                        lastCheckInAtMillis, visibility, status, createdAtMillis, updatedAtMillis
+                    )
+                    SELECT
+                        id, title, destination, activityTypesCsv, startDateLabel, durationDays,
+                        budgetCad, 'CAD', itineraryStopsJson, prepChecklistJson,
+                        checkInEnabled, checkInIntervalMinutes, expectedReturnLabel, trustedContactLabel,
+                        lastCheckInAtMillis, visibility, status, createdAtMillis, updatedAtMillis
+                    FROM adventure_trip_plans
+                    """.trimIndent()
+                )
+                db.execSQL("DROP TABLE adventure_trip_plans")
+                db.execSQL("ALTER TABLE adventure_trip_plans_new RENAME TO adventure_trip_plans")
+
+                db.execSQL(
+                    """
+                    CREATE TABLE adventure_creator_drafts_new (
+                        id TEXT NOT NULL,
+                        kind TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        destination TEXT NOT NULL,
+                        activityType TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        proposedPriceAmount REAL,
+                        proposedPriceCurrencyCode TEXT NOT NULL,
+                        dateLabel TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        createdAtMillis INTEGER NOT NULL,
+                        PRIMARY KEY(id)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    INSERT INTO adventure_creator_drafts_new (
+                        id, kind, title, destination, activityType, description,
+                        proposedPriceAmount, proposedPriceCurrencyCode, dateLabel, status, createdAtMillis
+                    )
+                    SELECT
+                        id, kind, title, destination, activityType, description,
+                        proposedPriceCad, 'CAD', dateLabel, status, createdAtMillis
+                    FROM adventure_creator_drafts
+                    """.trimIndent()
+                )
+                db.execSQL("DROP TABLE adventure_creator_drafts")
+                db.execSQL("ALTER TABLE adventure_creator_drafts_new RENAME TO adventure_creator_drafts")
+            }
+        }
+
         @Volatile private var instance: AdventurePlannerDatabase? = null
 
         fun getInstance(context: Context): AdventurePlannerDatabase =
@@ -121,7 +213,10 @@ abstract class AdventurePlannerDatabase : RoomDatabase() {
                     context.applicationContext,
                     AdventurePlannerDatabase::class.java,
                     "adventurer-planner.db",
-                ).build().also { instance = it }
+                )
+                    .addMigrations(MIGRATION_1_2)
+                    .build()
+                    .also { instance = it }
             }
     }
 }
