@@ -92,9 +92,10 @@ fun ClubsScreen(
 fun ClubCard(
     club: Club,
     onJoinToggle: () -> Unit,
-    onSendMessage: (String) -> Unit
+    onSendMessage: (String) -> Unit,
+    initialChatExpanded: Boolean = false
 ) {
-    var expandedChat by remember { mutableStateOf(false) }
+    var expandedChat by remember(club.id, initialChatExpanded) { mutableStateOf(initialChatExpanded) }
     var chatInput by remember { mutableStateOf("") }
 
     Card(

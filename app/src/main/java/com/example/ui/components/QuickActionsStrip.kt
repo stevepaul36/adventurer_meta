@@ -98,8 +98,8 @@ fun AdventureModulesHub(
             ),
             QuickActionItem(
                 screen = Screen.CLUBS,
-                title = "Riding Clubs",
-                subtitle = "Group rides & meetups",
+                title = "Community Hub",
+                subtitle = "Clubs, chat & challenges",
                 category = ModuleCategory.COMMUNITY,
                 icon = Icons.Default.Groups,
                 accentColor = Color(0xFF38BDF8)

@@ -12,17 +12,17 @@ import kotlinx.coroutines.launch
 
 enum class Screen(val title: String, val isTopLevel: Boolean = false) {
     FEED("Basecamp", isTopLevel = true),
-    JOURNEY("Journey", isTopLevel = true),
+    JOURNEY("Journey"),
     EXPEDITIONS("Expeditions"),
     EXPLORE_PLAN("Field Atlas", isTopLevel = true),
     ROUTE_BRIEF("Route Brief"),
-    VOICE_COMPANION("Voice Companion", isTopLevel = true),
-    RADAR("Roadside Radar", isTopLevel = true),
-    LIVE_TRACKER("Field Mode", isTopLevel = true),
-    STORY_STUDIO("Story Studio", isTopLevel = true),
+    VOICE_COMPANION("Voice Companion"),
+    RADAR("Safety & Help"),
+    LIVE_TRACKER("Go / Field Mode", isTopLevel = true),
+    STORY_STUDIO("Story Studio"),
     FINAL_REVIEW("Final Review"),
-    GAMIFICATION("Gamification Hub"),
-    CLUBS("Riding Clubs"),
+    GAMIFICATION("Achievements & Milestones"),
+    CLUBS("Community", isTopLevel = true),
     PROFILE("Trail Settings", isTopLevel = true),
     PRO_PAYWALL("Adventurer Pro")
 }
@@ -136,9 +136,8 @@ class AdventurerViewModel(
     private val voiceTopLevelScreens = listOf(
         Screen.FEED,
         Screen.EXPLORE_PLAN,
-        Screen.VOICE_COMPANION,
+        Screen.CLUBS,
         Screen.LIVE_TRACKER,
-        Screen.RADAR,
         Screen.PROFILE,
     )
 
