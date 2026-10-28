@@ -2,6 +2,8 @@
 
 **Discover a place. Plan the experience. Go explore. Bring the story home.**
 
+The consolidated product inventory and interaction roadmap are in [ADVENTURER_FEATURE_CATALOG.md](ADVENTURER_FEATURE_CATALOG.md). The current primary navigation is **Basecamp · Field Atlas · Community · Go/Field Mode · Trail Settings**. Voice Companion remains available from the persistent voice entry point; Story Studio, route briefs, final review and achievements remain contextual workspaces reachable from the feature organizer or relevant trip flows. An interactive browser UX study is available at [prototypes/adventurer-ux-concept/index.html](prototypes/adventurer-ux-concept/index.html); it is a local interaction concept, not a connected service.
+
 Adventurer is evolving from a motorcycle-first prototype into a multi-activity adventure companion for cycling, car road trips, overlanding, walking, trekking, camping, fishing, lawful hunting and wildlife observation, scuba/snorkelling, island trips, and discovering unfamiliar places. Its shared foundation is destination discovery, trip planning, offline-ready routes, safety planning, GPS activity records where appropriate, and AI-assisted storytelling. The current Android app remains a prototype: motorcycle telemetry is the most developed mode, and specialized route, environmental, underwater, and regulatory features described in the product blueprint are roadmap items, not all live services.
 
 ## Product features
