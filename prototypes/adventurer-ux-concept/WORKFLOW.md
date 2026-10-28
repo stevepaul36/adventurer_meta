@@ -9,17 +9,18 @@ Adventurer is a multi-activity adventure companion. The main product loop is **D
 ## Screens and purpose
 
 1. **Basecamp / Home** — concise launchpad: create an adventure, enter field mode, or shape a trip memory. A resume card exposes saved-plan progress and incomplete prep steps.
-2. **Field Atlas / Explore** — search, activity filters, map candidates and route cards. Map lines are illustrative and labelled until a trusted provider returns actual routing data.
-3. **Route Brief** — route chapters/stops, estimates, prep checklist and visible unknowns. Users can save the plan or enter field mode.
-4. **Field Mode** — Ready, Active, Paused and Finished states, glanceable controls and clear disclosure of what data is real. No implied SOS or sharing integrations when disconnected.
-5. **Story Studio** — choose route journal, short film, photo essay or trip guide; set tone, edit title/caption, choose audience, mask route start/end and delay location.
-6. **Final Review** — preview current edits and summarise audience, precise-route treatment and media permissions. Final action stays disabled until three explicit confirmations.
-7. **Trail Settings** — multi-activity preferences, voice behaviour, quiet hours, feed mood and plain-language privacy controls.
+2. **Trip Builder** — guided selection of activity, starting area, time available and preferred pace; carries selected activity into discovery.
+3. **Field Atlas / Explore** — search, activity filters, map candidates and route cards. Map lines are illustrative and labelled until a trusted provider returns actual routing data.
+4. **Route Brief** — route chapters/stops, estimates, prep checklist and visible unknowns. Users can save the plan or enter field mode.
+5. **Field Mode** — Ready, Active, Paused and Finished states, glanceable controls and clear disclosure of what data is real. No implied SOS or sharing integrations when disconnected.
+6. **Story Studio** — choose route journal, short film, photo essay or trip guide; set tone, edit title/caption, choose audience, mask route start/end and delay location.
+7. **Final Review** — preview current edits and summarise audience, precise-route treatment and media permissions. Final action stays disabled until three explicit confirmations.
+8. **Trail Settings** — multi-activity preferences, voice behaviour, quiet hours, feed mood and plain-language privacy controls.
 
 ## Primary workflows
 
 ### A. Discover an adventure
-`Basecamp → Field Atlas → Search / Filter → Route card → Route Brief → Save trip or Use plan → Field Mode`
+`Basecamp → Trip Builder → Field Atlas → Search / Filter → Route card → Route Brief → Save trip or Use plan → Field Mode`
 
 ### B. Record and make a story
 `Basecamp → Field Mode → Start → Pause / Resume → Finish → Story Studio → Edit → Final Review → Confirm demo`
