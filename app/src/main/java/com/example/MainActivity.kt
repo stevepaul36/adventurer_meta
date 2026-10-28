@@ -117,8 +117,8 @@ private data class NavTab(val screen: Screen, val label: Str, val selected: Imag
 private val NavTabs = listOf(
     NavTab(Screen.FEED, Str.NAV_FEED, Icons.Filled.Home, Icons.Outlined.Home, TrailOrange),
     NavTab(Screen.EXPLORE_PLAN, Str.NAV_EXPLORE, Icons.Filled.Map, Icons.Outlined.Map, TrailOrange),
+    NavTab(Screen.CLUBS, Str.NAV_COMMUNITY, Icons.Filled.Groups, Icons.Outlined.Groups, TrailOrange),
     NavTab(Screen.LIVE_TRACKER, Str.NAV_RIDE, Icons.Filled.PlayCircle, Icons.Outlined.PlayCircle, TrailOrange),
-    NavTab(Screen.STORY_STUDIO, Str.QUICK_STUDIO, Icons.Filled.AutoAwesome, Icons.Outlined.AutoAwesome, SafeMint),
     NavTab(Screen.PROFILE, Str.NAV_RIDER, Icons.Filled.Settings, Icons.Outlined.Settings, AmberGold),
 )
 
@@ -927,7 +927,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     Screen.STORY_STUDIO -> AiStoryStudioScreen(viewModel = viewModel)
                     Screen.FINAL_REVIEW -> FinalReviewScreen(viewModel = viewModel)
                     Screen.GAMIFICATION -> GamificationScreen(viewModel = viewModel)
-                    Screen.CLUBS -> ClubsScreen(viewModel = viewModel)
+                    Screen.CLUBS -> CommunityHubScreen(viewModel = viewModel)
                     Screen.PROFILE -> ProfileScreen(viewModel = viewModel)
                     Screen.PRO_PAYWALL -> ProPaywallScreen(viewModel = viewModel)
                 }
