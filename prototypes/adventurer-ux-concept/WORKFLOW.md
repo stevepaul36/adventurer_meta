@@ -28,6 +28,14 @@ Adventurer is a multi-activity adventure companion. The main product loop is **D
 ### C. Share deliberately
 `Story Studio → format/tone → title/caption → audience → route masking → delayed location → Final Review → three required confirmations → save/publish`
 
+### D. Find people and coordinate
+`Community → Clubs / Messages / Challenges → inspect context → join or open a thread → send a demo message / join a sample challenge → return to the relevant trip or club`
+
+### E. Use the voice companion
+`Tap Ask Adventurer → Talk Now or type → review recognised/request text → run a supported demo command → receive visible response → optional spoken answer → close companion`
+
+Supported sample commands cover demo navigation to Discover, Clubs, Messages, Challenges or Story Studio, plus start, pause, resume, finish and mark moment for the sample Field Mode. Typed/recognised text is interpreted locally in the UI concept; it is not sent to an AI backend.
+
 ## Design tokens
 
 - **Surface:** near-black navy `#0A1119`, slate panels `#111D28` / `#162532`, border `#263844`.
@@ -35,7 +43,7 @@ Adventurer is a multi-activity adventure companion. The main product loop is **D
 - **Typography:** readable sans-serif with strong headline hierarchy; uppercase micro-labels only for secondary metadata.
 - **Shapes:** compact functional cards, restrained outlines, 44 dp+ native touch targets.
 - **Imagery:** original/appropriately licensed adventure photography and original terrain diagrams. Do not extract competitor screenshots, icons, branding or branded layouts.
-- **Navigation:** Basecamp, Discover, Field, Studio, Me. No social-feed tab is required for the core job.
+- **Navigation:** Basecamp, Discover, Community, Go/Field, Me. Story Studio is contextual after a trip or from Basecamp, not a sixth persistent tab. Voice Companion is an app-wide action, not a tab.
 
 ## Safety, privacy and accessibility
 
@@ -52,7 +60,7 @@ The HTML is a standalone browser concept with illustrative sample data. It does 
 
 ## Suggested usability test
 
-Test with 3–5 people, without coaching: find and save a route; spot sample/unverified data; start, pause and finish a demo session; make a playful story; mask route start/end and delay location; complete the review gate. Record task success, hesitation, confusing labels, privacy controls missed and mistaken assumptions that a demo function is connected.
+Test with 3–5 people, without coaching: find and save a route; spot sample/unverified data; start, pause and finish a demo session; make a playful story; mask route start/end and delay location; complete the review gate; open a club, join/leave it; open a conversation and send a demo message; join a challenge; use a typed voice command; grant or deny browser microphone access and recover via typing. Record task success, hesitation, confusing labels, privacy controls missed and mistaken assumptions that a demo function is connected.
 
 ## Implementation order
 
@@ -62,3 +70,10 @@ Test with 3–5 people, without coaching: find and save a route; spot sample/unv
 4. Connect selected trip segments to Story Studio; preserve edits and upload consent/local export.
 5. Implement typed share draft, preview, confirmation gate, coordinate masking, audience policy and backend enforcement.
 6. Run usability tests, accessibility checks, physical-device field validation and release gates.
+
+
+## Expanded feature structure (October 2026)
+
+The detailed inventory and phased scope now live in [ADVENTURER_FEATURE_CATALOG.md](../../ADVENTURER_FEATURE_CATALOG.md). The experience groups discovery/planning, field operation, community/coordination, achievements, story creation, profile/privacy and a persistent voice companion. This is deliberate: feature depth belongs behind context-specific destinations and secondary tabs, not as an ever-growing Basecamp dashboard.
+
+**Voice UX safety:** Talk Now is explicit and one-shot in this browser prototype. Text input is always available, spoken responses can be muted/stopped, and the current command resolver supports only a finite set of demo intents. No passive recording, connected AI model, real GPS, live maps, actual message delivery or emergency dispatch is provided by this HTML concept.
