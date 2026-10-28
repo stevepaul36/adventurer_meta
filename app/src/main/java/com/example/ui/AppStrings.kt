@@ -8,8 +8,8 @@ import com.example.viewmodel.SupportedLang
  * Screens not yet listed here stay in English.
  */
 enum class Str(val en: String, val hi: String, val mr: String, val kn: String, val ta: String) {
-    NAV_FEED("Feed", "फ़ीड", "फीड", "ಫೀಡ್", "ஃபீட்"),
-    NAV_EXPLORE("Explore", "एक्सप्लोर", "एक्सप्लोर", "ಅನ್ವೇಷಿಸಿ", "ஆராயுங்கள்"),
+    NAV_FEED("Basecamp", "बेसकैम्प", "बेसकॅम्प", "ಬೇಸ್‌ಕ್ಯಾಂಪ್", "பேஸ்கேம்ப்"),
+    NAV_EXPLORE("Field Atlas", "फील्ड एटलस", "फील्ड अ‍ॅटलस", "ಫೀಲ್ಡ್ ಅಟ್ಲಸ್", "ஃபீல்ட் அட்லஸ்"),
     NAV_VOICE("Voice", "आवाज़", "आवाज", "ಧ್ವನಿ", "குரல்"),
     QUICK_EXPEDITIONS("Expeditions", "अभियान", "मोहीमा", "ಅಭಿಯಾನಗಳು", "பயணங்கள்"),
     NAV_PASSES("Passes", "दर्रे", "खिंडी", "ಘಾಟ್‌ಗಳು", "கணவாய்கள்"),
@@ -17,7 +17,7 @@ enum class Str(val en: String, val hi: String, val mr: String, val kn: String, v
     NAV_RIDE("Go", "चलें", "चला", "ಹೊರಡಿ", "செல்லுங்கள்"),
     NAV_COMMUNITY("Community", "समुदाय", "समुदाय", "ಸಮುದಾಯ", "சமூகம்"),
     NAV_SOS("SOS & Help", "SOS मदद", "SOS मदत", "SOS ಸಹಾಯ", "SOS உதவி"),
-    NAV_RIDER("Rider", "राइडर", "रायडर", "ರೈಡರ್", "ரைடர்"),
+    NAV_RIDER("Me", "प्रोफ़ाइल", "प्रोफाइल", "ಪ್ರೊಫೈಲ್", "சுயவிவரம்"),
     TAGLINE("Ride · share · stay safe", "राइड · शेयर · सुरक्षित रहें", "राइड · शेअर · सुरक्षित राहा", "ರೈಡ್ · ಹಂಚಿಕೊಳ್ಳಿ · ಸುರಕ್ಷಿತವಾಗಿರಿ", "ரைடு · பகிர் · பாதுகாப்பாக இரு"),
     HERO_TITLE("Start a ride", "राइड शुरू करें", "राइड सुरू करा", "ರೈಡ್ ಪ್ರಾರಂಭಿಸಿ", "ரைடைத் தொடங்குங்கள்"),
     HERO_BODY(
