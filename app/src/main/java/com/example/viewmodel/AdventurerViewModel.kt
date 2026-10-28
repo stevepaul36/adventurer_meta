@@ -11,17 +11,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 enum class Screen(val title: String, val isTopLevel: Boolean = false) {
-    FEED("Feed", isTopLevel = true),
-    JOURNEY("Journey", isTopLevel = true),
+    FEED("Home", isTopLevel = true),
+    JOURNEY("Journey"),
     EXPEDITIONS("Expeditions"),
-    EXPLORE_PLAN("Explore & Plan", isTopLevel = true),
-    VOICE_COMPANION("Voice Companion", isTopLevel = true),
-    RADAR("Roadside Radar", isTopLevel = true),
-    LIVE_TRACKER("Live Telemetry", isTopLevel = true),
+    EXPLORE_PLAN("Discover", isTopLevel = true),
+    VOICE_COMPANION("Voice Companion"),
+    RADAR("Safety & Help"),
+    LIVE_TRACKER("Go / Field Mode", isTopLevel = true),
     STORY_STUDIO("AI Story Studio"),
-    GAMIFICATION("Gamification Hub"),
-    CLUBS("Riding Clubs"),
-    PROFILE("Rider Profile", isTopLevel = true),
+    GAMIFICATION("Achievements & Milestones"),
+    CLUBS("Community", isTopLevel = true),
+    PROFILE("Profile & Settings", isTopLevel = true),
     PRO_PAYWALL("Adventurer Pro")
 }
 
@@ -127,9 +127,8 @@ class AdventurerViewModel(
     private val voiceTopLevelScreens = listOf(
         Screen.FEED,
         Screen.EXPLORE_PLAN,
-        Screen.VOICE_COMPANION,
+        Screen.CLUBS,
         Screen.LIVE_TRACKER,
-        Screen.RADAR,
         Screen.PROFILE,
     )
 
