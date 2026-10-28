@@ -28,8 +28,9 @@ data class QuickActionItem(
 )
 
 /**
- * Shortcuts to the screens that aren't bottom-bar tabs (the tabs are already one tap away),
- * laid out as a 2×2 grid of large, easy-to-hit tiles.
+ * Contextual shortcuts to focused workspaces. Community, achievements and profile
+ * live in their dedicated destinations; this compact 2×2 grid highlights planning,
+ * expeditions, voice and story creation without duplicating the bottom navigation.
  */
 @Composable
 fun QuickActionsStrip(
@@ -41,10 +42,8 @@ fun QuickActionsStrip(
     val items = listOf(
         QuickActionItem(Screen.JOURNEY, Str.NAV_JOURNEY, Icons.Default.Explore, com.example.ui.theme.AdventureOrange),
         QuickActionItem(Screen.EXPEDITIONS, Str.QUICK_EXPEDITIONS, Icons.Default.Terrain, Color(0xFF38BDF8)),
+        QuickActionItem(Screen.VOICE_COMPANION, Str.NAV_VOICE, Icons.Default.Mic, AdventureOrange),
         QuickActionItem(Screen.STORY_STUDIO, Str.QUICK_STUDIO, Icons.Default.AutoAwesome, Color(0xFFC084FC)),
-        QuickActionItem(Screen.CLUBS, Str.QUICK_CLUBS, Icons.Default.Groups, Color(0xFF38BDF8)),
-        QuickActionItem(Screen.GAMIFICATION, Str.QUICK_TROPHIES, Icons.Default.EmojiEvents, AmberGold),
-        QuickActionItem(Screen.PRO_PAYWALL, Str.QUICK_PRO, Icons.Default.WorkspacePremium, Color(0xFFFB7185)),
     )
 
     Column(
