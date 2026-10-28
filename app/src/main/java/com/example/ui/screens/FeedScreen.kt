@@ -700,7 +700,8 @@ fun FeedScreen(
                 QuickActionsStrip(
                     currentScreen = currentScreen,
                     onNavigate = { viewModel.navigateTo(it) },
-                    lang = currentLang
+                    lang = currentLang,
+                    onOpenAllModules = { viewModel.setShowFeatureOrganizer(true) }
                 )
             }
 
