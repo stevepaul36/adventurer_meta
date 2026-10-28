@@ -16,6 +16,7 @@ class AdventureFeatureCatalogTest {
 
         assertEquals(14, features.size)
         assertEquals(14, features.map { it.screen }.distinct().size)
+        assertEquals(Screen.values().toSet(), features.map { it.screen }.toSet())
     }
 
     @Test
