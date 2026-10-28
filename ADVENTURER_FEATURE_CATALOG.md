@@ -35,6 +35,26 @@ Adventurer is a multi-activity adventure companion for motorcycle touring, cycli
 6. Present only the next relevant choice by default; expose advanced route/safety/privacy settings progressively.
 7. When a feature is not connected or is based on sample data, label it at the point of action.
 
+### All-features directory: 14 destinations, five task groups
+
+The in-app directory is the authoritative index for every unique destination. Five destinations remain in the bottom navigation; other destinations are contextual tools launched from Basecamp, the directory, a trip or a finished activity.
+
+| Group | Destinations | Count |
+|---|---|---:|
+| **Plan & discover** | Basecamp, Field Atlas, Journey Command, India Expeditions, Route Brief & Checklist | 5 |
+| **Field & safety** | Go / Field Mode, Voice Companion, Safety & Roadside Help | 3 |
+| **Create & share** | Story Studio, Final Review | 2 |
+| **Community & progress** | Community Hub, Achievements & Milestones | 2 |
+| **Account & upgrade** | Trail Settings & Profile, Adventurer Pro | 2 |
+| **Total** | Every unique navigation destination, listed once | **14** |
+
+**Directory behaviour**
+- Search matches feature titles, purpose text and task-group names.
+- Group filters reduce the list without hiding the “All tools” option.
+- Items are clearly marked **TAB** when they are one of the five permanent navigation destinations, and **TOOL** for contextual destinations.
+- Basecamp shows six frequently useful secondary shortcuts; **All 14 tools** opens the complete directory rather than navigating to an unrelated screen.
+- The directory describes destinations and entry points. It does not imply that provider-backed, social, safety or premium services are enabled merely because a screen exists.
+
 ## 3. Feature inventory
 
 ### A. Voice Companion and conversational UX
