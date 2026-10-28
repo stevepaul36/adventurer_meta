@@ -2,6 +2,8 @@ package com.example.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -10,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -407,13 +410,6 @@ private fun BudgetLineItem(label: String, value: String) {
     }
 }
 
-private data class OrganizerFeature(
-    val screen: Screen,
-    val title: String,
-    val description: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val accentColor: Color
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -421,31 +417,23 @@ fun AdventureFeatureOrganizerSheet(
     onDismiss: () -> Unit,
     onNavigate: (Screen) -> Unit
 ) {
-    val operationalGroup = listOf(
-        OrganizerFeature(Screen.FEED, "Basecamp Launchpad", "Stories, active shorts reel & community feed", Icons.Default.Home, TrailOrange),
-        OrganizerFeature(Screen.JOURNEY, "Journey Command Center", "Nearby POIs, food cart simulation, fuel calc & voice dock", Icons.Default.Explore, TrailOrange),
-        OrganizerFeature(Screen.LIVE_TRACKER, "Field Mode (HUD)", "4-stage GPS telemetry, breadcrumb & check-in plan", Icons.Default.Speed, SafeMint),
-        OrganizerFeature(Screen.ROUTE_BRIEF, "Route Brief & Checklist", "74 km route, 8-point checklist & elevation graph", Icons.Default.Checklist, SafeMint),
-        OrganizerFeature(Screen.VOICE_COMPANION, "Voice Companion", "Hands-free realtime Gemini audio travel guide", Icons.Default.Mic, Color(0xFF818CF8))
-    )
-
-    val explorationGroup = listOf(
-        OrganizerFeature(Screen.EXPLORE_PLAN, "Field Atlas", "Map candidates, gear packing list & regional catalog", Icons.Default.Map, TrailOrange),
-        OrganizerFeature(Screen.EXPEDITIONS, "India Expeditions", "Curated routes across Ladakh, Spiti & Western Ghats", Icons.Default.Terrain, HighAltitudeCyan),
-        OrganizerFeature(Screen.RADAR, "Roadside Radar & SOS", "Live roadside assistance map & distress beacons", Icons.Default.Radar, DangerRed)
-    )
-
-    val storyGroup = listOf(
-        OrganizerFeature(Screen.STORY_STUDIO, "AI Story Studio", "Multimodal story templates, reels & audio narration", Icons.Default.AutoAwesome, Color(0xFFC084FC)),
-        OrganizerFeature(Screen.FINAL_REVIEW, "Final Review", "3-point privacy safety gating check before posting", Icons.Default.VerifiedUser, SafeMint)
-    )
-
-    val communityGroup = listOf(
-        OrganizerFeature(Screen.CLUBS, "Riding Clubs", "Active chapters, meetups & scheduled group rides", Icons.Default.Groups, Color(0xFF38BDF8)),
-        OrganizerFeature(Screen.GAMIFICATION, "Gamification Hub", "Rider XP levels, streaks & 16 unlockable badges", Icons.Default.EmojiEvents, AmberGold),
-        OrganizerFeature(Screen.PROFILE, "Trail Settings (\"Me\")", "Multi-activity identity, privacy check-up & offline cache", Icons.Default.Settings, AmberGold),
-        OrganizerFeature(Screen.PRO_PAYWALL, "Adventurer Pro", "Offline 3D topo maps, satellite beacon sync & unlimited AI", Icons.Default.WorkspacePremium, Color(0xFFFB7185))
-    )
+    var query by rememberSaveable { mutableStateOf("") }
+    var selectedCategoryName by rememberSaveable { mutableStateOf(ModuleCategory.ALL.name) }
+    val selectedCategory = ModuleCategory.values().firstOrNull { it.name == selectedCategoryName }
+        ?: ModuleCategory.ALL
+    val normalizedQuery = query.trim().lowercase()
+    val filteredFeatures = AdventureFeatureCatalog.all.filter { feature ->
+        val categoryMatches = selectedCategory == ModuleCategory.ALL || feature.category == selectedCategory
+        val queryMatches = normalizedQuery.isBlank() ||
+            feature.title.lowercase().contains(normalizedQuery) ||
+            feature.subtitle.lowercase().contains(normalizedQuery) ||
+            feature.category.label.lowercase().contains(normalizedQuery)
+        categoryMatches && queryMatches
+    }
+    val groupedFeatures = AdventureFeatureCatalog.categories.mapNotNull { category ->
+        val features = filteredFeatures.filter { it.category == category }
+        if (features.isEmpty()) null else category to features
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -465,21 +453,25 @@ fun AdventureFeatureOrganizerSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "ADVENTURE MODULES DIRECTORY",
+                        text = "ADVENTURER DIRECTORY",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.ExtraBold,
                         color = TrailOrange
                     )
                     Text(
-                        text = "All 14 features neatly organized by domain",
+                        text = "Find the right tool for your next step",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
+                    Text(
+                        text = "14 destinations · 5 main tabs · 5 task groups",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = FieldMuted
+                    )
                 }
-
                 IconButton(
                     onClick = onDismiss,
                     modifier = Modifier.size(36.dp).testTag("close_feature_organizer_button")
@@ -488,25 +480,86 @@ fun AdventureFeatureOrganizerSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it.take(80) },
+                modifier = Modifier.fillMaxWidth().testTag("feature_directory_search"),
+                singleLine = true,
+                label = { Text("Search all tools") },
+                placeholder = { Text("Try “voice”, “safety” or “story”") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (query.isNotBlank()) {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear search")
+                        }
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = TrailOrange,
+                    focusedLabelColor = TrailOrange,
+                    cursorColor = TrailOrange
+                )
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                item {
-                    OrganizerGroupSection("🧭 TRIP & FIELD OPERATIONS", operationalGroup, onNavigate)
-                }
-                item {
-                    OrganizerGroupSection("🗺️ EXPLORATION & SAFETY", explorationGroup, onNavigate)
-                }
-                item {
-                    OrganizerGroupSection("🎬 STORY & SHARING", storyGroup, onNavigate)
-                }
-                item {
-                    OrganizerGroupSection("👥 COMMUNITY & PROGRESSION", communityGroup, onNavigate)
+                ModuleCategory.values().forEach { category ->
+                    FilterChip(
+                        selected = selectedCategory == category,
+                        onClick = { selectedCategoryName = category.name },
+                        label = { Text(category.label, maxLines = 1) },
+                        modifier = Modifier.testTag("directory_filter_${category.name.lowercase()}")
+                    )
                 }
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (filteredFeatures.isEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.SearchOff, contentDescription = null, tint = FieldMuted, modifier = Modifier.size(30.dp))
+                    Text("No matching tools", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Try another term or clear the selected category.", color = FieldMuted, style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = {
+                        query = ""
+                        selectedCategoryName = ModuleCategory.ALL.name
+                    }) { Text("Clear filters", color = TrailOrange) }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 430.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    groupedFeatures.forEach { (category, features) ->
+                        item(key = "group_${category.name}") {
+                            OrganizerGroupSection(
+                                title = category.label,
+                                count = features.size,
+                                features = features,
+                                onNavigate = onNavigate
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "MAIN TAB marks one of the five bottom-navigation destinations. Tools open when needed. Live data, social delivery and premium capabilities may depend on permissions, account setup or connected services.",
+                style = MaterialTheme.typography.bodySmall,
+                color = FieldMuted
+            )
         }
     }
 }
@@ -514,17 +567,29 @@ fun AdventureFeatureOrganizerSheet(
 @Composable
 private fun OrganizerGroupSection(
     title: String,
-    features: List<OrganizerFeature>,
+    count: Int,
+    features: List<QuickActionItem>,
     onNavigate: (Screen) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = FieldMuted,
-            modifier = Modifier.padding(bottom = 6.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = FieldMuted
+            )
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = TrailOrange
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -538,7 +603,7 @@ private fun OrganizerGroupSection(
                     color = Color.Transparent,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 52.dp)
+                        .heightIn(min = 58.dp)
                         .testTag("organizer_nav_${feature.screen.name.lowercase()}")
                 ) {
                     Row(
@@ -548,37 +613,53 @@ private fun OrganizerGroupSection(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(9.dp),
                             color = feature.accentColor.copy(alpha = 0.15f),
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(38.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     feature.icon,
                                     contentDescription = null,
                                     tint = feature.accentColor,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(19.dp)
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = feature.title,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = Color.White,
+                                maxLines = 2,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                             Text(
-                                text = feature.description,
+                                text = feature.subtitle,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = FieldMuted,
-                                maxLines = 1
+                                maxLines = 2,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                         }
 
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (feature.isPrimaryDestination) feature.accentColor.copy(alpha = 0.16f) else SlatePanel
+                        ) {
+                            Text(
+                                text = if (feature.isPrimaryDestination) "TAB" else "TOOL",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (feature.isPrimaryDestination) feature.accentColor else FieldMuted
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             Icons.Default.ChevronRight,
                             contentDescription = null,
@@ -594,4 +675,3 @@ private fun OrganizerGroupSection(
         }
     }
 }
-

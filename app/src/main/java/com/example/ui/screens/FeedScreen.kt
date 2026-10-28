@@ -686,21 +686,13 @@ fun FeedScreen(
                 }
             }
 
-            // 11. Shortcuts to the non-tab screens
-            item {
-                Text(
-                    Str.EXPLORE.get(currentLang),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
+            // 11. Curated shortcuts to contextual tools; the full directory is one tap away.
             item {
                 QuickActionsStrip(
                     currentScreen = currentScreen,
                     onNavigate = { viewModel.navigateTo(it) },
-                    lang = currentLang
+                    lang = currentLang,
+                    onOpenAllModules = { viewModel.setShowFeatureOrganizer(true) }
                 )
             }
 
