@@ -20,6 +20,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
@@ -31,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -59,6 +62,14 @@ fun CommunityHubScreen(
     val progress by viewModel.gamification.collectAsState()
     var selectedTab by rememberSaveable { mutableStateOf(0) }
     var expandedClubId by rememberSaveable { mutableStateOf<String?>(null) }
+    var showDirectThread by rememberSaveable { mutableStateOf(false) }
+    var directMessageDraft by rememberSaveable { mutableStateOf("") }
+    val directMessages = androidx.compose.runtime.remember {
+        mutableStateListOf(
+            DirectMessageLine(false, "That lookout was incredible. I saved the route."),
+            DirectMessageLine(true, "Glad you liked it! Next time we should go at sunrise.")
+        )
+    }
 
     Scaffold(
         modifier = modifier,
@@ -184,16 +195,68 @@ fun CommunityHubScreen(
                     item {
                         Card(
                             shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Text("Direct messages", fontWeight = FontWeight.Bold)
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                        Text("Direct messages", fontWeight = FontWeight.Bold)
+                                        Text("Maya R. · Adventure friend", style = MaterialTheme.typography.labelSmall, color = AmberGold)
+                                    }
+                                    OutlinedButton(onClick = { showDirectThread = !showDirectThread }) {
+                                        Text(if (showDirectThread) "Close chat" else "Open chat")
+                                    }
+                                }
                                 Text(
-                                    "This inbox is not connected to real friend accounts yet. Club conversations are available now; private DMs need a secure persistent messaging service.",
+                                    "Try a one-to-one conversation. This is local demo data; no friend account receives these messages.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                if (showDirectThread) {
+                                    directMessages.forEach { line ->
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalAlignment = if (line.fromMe) Alignment.End else Alignment.Start
+                                        ) {
+                                            Surface(
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = if (line.fromMe) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                                            ) {
+                                                Text(
+                                                    line.text,
+                                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = if (line.fromMe) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        OutlinedTextField(
+                                            value = directMessageDraft,
+                                            onValueChange = { directMessageDraft = it.take(280) },
+                                            modifier = Modifier.weight(1f),
+                                            label = { Text("Write a message") },
+                                            singleLine = true
+                                        )
+                                        Button(
+                                            onClick = {
+                                                val message = directMessageDraft.trim()
+                                                if (message.isNotBlank()) {
+                                                    directMessages.add(DirectMessageLine(true, message))
+                                                    directMessageDraft = ""
+                                                }
+                                            },
+                                            enabled = directMessageDraft.isNotBlank(),
+                                            colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange)
+                                        ) { Text("Send") }
+                                    }
+                                }
                             }
                         }
                     }
@@ -289,18 +352,31 @@ private fun ProgressStat(label: String, value: String, modifier: Modifier = Modi
 
 @Composable
 private fun CommunityChallengeCard(title: String, description: String) {
+    var joined by rememberSaveable(title) { mutableStateOf(false) }
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(title, fontWeight = FontWeight.Bold)
-                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(title, fontWeight = FontWeight.Bold)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    if (joined) "Joined · local demo" else "Open participation",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (joined) AdventureOrange else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(onClick = { joined = !joined }) {
+                    Text(if (joined) "Leave challenge" else "Join challenge")
+                }
             }
-            Spacer(Modifier.width(8.dp))
-            Text("→", color = AdventureOrange, fontWeight = FontWeight.Bold)
         }
     }
 }
+
+private data class DirectMessageLine(val fromMe: Boolean, val text: String)
