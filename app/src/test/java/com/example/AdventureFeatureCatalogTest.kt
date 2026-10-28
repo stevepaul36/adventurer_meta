@@ -27,6 +27,10 @@ class AdventureFeatureCatalogTest {
             setOf(Screen.FEED, Screen.EXPLORE_PLAN, Screen.CLUBS, Screen.LIVE_TRACKER, Screen.PROFILE),
             primaryScreens
         )
+        assertEquals(
+            Screen.values().filter { it.isTopLevel }.toSet(),
+            primaryScreens
+        )
     }
 
     @Test
