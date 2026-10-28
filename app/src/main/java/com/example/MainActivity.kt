@@ -113,10 +113,9 @@ private data class NavTab(val screen: Screen, val label: Str, val selected: Imag
 
 private val NavTabs = listOf(
     NavTab(Screen.FEED, Str.NAV_FEED, Icons.Filled.Home, Icons.Outlined.Home, AdventureOrange),
-    NavTab(Screen.JOURNEY, Str.NAV_JOURNEY, Icons.Filled.Explore, Icons.Outlined.Explore, AdventureOrange),
-    NavTab(Screen.EXPLORE_PLAN, Str.NAV_EXPLORE, Icons.Filled.Map, Icons.Outlined.Map, AdventureOrange),
-    NavTab(Screen.VOICE_COMPANION, Str.NAV_VOICE, Icons.Filled.Mic, Icons.Outlined.Mic, AdventureOrange),
-    NavTab(Screen.RADAR, Str.NAV_SOS, Icons.Filled.Emergency, Icons.Outlined.Emergency, Color(0xFFEF4444)),
+    NavTab(Screen.EXPLORE_PLAN, Str.NAV_EXPLORE, Icons.Filled.Explore, Icons.Outlined.Explore, AdventureOrange),
+    NavTab(Screen.CLUBS, Str.NAV_COMMUNITY, Icons.Filled.Groups, Icons.Outlined.Groups, AdventureOrange),
+    NavTab(Screen.LIVE_TRACKER, Str.NAV_GO, Icons.Filled.PlayCircle, Icons.Outlined.PlayCircle, AdventureOrange),
     NavTab(Screen.PROFILE, Str.NAV_RIDER, Icons.Filled.Person, Icons.Outlined.Person, AmberGold),
 )
 
@@ -862,8 +861,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                                 },
                                 label = {
                                     Text(
-                                        if (tab.screen == Screen.LIVE_TRACKER && activityMode != ActivityType.Motorcycling) "Track"
-                                        else tab.label.get(lang),
+                                        tab.label.get(lang),
                                         maxLines = 1,
                                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                                     )
@@ -922,7 +920,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     Screen.LIVE_TRACKER -> GpsTrackerScreen(viewModel = viewModel)
                     Screen.STORY_STUDIO -> AiStoryStudioScreen(viewModel = viewModel)
                     Screen.GAMIFICATION -> GamificationScreen(viewModel = viewModel)
-                    Screen.CLUBS -> ClubsScreen(viewModel = viewModel)
+                    Screen.CLUBS -> CommunityHubScreen(viewModel = viewModel)
                     Screen.PROFILE -> ProfileScreen(viewModel = viewModel)
                     Screen.PRO_PAYWALL -> ProPaywallScreen(viewModel = viewModel)
                 }
