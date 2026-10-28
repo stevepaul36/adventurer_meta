@@ -126,6 +126,37 @@ fun ProfileScreen(
                 }
             }
 
+            // Keep safety discoverable after moving SOS/help out of the primary bottom navigation.
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().testTag("profile_safety_help_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF20191B)),
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF7F3B35))
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(Icons.Default.HealthAndSafety, contentDescription = null, tint = Color(0xFFFF8B75), modifier = Modifier.size(26.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Safety & Help", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Roadside options, safety guidance and emergency-call entry points. Availability depends on device and region.",
+                                color = Color(0xFFD9C8C6),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        OutlinedButton(onClick = { viewModel.navigateTo(Screen.RADAR) }) {
+                            Text("Open", color = Color(0xFFFFB4A6))
+                        }
+                    }
+                }
+            }
+
             // Monetization entry point. Product prices come from Google Play via RevenueCat.
             item {
                 Card(
