@@ -42,7 +42,8 @@ fun PostCard(
     post: Post,
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPhotoClick: ((String, String) -> Unit)? = null
 ) {
     Card(
         modifier = modifier
@@ -119,15 +120,41 @@ fun PostCard(
             // Image
             post.imageUrl?.let { img ->
                 Spacer(modifier = Modifier.height(12.dp))
-                AsyncImage(
-                    model = img,
-                    contentDescription = "Post image",
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(230.dp)
-                        .clip(RoundedCornerShape(14.dp)),
-                    contentScale = ContentScale.Crop
-                )
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable(enabled = onPhotoClick != null) {
+                            onPhotoClick?.invoke(img, post.caption)
+                        }
+                ) {
+                    AsyncImage(
+                        model = img,
+                        contentDescription = "Post image",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    if (onPhotoClick != null) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.Black.copy(alpha = 0.5f),
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(8.dp)
+                                .size(28.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.ZoomIn,
+                                    contentDescription = "View full photo",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(14.dp))

@@ -27,6 +27,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -45,9 +46,17 @@ import com.example.data.providers.RegionalServiceCategory
 import com.example.ui.components.ExpeditionGearPackListCard
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
+import com.example.ui.theme.BorderNavy
+import com.example.ui.theme.FieldMuted
+import com.example.ui.theme.FieldNavy
 import com.example.ui.theme.HighAltitudeCyan
+import com.example.ui.theme.SafeMint
+import com.example.ui.theme.SlatePanel
+import com.example.ui.theme.SlatePanelAlt
 import com.example.ui.theme.SuccessGreen
+import com.example.ui.theme.TrailOrange
 import com.example.viewmodel.AdventurerViewModel
+import com.example.viewmodel.Screen
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -268,16 +277,46 @@ fun AdventurePlannerScreen(
             TopAppBar(
                 title = {
                     Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "FIELD ATLAS",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 16.sp
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = TrailOrange.copy(alpha = 0.2f)
+                            ) {
+                                Text(
+                                    "02 EXPLORE",
+                                    color = TrailOrange,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
                         Text(
-                            "Explore & Plan",
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "Discover a place · build the trip · prepare safely",
-                            color = AmberGold,
+                            "Discover / close to somewhere · Find a route worth the detour",
+                            color = FieldMuted,
                             style = MaterialTheme.typography.labelSmall
                         )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { viewModel.navigateTo(Screen.EXPEDITIONS) },
+                        modifier = Modifier.testTag("planner_nav_expeditions")
+                    ) {
+                        Icon(Icons.Default.Terrain, contentDescription = "Curated Expeditions", tint = HighAltitudeCyan)
+                    }
+                    IconButton(
+                        onClick = { viewModel.setShowFeatureOrganizer(true) },
+                        modifier = Modifier.testTag("planner_nav_modules")
+                    ) {
+                        Icon(Icons.Default.Widgets, contentDescription = "All Modules", tint = SafeMint)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -295,6 +334,144 @@ fun AdventurePlannerScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            // Screen 02: Map Candidates & Honest Provenance Warning
+            item(key = "field-atlas-candidates") {
+                Card(
+                    modifier = Modifier.fillMaxWidth().testTag("field_atlas_candidates_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = SlatePanel),
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = Brush.horizontalGradient(listOf(TrailOrange.copy(alpha = 0.8f), SafeMint.copy(alpha = 0.4f)))
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Map, contentDescription = null, tint = TrailOrange, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "MAP CANDIDATES",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = AmberGold.copy(alpha = 0.2f)
+                            ) {
+                                Text(
+                                    "NOT VERIFIED ROUTING",
+                                    color = AmberGold,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 9.sp,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Candidate route tracks and sample estimates. Tap any route to open its Route Brief and safety checklist.",
+                            color = FieldMuted,
+                            fontSize = 11.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Candidate Route 1 (Ridge & River Loop)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = SlatePanelAlt,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderNavy),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.navigateTo(Screen.ROUTE_BRIEF) }
+                                .testTag("candidate_route_ridge_river")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            "Ridge & River Loop",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(shape = RoundedCornerShape(4.dp), color = TrailOrange.copy(alpha = 0.2f)) {
+                                            Text("74 km · 3h", color = TrailOrange, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text("4 scenic stops · Mixed road · intermediate", color = FieldMuted, fontSize = 11.sp)
+                                }
+                                Button(
+                                    onClick = { viewModel.navigateTo(Screen.ROUTE_BRIEF) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = TrailOrange),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text("Brief →", color = FieldNavy, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Candidate Route 2 (Lookout Traverse)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = SlatePanelAlt,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderNavy),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.navigateTo(Screen.ROUTE_BRIEF) }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            "Lookout Traverse",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(shape = RoundedCornerShape(4.dp), color = SafeMint.copy(alpha = 0.2f)) {
+                                            Text("8.4 km · 3–4 h", color = SafeMint, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text("Steep section · check conditions", color = FieldMuted, fontSize = 11.sp)
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.navigateTo(Screen.ROUTE_BRIEF) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text("Brief →", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Quick Destination Recommendations & Live Search
             item(key = "destination-discovery") {
                 PlannerPanelCard {

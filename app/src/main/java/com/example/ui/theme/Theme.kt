@@ -12,27 +12,27 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = AdventureOrange,
-    onPrimary = DarkBackground,
+    primary = TrailOrange,
+    onPrimary = FieldNavy,
     primaryContainer = AdventureOrangeDark,
-    onPrimaryContainer = TextPrimary,
+    onPrimaryContainer = FieldText,
     secondary = AmberGold,
-    onSecondary = DarkBackground,
-    secondaryContainer = DarkSurfaceVariant,
+    onSecondary = FieldNavy,
+    secondaryContainer = SlatePanelAlt,
     onSecondaryContainer = AmberGoldLight,
-    tertiary = HighAltitudeCyan,
-    onTertiary = DarkBackground,
+    tertiary = SafeMint,
+    onTertiary = FieldNavy,
     tertiaryContainer = Color(0xFF0C4A6E),
     onTertiaryContainer = HighAltitudeCyanLight,
-    background = DarkBackground,
-    onBackground = TextPrimary,
-    surface = DarkSurface,
-    onSurface = TextPrimary,
-    surfaceVariant = DarkSurfaceVariant,
-    onSurfaceVariant = TextSecondary,
-    outline = DarkSurfaceBorder,
+    background = FieldNavy,
+    onBackground = FieldText,
+    surface = SlatePanel,
+    onSurface = FieldText,
+    surfaceVariant = SlatePanelAlt,
+    onSurfaceVariant = FieldMuted,
+    outline = BorderNavy,
     error = DangerRed,
-    onError = TextPrimary
+    onError = FieldText
 )
 
 private val LightColorScheme = lightColorScheme(

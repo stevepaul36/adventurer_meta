@@ -32,9 +32,15 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
 import com.example.ui.theme.DangerRed
+import com.example.ui.theme.FieldMuted
+import com.example.ui.theme.FieldNavy
 import com.example.ui.theme.HighAltitudeCyan
+import com.example.ui.theme.SafeMint
+import com.example.ui.theme.SlatePanel
+import com.example.ui.theme.TrailOrange
 import com.example.analytics.AdventureFunnelAnalytics
 import com.example.viewmodel.AdventurerViewModel
+import com.example.viewmodel.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,24 +77,38 @@ fun GpsTrackerScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = CircleShape,
-                            color = if (telemetry.isRecording) Color(0xFF10B981) else AmberGold,
-                            modifier = Modifier.size(12.dp)
-                        ) {}
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = if (telemetry.isRecording) (if (telemetry.isPaused) AmberGold else SafeMint) else FieldMuted,
+                                modifier = Modifier.size(10.dp)
+                            ) {}
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (telemetry.isRecording) "LIVE ${activityType.displayName.uppercase()} TRACKER" else "START ${activityType.displayName.uppercase()} SESSION",
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                text = "FIELD MODE",
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 16.sp
                             )
-                            Text(
-                                text = activityType.trackerSubtitle,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = AmberGold
-                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = TrailOrange.copy(alpha = 0.2f)
+                            ) {
+                                Text(
+                                    if (telemetry.isRecording) (if (telemetry.isPaused) "PAUSED" else "ACTIVE") else "READY",
+                                    color = TrailOrange,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                )
+                            }
                         }
+                        Text(
+                            text = if (telemetry.isRecording) "Ridge & River Loop · Practice session" else "Calm, glanceable active session",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = FieldMuted
+                        )
                     }
                 },
                 navigationIcon = {
@@ -438,14 +458,17 @@ fun GpsTrackerScreen(
                             }
                         }
                         Button(
-                            onClick = { viewModel.finishRide() },
-                            colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange),
+                            onClick = {
+                                viewModel.finishRide()
+                                viewModel.navigateTo(Screen.STORY_STUDIO)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = TrailOrange),
                             shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().testTag("field_mode_finish_button")
                         ) {
-                            Icon(Icons.Default.Flag, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Movie, contentDescription = null, tint = FieldNavy, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Finish & Post", color = Color.Black, fontWeight = FontWeight.Bold)
+                            Text("Finish & Shape Story →", color = FieldNavy, fontWeight = FontWeight.ExtraBold)
                         }
                         OutlinedButton(
                             onClick = { viewModel.discardRide() },

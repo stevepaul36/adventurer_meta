@@ -37,6 +37,7 @@ import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
 import com.example.ui.theme.DangerRed
 import com.example.ui.theme.HighAltitudeCyan
+import com.example.ui.theme.SafeMint
 import com.example.ui.theme.SuccessGreen
 import com.example.viewmodel.AdventurerViewModel
 import com.example.viewmodel.Screen
@@ -131,6 +132,22 @@ fun JourneyScreen(
                             Icon(Icons.Default.Speed, contentDescription = null, tint = AdventureOrange, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("HUD", color = AdventureOrange, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+
+                        // Roadside Assistance Radar shortcut
+                        IconButton(
+                            onClick = { viewModel.navigateTo(Screen.RADAR) },
+                            modifier = Modifier.testTag("journey_nav_radar")
+                        ) {
+                            Icon(Icons.Default.Radar, contentDescription = "Roadside Radar", tint = DangerRed)
+                        }
+
+                        // All Modules Directory
+                        IconButton(
+                            onClick = { viewModel.setShowFeatureOrganizer(true) },
+                            modifier = Modifier.testTag("journey_nav_modules")
+                        ) {
+                            Icon(Icons.Default.Widgets, contentDescription = "All Modules", tint = SafeMint)
                         }
 
                         // Food cart badge button

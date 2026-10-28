@@ -25,8 +25,16 @@ import com.example.data.model.Post
 import com.example.data.model.TripBudgetEstimate
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
+import com.example.ui.theme.BorderNavy
 import com.example.ui.theme.DangerRed
+import com.example.ui.theme.FieldMuted
+import com.example.ui.theme.FieldNavy
 import com.example.ui.theme.HighAltitudeCyan
+import com.example.ui.theme.SafeMint
+import com.example.ui.theme.SlatePanel
+import com.example.ui.theme.SlatePanelAlt
+import com.example.ui.theme.TrailOrange
+import com.example.viewmodel.Screen
 
 @Composable
 fun CreatePostDialog(
@@ -398,3 +406,192 @@ private fun BudgetLineItem(label: String, value: String) {
         Text(value, style = MaterialTheme.typography.bodySmall, color = Color.White, fontWeight = FontWeight.SemiBold)
     }
 }
+
+private data class OrganizerFeature(
+    val screen: Screen,
+    val title: String,
+    val description: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val accentColor: Color
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdventureFeatureOrganizerSheet(
+    onDismiss: () -> Unit,
+    onNavigate: (Screen) -> Unit
+) {
+    val operationalGroup = listOf(
+        OrganizerFeature(Screen.FEED, "Basecamp Launchpad", "Stories, active shorts reel & community feed", Icons.Default.Home, TrailOrange),
+        OrganizerFeature(Screen.JOURNEY, "Journey Command Center", "Nearby POIs, food cart simulation, fuel calc & voice dock", Icons.Default.Explore, TrailOrange),
+        OrganizerFeature(Screen.LIVE_TRACKER, "Field Mode (HUD)", "4-stage GPS telemetry, breadcrumb & check-in plan", Icons.Default.Speed, SafeMint),
+        OrganizerFeature(Screen.ROUTE_BRIEF, "Route Brief & Checklist", "74 km route, 8-point checklist & elevation graph", Icons.Default.Checklist, SafeMint),
+        OrganizerFeature(Screen.VOICE_COMPANION, "Voice Companion", "Hands-free realtime Gemini audio travel guide", Icons.Default.Mic, Color(0xFF818CF8))
+    )
+
+    val explorationGroup = listOf(
+        OrganizerFeature(Screen.EXPLORE_PLAN, "Field Atlas", "Map candidates, gear packing list & regional catalog", Icons.Default.Map, TrailOrange),
+        OrganizerFeature(Screen.EXPEDITIONS, "India Expeditions", "Curated routes across Ladakh, Spiti & Western Ghats", Icons.Default.Terrain, HighAltitudeCyan),
+        OrganizerFeature(Screen.RADAR, "Roadside Radar & SOS", "Live roadside assistance map & distress beacons", Icons.Default.Radar, DangerRed)
+    )
+
+    val storyGroup = listOf(
+        OrganizerFeature(Screen.STORY_STUDIO, "AI Story Studio", "Multimodal story templates, reels & audio narration", Icons.Default.AutoAwesome, Color(0xFFC084FC)),
+        OrganizerFeature(Screen.FINAL_REVIEW, "Final Review", "3-point privacy safety gating check before posting", Icons.Default.VerifiedUser, SafeMint)
+    )
+
+    val communityGroup = listOf(
+        OrganizerFeature(Screen.CLUBS, "Riding Clubs", "Active chapters, meetups & scheduled group rides", Icons.Default.Groups, Color(0xFF38BDF8)),
+        OrganizerFeature(Screen.GAMIFICATION, "Gamification Hub", "Rider XP levels, streaks & 16 unlockable badges", Icons.Default.EmojiEvents, AmberGold),
+        OrganizerFeature(Screen.PROFILE, "Trail Settings (\"Me\")", "Multi-activity identity, privacy check-up & offline cache", Icons.Default.Settings, AmberGold),
+        OrganizerFeature(Screen.PRO_PAYWALL, "Adventurer Pro", "Offline 3D topo maps, satellite beacon sync & unlimited AI", Icons.Default.WorkspacePremium, Color(0xFFFB7185))
+    )
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = SlatePanel,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        dragHandle = { BottomSheetDefaults.DragHandle(color = BorderNavy) },
+        modifier = Modifier.testTag("feature_organizer_bottom_sheet")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp)
+                .padding(bottom = 24.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "ADVENTURE MODULES DIRECTORY",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TrailOrange
+                    )
+                    Text(
+                        text = "All 14 features neatly organized by domain",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(36.dp).testTag("close_feature_organizer_button")
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = FieldMuted)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    OrganizerGroupSection("🧭 TRIP & FIELD OPERATIONS", operationalGroup, onNavigate)
+                }
+                item {
+                    OrganizerGroupSection("🗺️ EXPLORATION & SAFETY", explorationGroup, onNavigate)
+                }
+                item {
+                    OrganizerGroupSection("🎬 STORY & SHARING", storyGroup, onNavigate)
+                }
+                item {
+                    OrganizerGroupSection("👥 COMMUNITY & PROGRESSION", communityGroup, onNavigate)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OrganizerGroupSection(
+    title: String,
+    features: List<OrganizerFeature>,
+    onNavigate: (Screen) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = FieldMuted,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(SlatePanelAlt, RoundedCornerShape(12.dp))
+                .padding(vertical = 4.dp)
+        ) {
+            features.forEachIndexed { index, feature ->
+                Surface(
+                    onClick = { onNavigate(feature.screen) },
+                    color = Color.Transparent,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 52.dp)
+                        .testTag("organizer_nav_${feature.screen.name.lowercase()}")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = feature.accentColor.copy(alpha = 0.15f),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    feature.icon,
+                                    contentDescription = null,
+                                    tint = feature.accentColor,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = feature.title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = feature.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = FieldMuted,
+                                maxLines = 1
+                            )
+                        }
+
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = BorderNavy,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                if (index < features.size - 1) {
+                    Divider(color = BorderNavy.copy(alpha = 0.4f), modifier = Modifier.padding(horizontal = 12.dp))
+                }
+            }
+        }
+    }
+}
+

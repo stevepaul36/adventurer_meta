@@ -5,9 +5,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
 
 // Adventurer Palette - Vibrant Solar Adventure & High Pass Outdoor Colors
-val AdventureOrange = Color(0xFFFF5722)
-val AdventureOrangeLight = Color(0xFFFF8A65)
+val AdventureOrange = Color(0xFFFF8B43) // Mapped to official Trail Orange #FF8B43
+val AdventureOrangeLight = Color(0xFFFFB07A)
 val AdventureOrangeDark = Color(0xFFD84315)
+
+// Official Adventurer UI/UX Concept System Tokens
+val FieldNavy = Color(0xFF0A1119)
+val SlatePanel = Color(0xFF111D28)
+val SlatePanelAlt = Color(0xFF162532)
+val BorderNavy = Color(0xFF263844)
+val TrailOrange = Color(0xFFFF8B43)
+val SafeMint = Color(0xFFA8DFC4)
+val FieldText = Color(0xFFF4F1E9)
+val FieldMuted = Color(0xFF94A3B8)
 
 val AmberGold = Color(0xFFF59E0B)
 val AmberGoldLight = Color(0xFFFCD34D)

@@ -11,17 +11,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 enum class Screen(val title: String, val isTopLevel: Boolean = false) {
-    FEED("Feed", isTopLevel = true),
+    FEED("Basecamp", isTopLevel = true),
     JOURNEY("Journey", isTopLevel = true),
     EXPEDITIONS("Expeditions"),
-    EXPLORE_PLAN("Explore & Plan", isTopLevel = true),
+    EXPLORE_PLAN("Field Atlas", isTopLevel = true),
+    ROUTE_BRIEF("Route Brief"),
     VOICE_COMPANION("Voice Companion", isTopLevel = true),
     RADAR("Roadside Radar", isTopLevel = true),
-    LIVE_TRACKER("Live Telemetry", isTopLevel = true),
-    STORY_STUDIO("AI Story Studio"),
+    LIVE_TRACKER("Field Mode", isTopLevel = true),
+    STORY_STUDIO("Story Studio", isTopLevel = true),
+    FINAL_REVIEW("Final Review"),
     GAMIFICATION("Gamification Hub"),
     CLUBS("Riding Clubs"),
-    PROFILE("Rider Profile", isTopLevel = true),
+    PROFILE("Trail Settings", isTopLevel = true),
     PRO_PAYWALL("Adventurer Pro")
 }
 
@@ -62,6 +64,13 @@ class AdventurerViewModel(
 
     private val _activeCommentPostIndex = MutableStateFlow<Int?>(null)
     val activeCommentPostIndex: StateFlow<Int?> = _activeCommentPostIndex.asStateFlow()
+
+    private val _showFeatureOrganizer = MutableStateFlow(false)
+    val showFeatureOrganizer: StateFlow<Boolean> = _showFeatureOrganizer.asStateFlow()
+
+    fun setShowFeatureOrganizer(show: Boolean) {
+        _showFeatureOrganizer.value = show
+    }
 
     val feed = repository.feed
     val expeditions = repository.expeditions

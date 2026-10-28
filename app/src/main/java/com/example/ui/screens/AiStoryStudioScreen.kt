@@ -62,7 +62,9 @@ import com.example.data.story.formatTime
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
 import com.example.ui.theme.DangerRed
+import com.example.ui.theme.FieldNavy
 import com.example.ui.theme.HighAltitudeCyan
+import com.example.ui.theme.SafeMint
 import com.example.viewmodel.AdventurerViewModel
 import com.example.viewmodel.Screen
 import com.example.viewmodel.StoryStudioViewModel
@@ -279,6 +281,7 @@ fun AiStoryStudioScreen(
                             viewModel.navigateTo(Screen.FEED)
                         },
                         onGoToHighlights = { tab = 1 },
+                        onGoToFinalReview = { viewModel.navigateTo(Screen.FINAL_REVIEW) },
                     )
                 }
             }
@@ -467,6 +470,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.storyTab(
     onCopy: (String) -> Unit,
     onPost: (String) -> Unit,
     onGoToHighlights: () -> Unit,
+    onGoToFinalReview: () -> Unit,
 ) {
     item {
         PanelCard {
@@ -525,8 +529,15 @@ private fun androidx.compose.foundation.lazy.LazyListScope.storyTab(
                 OutlinedButton(onClick = { onCopy(shareText) }, shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f)) {
                     Icon(Icons.Default.ContentCopy, null, tint = Violet, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Copy", color = Violet)
                 }
-                Button(onClick = { onPost(shareText) }, colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange), shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.Share, null, tint = Color.Black, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Post to feed", color = Color.Black, fontWeight = FontWeight.Bold)
+                Button(
+                    onClick = onGoToFinalReview,
+                    colors = ButtonDefaults.buttonColors(containerColor = SafeMint),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.weight(1.3f).testTag("go_to_final_review_button")
+                ) {
+                    Icon(Icons.Default.VerifiedUser, null, tint = FieldNavy, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Final Review →", color = FieldNavy, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }

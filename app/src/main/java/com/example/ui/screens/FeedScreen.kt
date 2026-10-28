@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,6 +30,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.analytics.AdventureFunnelAnalytics
 import com.example.data.model.*
 import com.example.data.repository.formatRideDuration
@@ -37,7 +39,13 @@ import com.example.ui.components.*
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AmberGold
 import com.example.ui.theme.DangerRed
+import com.example.ui.theme.FieldMuted
+import com.example.ui.theme.FieldNavy
 import com.example.ui.theme.HighAltitudeCyan
+import com.example.ui.theme.SafeMint
+import com.example.ui.theme.SlatePanel
+import com.example.ui.theme.SuccessGreen
+import com.example.ui.theme.TrailOrange
 import com.example.viewmodel.AdventurerViewModel
 import com.example.viewmodel.Screen
 import com.example.viewmodel.SupportedLang
@@ -57,6 +65,9 @@ fun FeedScreen(
     val isDarkMode by viewModel.isDarkMode.collectAsState()
     var showLangDropdown by remember { mutableStateOf(false) }
     var selectedTerrain by remember { mutableStateOf("All Terrains") }
+    var activeViewerShort by remember { mutableStateOf<AdventureShort?>(null) }
+    var activePhotoViewer by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var activeViewerFilter by remember { mutableStateOf("All Media") }
     val listState = rememberLazyListState()
 
     val rotationAngle by animateFloatAsState(
@@ -168,6 +179,18 @@ fun FeedScreen(
                         }
                     }
 
+                    // All Modules & Features Navigator
+                    IconButton(
+                        onClick = { viewModel.setShowFeatureOrganizer(true) },
+                        modifier = Modifier.testTag("open_feature_organizer_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Widgets,
+                            contentDescription = "Adventure Modules Directory",
+                            tint = SafeMint
+                        )
+                    }
+
                     // Create Post quick top action
                     IconButton(
                         onClick = { viewModel.setShowCreatePost(true) },
@@ -226,29 +249,287 @@ fun FeedScreen(
             contentPadding = PaddingValues(bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Expedition Live Stories Strip
+            // 1. TOP: Expedition Live Shorts & Vertical Video Reels (Active Viewer Showcase)
+            item {
+                ExpeditionShortsReel(
+                    shorts = defaultAdventureShorts,
+                    onShortClick = { shortItem ->
+                        activeViewerShort = shortItem
+                    },
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            // 2. Active Viewer Filter Chips
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    listOf("All Media", "🔥 Trail Shorts", "📸 Trail Photos", "🏔️ High Pass").forEach { filterName ->
+                        val isSelected = activeViewerFilter == filterName
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { activeViewerFilter = filterName },
+                            label = {
+                                Text(
+                                    text = filterName,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = AdventureOrange,
+                                selectedLabelColor = Color.White,
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                labelColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = isSelected,
+                                borderColor = if (isSelected) AdventureOrange else MaterialTheme.colorScheme.outline
+                            ),
+                            modifier = Modifier.testTag("viewer_filter_${filterName.replace(" ", "_").lowercase()}")
+                        )
+                    }
+                }
+            }
+
+            // 3. Basecamp Active Plan & Preparation Resume Card (Screen 01)
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .clickable { viewModel.navigateTo(Screen.ROUTE_BRIEF) }
+                        .testTag("basecamp_resume_plan_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = SlatePanel),
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = Brush.horizontalGradient(listOf(TrailOrange.copy(alpha = 0.8f), SafeMint.copy(alpha = 0.5f)))
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = SafeMint.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        "6/8 PREP COMPLETE",
+                                        color = SafeMint,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 10.sp,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "SAVED TRIP CANDIDATE",
+                                    color = FieldMuted,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.7f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            "Ridge & River Loop · 74 km",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            "4 stops · North overlook, Creek crossing · Expected return 6:30 PM",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = FieldMuted
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { viewModel.navigateTo(Screen.ROUTE_BRIEF) },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                                modifier = Modifier.weight(1f).height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp)
+                            ) {
+                                Text("Route Brief", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            Button(
+                                onClick = { viewModel.navigateTo(Screen.LIVE_TRACKER) },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = TrailOrange),
+                                modifier = Modifier.weight(1f).height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp)
+                            ) {
+                                Text("Field Mode", color = FieldNavy, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. Adventure Modules & Expedition Tools Hub
+            item {
+                AdventureModulesHub(
+                    currentScreen = Screen.FEED,
+                    onNavigate = { viewModel.navigateTo(it) },
+                    onOpenAllModules = { viewModel.setShowFeatureOrganizer(true) },
+                    lang = currentLang
+                )
+            }
+
+            // 5. Expedition Live Stories Avatars Strip
             item {
                 ExpeditionStoriesStrip(
                     onAddStoryClick = { viewModel.setShowCreatePost(true) },
                     onStoryClick = { story ->
                         viewModel.navigateTo(Screen.STORY_STUDIO)
                     },
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier.padding(top = 2.dp)
                 )
             }
 
-            // Alpine Weather & Telemetry Bar
+            // 4. Photos & Visual Media Feed Section Header
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "EXPEDITION PHOTOS & MOMENTS",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AdventureOrange
+                    )
+                    Text(
+                        text = "High-Res Trail View",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (filteredFeedItems.isEmpty()) {
+                item {
+                    Text(
+                        Str.FEED_EMPTY.get(currentLang),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(32.dp)
+                    )
+                }
+            }
+
+            // 5. Active Viewer Photos & Post Cards (Elevated to top)
+            itemsIndexed(filteredFeedItems) { index, item ->
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    when (item) {
+                        is FeedItem.PostItem -> {
+                            PostCard(
+                                post = item.post,
+                                onLikeClick = { viewModel.toggleLike(index) },
+                                onCommentClick = { viewModel.openCommentSheet(index) },
+                                onPhotoClick = { photoUrl, caption ->
+                                    activePhotoViewer = Pair(photoUrl, caption)
+                                }
+                            )
+                        }
+                        is FeedItem.RideShareItem -> {
+                            RideShareCard(
+                                rideShare = item.rideShare,
+                                onLikeClick = { viewModel.toggleLike(index) },
+                                onCommentClick = { viewModel.openCommentSheet(index) }
+                            )
+                        }
+                        is FeedItem.StoryItem -> {
+                            RideStoryCard(
+                                story = item.story,
+                                onClick = { viewModel.navigateTo(Screen.STORY_STUDIO) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 6. Section Divider: Adventure Hub & Telemetry
+            item {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Explore,
+                                contentDescription = null,
+                                tint = HighAltitudeCyan,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "ADVENTURE CONTROLS & TELEMETRY",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Text(
+                            text = "Sensors Active",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SuccessGreen,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // 7. Alpine Weather & Telemetry Bar
             item {
                 Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                     AlpineWeatherTelemetryBar()
                 }
             }
 
-            // Interactive Activity Mode Switcher Strip
+            // 8. Interactive Activity Mode Switcher Strip
             item {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = "EXPLORE BY ACTIVITY",
@@ -314,14 +595,14 @@ fun FeedScreen(
                 }
             }
 
-            // Season Altitude Profile & Interactive Sparkline Card
+            // 9. Season Altitude Profile & Sparkline Card
             item {
                 Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                     ExpeditionElevationSparklineCard()
                 }
             }
 
-            // Hero: start an adventure, or jump back into active recording
+            // 10. Hero: start an adventure, or jump back into active recording
             item {
                 Card(
                     modifier = Modifier
@@ -405,7 +686,7 @@ fun FeedScreen(
                 }
             }
 
-            // Shortcuts to the non-tab screens
+            // 11. Shortcuts to the non-tab screens
             item {
                 Text(
                     Str.EXPLORE.get(currentLang),
@@ -423,7 +704,7 @@ fun FeedScreen(
                 )
             }
 
-            // Terrain & Trail Filter Chips
+            // 12. Terrain & Trail Filter Chips
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text(
@@ -439,45 +720,36 @@ fun FeedScreen(
                     )
                 }
             }
+        }
 
-            if (filteredFeedItems.isEmpty()) {
-                item {
-                    Text(
-                        Str.FEED_EMPTY.get(currentLang),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth().padding(32.dp)
-                    )
-                }
+        // Active Shorts Viewer Modal Overlay
+        activeViewerShort?.let { currentShort ->
+            val shortsList = defaultAdventureShorts
+            val currentIndex = remember(currentShort) {
+                shortsList.indexOfFirst { it.id == currentShort.id }.coerceAtLeast(0)
             }
+            ActiveShortsViewerModal(
+                short = currentShort,
+                onDismiss = { activeViewerShort = null },
+                onNext = {
+                    val nextIndex = (currentIndex + 1) % shortsList.size
+                    activeViewerShort = shortsList[nextIndex]
+                },
+                onPrevious = {
+                    val prevIndex = (currentIndex - 1 + shortsList.size) % shortsList.size
+                    activeViewerShort = shortsList[prevIndex]
+                }
+            )
+        }
 
-            // Feed items
-            itemsIndexed(filteredFeedItems) { index, item ->
-                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    when (item) {
-                        is FeedItem.PostItem -> {
-                            PostCard(
-                                post = item.post,
-                                onLikeClick = { viewModel.toggleLike(index) },
-                                onCommentClick = { viewModel.openCommentSheet(index) }
-                            )
-                        }
-                        is FeedItem.RideShareItem -> {
-                            RideShareCard(
-                                rideShare = item.rideShare,
-                                onLikeClick = { viewModel.toggleLike(index) },
-                                onCommentClick = { viewModel.openCommentSheet(index) }
-                            )
-                        }
-                        is FeedItem.StoryItem -> {
-                            RideStoryCard(
-                                story = item.story,
-                                onClick = { viewModel.navigateTo(Screen.STORY_STUDIO) }
-                            )
-                        }
-                    }
-                }
-            }
+        // Active Photo Viewer Dialog Overlay
+        activePhotoViewer?.let { (photoUrl, caption) ->
+            ActivePhotoViewerDialog(
+                photoUrl = photoUrl,
+                caption = caption,
+                onDismiss = { activePhotoViewer = null }
+            )
         }
     }
 }
+

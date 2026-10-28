@@ -62,11 +62,14 @@ import com.example.ui.components.AdventureVoiceBubble
 import com.example.ui.components.CommentsBottomSheet
 import com.example.ui.components.CreatePostDialog
 import com.example.ui.components.SafetySosDialog
+import com.example.ui.components.AdventureFeatureOrganizerSheet
 import com.example.ui.theme.DangerRed
 import com.example.ui.screens.*
 import com.example.ui.theme.AdventureOrange
 import com.example.ui.theme.AdventurerTheme
 import com.example.ui.theme.AmberGold
+import com.example.ui.theme.TrailOrange
+import com.example.ui.theme.SafeMint
 import com.example.viewmodel.AdventurerViewModel
 import com.example.viewmodel.Screen
 import com.google.firebase.functions.FirebaseFunctions
@@ -112,12 +115,11 @@ private data class VoicePlaceFix(
 private data class NavTab(val screen: Screen, val label: Str, val selected: ImageVector, val unselected: ImageVector, val accent: Color)
 
 private val NavTabs = listOf(
-    NavTab(Screen.FEED, Str.NAV_FEED, Icons.Filled.Home, Icons.Outlined.Home, AdventureOrange),
-    NavTab(Screen.JOURNEY, Str.NAV_JOURNEY, Icons.Filled.Explore, Icons.Outlined.Explore, AdventureOrange),
-    NavTab(Screen.EXPLORE_PLAN, Str.NAV_EXPLORE, Icons.Filled.Map, Icons.Outlined.Map, AdventureOrange),
-    NavTab(Screen.VOICE_COMPANION, Str.NAV_VOICE, Icons.Filled.Mic, Icons.Outlined.Mic, AdventureOrange),
-    NavTab(Screen.RADAR, Str.NAV_SOS, Icons.Filled.Emergency, Icons.Outlined.Emergency, Color(0xFFEF4444)),
-    NavTab(Screen.PROFILE, Str.NAV_RIDER, Icons.Filled.Person, Icons.Outlined.Person, AmberGold),
+    NavTab(Screen.FEED, Str.NAV_FEED, Icons.Filled.Home, Icons.Outlined.Home, TrailOrange),
+    NavTab(Screen.EXPLORE_PLAN, Str.NAV_EXPLORE, Icons.Filled.Map, Icons.Outlined.Map, TrailOrange),
+    NavTab(Screen.LIVE_TRACKER, Str.NAV_RIDE, Icons.Filled.PlayCircle, Icons.Outlined.PlayCircle, TrailOrange),
+    NavTab(Screen.STORY_STUDIO, Str.QUICK_STUDIO, Icons.Filled.AutoAwesome, Icons.Outlined.AutoAwesome, SafeMint),
+    NavTab(Screen.PROFILE, Str.NAV_RIDER, Icons.Filled.Settings, Icons.Outlined.Settings, AmberGold),
 )
 
 @Composable
@@ -624,6 +626,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
     val showCreatePost by viewModel.showCreatePost.collectAsState()
     val activeCommentIndex by viewModel.activeCommentPostIndex.collectAsState()
     val showSosAlert by viewModel.showSosAlert.collectAsState()
+    val showFeatureOrganizer by viewModel.showFeatureOrganizer.collectAsState()
     val feedItems by viewModel.feed.collectAsState()
     val telemetry by viewModel.telemetry.collectAsState()
     val activityMode by viewModel.activityMode.collectAsState()
@@ -909,6 +912,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     Screen.FEED -> FeedScreen(viewModel = viewModel)
                     Screen.JOURNEY -> JourneyScreen(viewModel = viewModel)
                     Screen.EXPLORE_PLAN -> AdventurePlannerScreen(viewModel = viewModel, plannerRepository = plannerRepository)
+                    Screen.ROUTE_BRIEF -> RouteBriefScreen(viewModel = viewModel)
                     Screen.VOICE_COMPANION -> AdventureVoiceCompanionScreen(
                         viewModel = viewModel,
                         controller = voiceController,
@@ -921,6 +925,7 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     Screen.RADAR -> RoadsideRadarScreen(viewModel = viewModel)
                     Screen.LIVE_TRACKER -> GpsTrackerScreen(viewModel = viewModel)
                     Screen.STORY_STUDIO -> AiStoryStudioScreen(viewModel = viewModel)
+                    Screen.FINAL_REVIEW -> FinalReviewScreen(viewModel = viewModel)
                     Screen.GAMIFICATION -> GamificationScreen(viewModel = viewModel)
                     Screen.CLUBS -> ClubsScreen(viewModel = viewModel)
                     Screen.PROFILE -> ProfileScreen(viewModel = viewModel)
@@ -968,6 +973,16 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
             locationManager = viewModel.locationManager,
             liveLatitude = telemetry.latitude.takeIf { telemetry.hasGpsFix },
             liveLongitude = telemetry.longitude.takeIf { telemetry.hasGpsFix },
+        )
+    }
+
+    if (showFeatureOrganizer) {
+        AdventureFeatureOrganizerSheet(
+            onDismiss = { viewModel.setShowFeatureOrganizer(false) },
+            onNavigate = { targetScreen ->
+                viewModel.setShowFeatureOrganizer(false)
+                viewModel.navigateTo(targetScreen)
+            }
         )
     }
 }
