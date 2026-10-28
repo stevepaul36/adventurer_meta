@@ -68,7 +68,7 @@ class AdventureFeatureCatalogTest {
     fun filtersCanCombineCategoryAndSearch() {
         assertEquals(
             listOf(Screen.RADAR),
-            filterAdventureFeatures("safety", ModuleCategory.FIELD_SAFETY).map { it.screen }
+            filterAdventureFeatures("roadside", ModuleCategory.FIELD_SAFETY).map { it.screen }
         )
         assertTrue(
             filterAdventureFeatures("voice", ModuleCategory.COMMUNITY_PROGRESS).isEmpty()
