@@ -8,9 +8,11 @@ import com.example.viewmodel.SupportedLang
  * Screens not yet listed here stay in English.
  */
 enum class Str(val en: String, val hi: String, val mr: String, val kn: String, val ta: String) {
-    NAV_FEED("Feed", "फ़ीड", "फीड", "ಫೀಡ್", "ஃபீட்"),
-    NAV_EXPLORE("Explore", "एक्सप्लोर", "एक्सप्लोर", "ಅನ್ವೇಷಿಸಿ", "ஆராயுங்கள்"),
+    NAV_FEED("Home", "होम", "होम", "ಮುಖಪುಟ", "முகப்பு"),
+    NAV_EXPLORE("Discover", "खोजें", "शोधा", "ಅನ್ವೇಷಿಸಿ", "கண்டறியுங்கள்"),
     NAV_VOICE("Voice", "आवाज़", "आवाज", "ಧ್ವನಿ", "குரல்"),
+    NAV_COMMUNITY("Community", "समुदाय", "समुदाय", "ಸಮುದಾಯ", "சமூகம்"),
+    NAV_GO("Go", "चलें", "चला", "ಹೊರಡಿ", "செல்லுங்கள்"),
     QUICK_EXPEDITIONS("Expeditions", "अभियान", "मोहीमा", "ಅಭಿಯಾನಗಳು", "பயணங்கள்"),
     NAV_PASSES("Passes", "दर्रे", "खिंडी", "ಘಾಟ್‌ಗಳು", "கணவாய்கள்"),
     NAV_JOURNEY("Journey", "यात्रा", "प्रवास", "ಪ್ರಯಾಣ", "பயணம்"),
