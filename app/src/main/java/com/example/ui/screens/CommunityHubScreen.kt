@@ -135,6 +135,29 @@ fun CommunityHubScreen(
                         )
                     }
                 }
+                item {
+                    Text(
+                        "Upcoming group adventures",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                item {
+                    CommunityEventCard(
+                        title = "Fall colour loop",
+                        details = "Hiking · Sample meetup · Saturday 8:30 AM · Toronto area",
+                        description = "Meet at the trailhead, compare gear plans and agree on a return check-in before setting out.",
+                        onOpenPlanner = { viewModel.navigateTo(Screen.EXPLORE_PLAN) }
+                    )
+                }
+                item {
+                    CommunityEventCard(
+                        title = "Coffee & country roads",
+                        details = "Motorcycle · Sample meetup · Sunday 9:00 AM · GTA",
+                        description = "A relaxed group ride concept. Route, road conditions and final meetup details must be confirmed by the host.",
+                        onOpenPlanner = { viewModel.navigateTo(Screen.EXPLORE_PLAN) }
+                    )
+                }
             }
             1 -> {
                 val joinedClubs = clubs.filter { it.isJoined }
@@ -260,6 +283,27 @@ fun CommunityHubScreen(
                             }
                         }
                     }
+                    item {
+                        Text(
+                            "Suggested adventure friends · sample data",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    item {
+                        SuggestedFriendCard(
+                            name = "Maya R.",
+                            subtitle = "Hiking · photography · Ontario",
+                            note = "Share route ideas and trip stories."
+                        )
+                    }
+                    item {
+                        SuggestedFriendCard(
+                            name = "Ravi K.",
+                            subtitle = "Motorcycle touring · weekend trips",
+                            note = "Compare plans and coordinate group meetups."
+                        )
+                    }
                 }
             }
             else -> LazyColumn(
@@ -380,3 +424,70 @@ private fun CommunityChallengeCard(title: String, description: String) {
 }
 
 private data class DirectMessageLine(val fromMe: Boolean, val text: String)
+
+@Composable
+private fun CommunityEventCard(
+    title: String,
+    details: String,
+    description: String,
+    onOpenPlanner: () -> Unit
+) {
+    var attending by rememberSaveable(title) { mutableStateOf(false) }
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(details, style = MaterialTheme.typography.labelSmall, color = AmberGold)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                if (attending) "RSVP saved locally · demo only" else "Sample event · no invitation service connected",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (attending) AdventureOrange else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Button(
+                    onClick = { attending = !attending },
+                    colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange)
+                ) { Text(if (attending) "Cancel RSVP" else "Interested", maxLines = 1) }
+                OutlinedButton(onClick = onOpenPlanner) { Text("Plan a trip") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SuggestedFriendCard(
+    name: String,
+    subtitle: String,
+    note: String
+) {
+    var requestSent by rememberSaveable(name) { mutableStateOf(false) }
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(name, fontWeight = FontWeight.Bold)
+                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = AmberGold)
+                Text(note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    if (requestSent) "Request queued in local demo" else "Sample profile · no real invite is sent",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (requestSent) AdventureOrange else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            OutlinedButton(onClick = { requestSent = !requestSent }) {
+                Text(if (requestSent) "Undo" else "Connect")
+            }
+        }
+    }
+}
