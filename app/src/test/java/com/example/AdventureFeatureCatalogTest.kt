@@ -2,6 +2,7 @@ package com.example
 
 import com.example.ui.components.AdventureFeatureCatalog
 import com.example.ui.components.ModuleCategory
+import com.example.ui.components.filterAdventureFeatures
 import com.example.viewmodel.Screen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -37,6 +38,47 @@ class AdventureFeatureCatalogTest {
         assertEquals(2, features.count { it.category == ModuleCategory.CREATE_SHARE })
         assertEquals(2, features.count { it.category == ModuleCategory.COMMUNITY_PROGRESS })
         assertEquals(2, features.count { it.category == ModuleCategory.ACCOUNT_UPGRADE })
+    }
+
+
+    @Test
+    fun blankSearchReturnsTheCompleteDirectoryInCatalogOrder() {
+        val results = filterAdventureFeatures("   ")
+
+        assertEquals(AdventureFeatureCatalog.all.map { it.screen }, results.map { it.screen })
+    }
+
+    @Test
+    fun searchIsCaseInsensitiveAndMatchesTitlesSubtitlesAndScreenNames() {
+        assertEquals(
+            listOf(Screen.VOICE_COMPANION),
+            filterAdventureFeatures("  vOiCe  ").map { it.screen }
+        )
+        assertEquals(
+            listOf(Screen.ROUTE_BRIEF),
+            filterAdventureFeatures("checklist").map { it.screen }
+        )
+        assertEquals(
+            listOf(Screen.PRO_PAYWALL),
+            filterAdventureFeatures("premium").map { it.screen }
+        )
+    }
+
+    @Test
+    fun filtersCanCombineCategoryAndSearch() {
+        assertEquals(
+            listOf(Screen.RADAR),
+            filterAdventureFeatures("safety", ModuleCategory.FIELD_SAFETY).map { it.screen }
+        )
+        assertTrue(
+            filterAdventureFeatures("voice", ModuleCategory.COMMUNITY_PROGRESS).isEmpty()
+        )
+    }
+
+    @Test
+    fun allCategoryIsNotListedAsAFeatureGroup() {
+        assertFalse(AdventureFeatureCatalog.categories.contains(ModuleCategory.ALL))
+        assertEquals(5, AdventureFeatureCatalog.categories.size)
     }
 
     @Test
