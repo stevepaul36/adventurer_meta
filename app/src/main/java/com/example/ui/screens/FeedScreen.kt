@@ -103,7 +103,7 @@ fun FeedScreen(
                     is FeedItem.RideShareItem -> item.rideShare.title.contains(keyword, true) || item.rideShare.user.name.contains(keyword, true)
                 }
             }
-            if (matched.isEmpty()) feedItems else matched
+            matched
         }
     }
 
@@ -436,7 +436,8 @@ fun FeedScreen(
                 }
             }
 
-            // 4. Photos & Visual Media Feed Section Header
+            if (activeViewerFilter != "🔥 Trail Shorts") {
+            // 6. Social posts and stories, directly below the viewer shelves
             item {
                 Row(
                     modifier = Modifier
@@ -499,6 +500,20 @@ fun FeedScreen(
                             )
                         }
                     }
+                }
+            }
+
+
+            }
+
+            if (activeViewerFilter == "🔥 Trail Shorts" && availableShorts.isEmpty()) {
+                item {
+                    Text(
+                        if (selectedFeedTab == "Following") "No shorts from the Adventurers you follow yet." else "No short videos match this view yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 18.dp)
+                    )
                 }
             }
 
