@@ -2,6 +2,7 @@ package com.example
 
 import com.example.ui.components.AdventureFeatureCatalog
 import com.example.ui.components.ModuleCategory
+import com.example.ui.components.filterAdventureFeatures
 import com.example.viewmodel.Screen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -15,6 +16,7 @@ class AdventureFeatureCatalogTest {
 
         assertEquals(14, features.size)
         assertEquals(14, features.map { it.screen }.distinct().size)
+        assertEquals(Screen.values().toSet(), features.map { it.screen }.toSet())
     }
 
     @Test
@@ -24,6 +26,10 @@ class AdventureFeatureCatalogTest {
         assertEquals(5, primaryScreens.size)
         assertEquals(
             setOf(Screen.FEED, Screen.EXPLORE_PLAN, Screen.CLUBS, Screen.LIVE_TRACKER, Screen.PROFILE),
+            primaryScreens
+        )
+        assertEquals(
+            Screen.values().filter { it.isTopLevel }.toSet(),
             primaryScreens
         )
     }
@@ -37,6 +43,47 @@ class AdventureFeatureCatalogTest {
         assertEquals(2, features.count { it.category == ModuleCategory.CREATE_SHARE })
         assertEquals(2, features.count { it.category == ModuleCategory.COMMUNITY_PROGRESS })
         assertEquals(2, features.count { it.category == ModuleCategory.ACCOUNT_UPGRADE })
+    }
+
+
+    @Test
+    fun blankSearchReturnsTheCompleteDirectoryInCatalogOrder() {
+        val results = filterAdventureFeatures("   ")
+
+        assertEquals(AdventureFeatureCatalog.all.map { it.screen }, results.map { it.screen })
+    }
+
+    @Test
+    fun searchIsCaseInsensitiveAndMatchesTitlesSubtitlesAndScreenNames() {
+        assertEquals(
+            listOf(Screen.VOICE_COMPANION),
+            filterAdventureFeatures("  vOiCe  ").map { it.screen }
+        )
+        assertEquals(
+            listOf(Screen.ROUTE_BRIEF),
+            filterAdventureFeatures("checklist").map { it.screen }
+        )
+        assertEquals(
+            listOf(Screen.PRO_PAYWALL),
+            filterAdventureFeatures("premium").map { it.screen }
+        )
+    }
+
+    @Test
+    fun filtersCanCombineCategoryAndSearch() {
+        assertEquals(
+            listOf(Screen.RADAR),
+            filterAdventureFeatures("roadside", ModuleCategory.FIELD_SAFETY).map { it.screen }
+        )
+        assertTrue(
+            filterAdventureFeatures("voice", ModuleCategory.COMMUNITY_PROGRESS).isEmpty()
+        )
+    }
+
+    @Test
+    fun allCategoryIsNotListedAsAFeatureGroup() {
+        assertFalse(AdventureFeatureCatalog.categories.contains(ModuleCategory.ALL))
+        assertEquals(5, AdventureFeatureCatalog.categories.size)
     }
 
     @Test

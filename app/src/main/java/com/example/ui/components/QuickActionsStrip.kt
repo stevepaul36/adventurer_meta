@@ -1,6 +1,6 @@
 package com.example.ui.components
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Widgets
@@ -39,8 +40,8 @@ import com.example.viewmodel.Screen
 import com.example.viewmodel.SupportedLang
 
 /**
- * A small, curated Basecamp launchpad. The full directory lives in AdventureFeatureOrganizerSheet;
- * the feed stays focused on six common secondary actions instead of repeating bottom navigation.
+ * Compact Basecamp launchpad: horizontally scrollable, contextual tools only.
+ * The searchable feature directory is the single home for the complete catalog.
  */
 @Composable
 fun AdventureModulesHub(
@@ -65,14 +66,14 @@ fun AdventureModulesHub(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "MORE ADVENTURE TOOLS",
+                    text = "QUICK LINKS",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.ExtraBold,
                     color = TrailOrange,
                     fontSize = 11.sp
                 )
                 Text(
-                    text = "Six shortcuts · one complete directory",
+                    text = "Swipe for more · ${shortcuts.size} shortcuts",
                     style = MaterialTheme.typography.bodySmall,
                     color = FieldMuted,
                     fontSize = 11.sp
@@ -91,7 +92,7 @@ fun AdventureModulesHub(
                     horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     Text(
-                        text = "All 14 tools",
+                        text = "Browse ${AdventureFeatureCatalog.all.size}",
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
@@ -99,7 +100,7 @@ fun AdventureModulesHub(
                     )
                     Icon(
                         imageVector = Icons.Default.Widgets,
-                        contentDescription = "Browse all 14 features",
+                        contentDescription = "Browse all features",
                         tint = TrailOrange,
                         modifier = Modifier.size(15.dp)
                     )
@@ -107,74 +108,74 @@ fun AdventureModulesHub(
             }
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            shortcuts.chunked(2).forEach { rowItems ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .testTag("basecamp_quick_links"),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            shortcuts.forEach { item ->
+                Surface(
+                    onClick = { onNavigate(item.screen) },
+                    shape = RoundedCornerShape(14.dp),
+                    color = SlatePanel,
+                    border = ButtonDefaults.outlinedButtonBorder.copy(
+                        brush = SolidColor(if (currentScreen == item.screen) item.accentColor else BorderNavy)
+                    ),
+                    modifier = Modifier
+                        .width(190.dp)
+                        .heightIn(min = 106.dp)
+                        .testTag("quick_action_${item.screen.name.lowercase()}")
                 ) {
-                    rowItems.forEach { item ->
-                        Surface(
-                            onClick = { onNavigate(item.screen) },
-                            shape = RoundedCornerShape(14.dp),
-                            color = SlatePanel,
-                            border = ButtonDefaults.outlinedButtonBorder.copy(
-                                brush = SolidColor(if (currentScreen == item.screen) item.accentColor else BorderNavy)
-                            ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .heightIn(min = 72.dp)
-                                .testTag("quick_action_${item.screen.name.lowercase()}")
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(9.dp)
+                            Surface(
+                                shape = RoundedCornerShape(9.dp),
+                                color = item.accentColor.copy(alpha = 0.16f),
+                                modifier = Modifier.size(34.dp)
                             ) {
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = item.accentColor.copy(alpha = 0.16f),
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = item.icon,
-                                            contentDescription = null,
-                                            tint = item.accentColor,
-                                            modifier = Modifier.size(19.dp)
-                                        )
-                                    }
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = item.title,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = item.subtitle,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = FieldMuted,
-                                        fontSize = 10.sp,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = item.icon,
+                                        contentDescription = null,
+                                        tint = item.accentColor,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
+                            Text(
+                                text = item.title,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
+                        Text(
+                            text = item.subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = FieldMuted,
+                            fontSize = 11.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(1.dp))
                     }
-                    if (rowItems.size == 1) Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }
     }
 }
 
-/** Backwards-compatible wrapper for existing calls; Basecamp passes the full-directory action. */
+/** Backwards-compatible wrapper for existing calls; Basecamp opens the full directory action. */
 @Composable
 fun QuickActionsStrip(
     currentScreen: Screen,

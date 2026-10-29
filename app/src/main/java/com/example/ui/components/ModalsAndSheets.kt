@@ -421,15 +421,10 @@ fun AdventureFeatureOrganizerSheet(
     var selectedCategoryName by rememberSaveable { mutableStateOf(ModuleCategory.ALL.name) }
     val selectedCategory = ModuleCategory.values().firstOrNull { it.name == selectedCategoryName }
         ?: ModuleCategory.ALL
-    val normalizedQuery = query.trim().lowercase()
-    val filteredFeatures = AdventureFeatureCatalog.all.filter { feature ->
-        val categoryMatches = selectedCategory == ModuleCategory.ALL || feature.category == selectedCategory
-        val queryMatches = normalizedQuery.isBlank() ||
-            feature.title.lowercase().contains(normalizedQuery) ||
-            feature.subtitle.lowercase().contains(normalizedQuery) ||
-            feature.category.label.lowercase().contains(normalizedQuery)
-        categoryMatches && queryMatches
-    }
+    val filteredFeatures = filterAdventureFeatures(
+        query = query,
+        category = selectedCategory
+    )
     val groupedFeatures = AdventureFeatureCatalog.categories.mapNotNull { category ->
         val features = filteredFeatures.filter { it.category == category }
         if (features.isEmpty()) null else category to features
@@ -467,7 +462,7 @@ fun AdventureFeatureOrganizerSheet(
                         color = Color.White
                     )
                     Text(
-                        text = "14 destinations · 5 main tabs · 5 task groups",
+                        text = "${AdventureFeatureCatalog.all.size} destinations · ${AdventureFeatureCatalog.primaryDestinations.size} main tabs · ${AdventureFeatureCatalog.categories.size} task groups",
                         style = MaterialTheme.typography.bodySmall,
                         color = FieldMuted
                     )
@@ -514,7 +509,14 @@ fun AdventureFeatureOrganizerSheet(
                     FilterChip(
                         selected = selectedCategory == category,
                         onClick = { selectedCategoryName = category.name },
-                        label = { Text(category.label, maxLines = 1) },
+                        label = {
+                            val count = if (category == ModuleCategory.ALL) {
+                                AdventureFeatureCatalog.all.size
+                            } else {
+                                AdventureFeatureCatalog.all.count { it.category == category }
+                            }
+                            Text("${category.label} · $count", maxLines = 1)
+                        },
                         modifier = Modifier.testTag("directory_filter_${category.name.lowercase()}")
                     )
                 }
@@ -544,7 +546,7 @@ fun AdventureFeatureOrganizerSheet(
                     groupedFeatures.forEach { (category, features) ->
                         item(key = "group_${category.name}") {
                             OrganizerGroupSection(
-                                title = category.label,
+                                category = category,
                                 count = features.size,
                                 features = features,
                                 onNavigate = onNavigate
@@ -566,7 +568,7 @@ fun AdventureFeatureOrganizerSheet(
 
 @Composable
 private fun OrganizerGroupSection(
-    title: String,
+    category: ModuleCategory,
     count: Int,
     features: List<QuickActionItem>,
     onNavigate: (Screen) -> Unit
@@ -577,12 +579,20 @@ private fun OrganizerGroupSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = title.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = FieldMuted
-            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = category.label.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = FieldMuted
+                )
+                Text(
+                    text = category.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = FieldMuted,
+                    maxLines = 2
+                )
+            }
             Text(
                 text = count.toString(),
                 style = MaterialTheme.typography.labelSmall,

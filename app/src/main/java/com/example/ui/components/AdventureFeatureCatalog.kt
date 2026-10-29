@@ -83,3 +83,27 @@ object AdventureFeatureCatalog {
     val categories: List<ModuleCategory>
         get() = ModuleCategory.values().filter { it != ModuleCategory.ALL }
 }
+
+/**
+ * Search and category filtering are kept outside Compose so they are deterministic and unit-testable.
+ * Search includes user-facing names, screen names, purpose text, and category names/descriptions.
+ */
+fun filterAdventureFeatures(
+    query: String,
+    category: ModuleCategory = ModuleCategory.ALL,
+    features: List<QuickActionItem> = AdventureFeatureCatalog.all
+): List<QuickActionItem> {
+    val normalizedQuery = query.trim().lowercase()
+    return features.filter { feature ->
+        val categoryMatches = category == ModuleCategory.ALL || feature.category == category
+        val searchText = listOf(
+            feature.title,
+            feature.subtitle,
+            feature.screen.title,
+            feature.category.label,
+            feature.category.description,
+        ).joinToString(" ").lowercase()
+        val queryMatches = normalizedQuery.isBlank() || searchText.contains(normalizedQuery)
+        categoryMatches && queryMatches
+    }
+}
