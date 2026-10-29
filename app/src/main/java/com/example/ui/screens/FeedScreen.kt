@@ -136,7 +136,7 @@ fun FeedScreen(
     }
     val audienceShorts = remember(selectedFeedTab, followedAdventurerIds) {
         if (selectedFeedTab == "Following") {
-            defaultAdventureShorts.filter { it.adventurerId in followedAdventurerIds }
+            defaultAdventureShorts.filter { short -> short.adventurerId?.let { it in followedAdventurerIds } == true }
         } else {
             defaultAdventureShorts
         }
