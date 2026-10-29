@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.example.data.model.ActivityType
-import com.example.data.market.AdventureMarket
+import com.example.data.providers.AdventureMarket
 import com.example.data.market.AdventureMarketSettings
 import com.example.ui.theme.*
 import com.example.viewmodel.AdventurerViewModel
