@@ -79,9 +79,15 @@ fun PostCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "${post.user.bikeModel} • ${post.timestamp}",
+                        text = "${post.user.primaryActivity} Adventurer • ${post.timestamp}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = post.user.bikeModel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        maxLines = 1
                     )
                 }
             }
@@ -270,7 +276,7 @@ fun RideShareCard(
                         color = AdventureOrange
                     )
                     Text(
-                        text = "Mapped by ${rideShare.user.name} • ${rideShare.timestamp}",
+                        text = "Shared by ${rideShare.user.name} · Adventurer · ${rideShare.user.primaryActivity} • ${rideShare.timestamp}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -419,6 +425,40 @@ fun RideStoryCard(
                         color = AdventureOrange,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+                Text(
+                    text = story.date,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = story.user.avatarUrl,
+                    contentDescription = "Adventurer ${story.user.name}",
+                    modifier = Modifier.size(36.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(Modifier.width(9.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "${story.user.name} · Adventurer",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${story.user.primaryActivity} · ${story.user.location}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
                     )
                 }
                 Text(
