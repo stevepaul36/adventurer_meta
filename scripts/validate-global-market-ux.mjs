@@ -34,6 +34,14 @@ for (const [label, token] of [
   if (html.includes(token)) pass(label + " exists.");
   else fail(label + " exists.");
 }
+for (const [label, token] of [
+  ["full-screen viewer open function", "function openViewer()"],
+  ["Escape-to-close interaction", 'document.addEventListener("keydown"'],
+  ["overlay backdrop close interaction", 'if(event.target===$("viewerOverlay"))closeViewer()'],
+]) {
+  if (html.includes(token)) pass(label + " exists.");
+  else fail(label + " exists.");
+}
 for (const forbidden of ["AIza", "sk_live_", "sk_test_", "REVENUECAT_SECRET_API_KEY"]) {
   if (html.includes(forbidden)) fail("No credential-shaped or server-secret string in the client HTML: " + forbidden);
 }
