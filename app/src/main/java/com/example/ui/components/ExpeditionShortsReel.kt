@@ -599,7 +599,7 @@ fun ShortCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = short.riderName,
+                            text = "${short.riderName} · Adventurer",
                             color = Color.White.copy(alpha = 0.9f),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
@@ -770,7 +770,7 @@ fun ActiveShortsViewerModal(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         AsyncImage(
                             model = short.riderAvatar,
-                            contentDescription = short.riderName,
+                            contentDescription = "Adventurer ${short.riderName}",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(38.dp)
