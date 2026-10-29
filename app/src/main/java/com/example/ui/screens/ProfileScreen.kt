@@ -248,7 +248,7 @@ fun ProfileScreen(
                                 ) {
                                     AdventureMarket.values().forEach { market ->
                                         DropdownMenuItem(
-                                            text = { Text(market.label) },
+                                            text = { Text(market.countryName) },
                                             onClick = {
                                                 AdventureMarketSettings.setMarket(context, market)
                                                 marketMenuExpanded = false
