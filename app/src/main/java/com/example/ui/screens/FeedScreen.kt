@@ -311,7 +311,7 @@ fun FeedScreen(
                     currentUser = viewModel.currentUser,
                     adventurers = viewModel.friendUsers,
                     followedIds = followedAdventurerIds,
-                    onAddStoryClick = { viewModel.setShowCreatePost(true) },
+                    onAddStoryClick = { viewModel.navigateTo(Screen.STORY_STUDIO) },
                     onStoryClick = { adventurer ->
                         val short = defaultAdventureShorts.firstOrNull { it.riderName == adventurer.name }
                         if (short != null) {
