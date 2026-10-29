@@ -488,7 +488,7 @@ fun FeedScreen(
                         is FeedItem.RideShareItem -> {
                             RideShareCard(
                                 rideShare = item.rideShare,
-                                onLikeClick = { viewModel.toggleLike(index) },
+                                onLikeClick = { viewModel.toggleLike(sourceIndex) },
                                 onCommentClick = { viewModel.openCommentSheet(sourceIndex) }
                             )
                         }
