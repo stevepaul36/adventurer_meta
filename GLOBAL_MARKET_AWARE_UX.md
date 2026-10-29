@@ -6,7 +6,7 @@ Keep one media and creator experience across India, Canada and the United States
 
 ## Shared everywhere
 
-- Full-screen video/photo viewer, playback, creator identity, captions, likes, comments, sharing and saving.
+- Full-screen video/photo viewer, playback, creator identity, captions, likes, comments, sharing and saving. The browser concept opens the same responsive full-screen viewer on mobile/desktop, with Escape/backdrop/close-button exit; its video is illustrative until a real media stream/feed is connected.
 - Discovery, profile, saved memories, accessibility patterns and primary navigation.
 - Common trip/memory data model and transparent action states.
 
