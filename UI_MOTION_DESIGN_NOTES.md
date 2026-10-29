@@ -12,7 +12,7 @@ The Home screen is a continuous, vertically scrolling feed, not a dashboard that
 
 1. **Adventurer Stories** — horizontal story bubbles at the very top, including “Your story” and recent moments from followed Adventurers. Tapping a bubble opens that Adventurer's current short or photo.
 2. **For you / Following** — an explicit feed switch. “For you” discovers moments; “Following” only shows feed items and shorts by followed profiles.
-3. **Adventurer Shorts** — horizontally scrollable vertical-media previews. Selecting a preview opens the immersive viewer with reactions, comments, sharing, progress, and activity-aware context.
+3. **Adventurer Shorts** — horizontally scrollable vertical-media previews. Selecting a preview opens the immersive viewer with a direct Follow/Following control, reactions, comments, sharing, progress, and activity-aware context.
 4. **Media filters** — All Media, Trail Shorts, Trail Photos, and High Pass change the displayed content instead of acting as decorative chips.
 5. **Adventurer updates** — vertically scrolling posts, shared routes, and stories with existing like/comment/media-viewer interactions.
 6. **Meet Adventurers** — creator cards show their name, chosen activity and location, with a working Follow/Following action.
@@ -51,7 +51,7 @@ The media viewer and creator/follower relationship are shared across India, Cana
 - Empty Following state: no items when the follow set is empty.
 - Stable ordering: source feed order remains intact.
 - Follow/unfollow state transitions and self-follow/blank-ID safeguards.
-- Shorts: valid IDs, titles, location, activity, metrics, and wraparound behavior.
+- Shorts: valid IDs, titles, location, activity, metrics, creator/profile linkage, and wraparound behavior.
 - Android CI: validate UX scripts, assemble a debug APK, and run the Gradle task :app:testDebugUnitTest.
 
 ### Manual
