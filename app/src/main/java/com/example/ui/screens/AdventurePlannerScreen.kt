@@ -41,6 +41,7 @@ import com.example.data.planning.AdventurePlaceBookmarkEntity
 import com.example.data.planning.AdventurePlannerRepository
 import com.example.data.planning.AdventureTripPlanEntity
 import com.example.data.providers.AdventureMarket
+import com.example.data.market.AdventureMarketSettings
 import com.example.data.providers.RegionalProviderCatalog
 import com.example.data.providers.RegionalServiceCategory
 import com.example.ui.components.ExpeditionGearPackListCard
@@ -128,6 +129,8 @@ fun AdventurePlannerScreen(
     val marketPreferences = remember(context) {
         context.getSharedPreferences("adventurer_market_preferences", android.content.Context.MODE_PRIVATE)
     }
+    val marketContext by AdventureMarketSettings.state.collectAsState()
+    LaunchedEffect(context) { AdventureMarketSettings.initialize(context) }
     val activityMode by viewModel.activityMode.collectAsState()
     val trips by plannerRepository.observeTrips().collectAsState(initial = emptyList())
     val savedPlaces by plannerRepository.observeSavedPlaces().collectAsState(initial = emptyList())
@@ -143,11 +146,16 @@ fun AdventurePlannerScreen(
         val savedCurrency = marketPreferences.getString("budget_currency_code", null)
         val savedMarket = marketPreferences.getString("selected_market", null)
         when (savedCurrency) {
-            "CAD", "INR" -> savedCurrency
+            "CAD", "INR", "USD" -> savedCurrency
             else -> when (savedMarket) {
                 AdventureMarket.INDIA.name -> "INR"
                 AdventureMarket.CANADA.name -> "CAD"
-                else -> if (Locale.getDefault().country.equals("IN", ignoreCase = true)) "INR" else "CAD"
+                AdventureMarket.UNITED_STATES.name -> "USD"
+                else -> when (Locale.getDefault().country.uppercase()) {
+                    "IN" -> "INR"
+                    "US" -> "USD"
+                    else -> "CAD"
+                }
             }
         }
     }
@@ -208,6 +216,10 @@ fun AdventurePlannerScreen(
 
     LaunchedEffect(selectedMarketCode) {
         marketPreferences.edit().putString("selected_market", selectedMarketCode).apply()
+        AdventureMarketSettings.setMarket(context, selectedMarket)
+    }
+    LaunchedEffect(marketContext.region) {
+        marketPreferences.edit().putString("selected_region", marketContext.region).apply()
     }
     LaunchedEffect(budgetCurrencyCode) {
         marketPreferences.edit().putString("budget_currency_code", budgetCurrencyCode).apply()
@@ -571,7 +583,7 @@ fun AdventurePlannerScreen(
                         )
                     }
                     Text(
-                        "Choose India or Canada to see relevant services. This preference does not use your location.",
+                        "Choose India, Canada or the United States. This market preference does not request or use GPS.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -587,6 +599,29 @@ fun AdventurePlannerScreen(
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = AdventureOrange,
                                     selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                        }
+                    }
+                    Text(
+                        "State / province / region: ${marketContext.region}",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AdventureMarketSettings.regionsFor(selectedMarket).forEach { region ->
+                            FilterChip(
+                                selected = marketContext.region == region,
+                                onClick = { AdventureMarketSettings.setRegion(context, region) },
+                                label = { Text(region) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = SafeMint,
+                                    selectedLabelColor = Color(0xFF09201D),
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
                                     labelColor = MaterialTheme.colorScheme.onSurface
                                 )
@@ -894,7 +929,7 @@ fun AdventurePlannerScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text("Budget currency", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
-                        listOf("CAD", "INR").forEach { currencyCode ->
+                        listOf("CAD", "INR", "USD").forEach { currencyCode ->
                             FilterChip(
                                 selected = budgetCurrencyCode == currencyCode,
                                 onClick = { budgetCurrencyCode = currencyCode },
@@ -941,7 +976,11 @@ fun AdventurePlannerScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text("Adjust:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                (if (budgetCurrencyCode == "INR") listOf(-1000, 1000, 2500) else listOf(-50, 50, 100)).forEach { delta ->
+                                (when (budgetCurrencyCode) {
+                                    "INR" -> listOf(-1000, 1000, 2500)
+                                    "USD" -> listOf(-50, 50, 100)
+                                    else -> listOf(-50, 50, 100)
+                                }).forEach { delta ->
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
                                         color = MaterialTheme.colorScheme.surface,
@@ -1438,8 +1477,12 @@ fun AdventurePlannerScreen(
 }
 
 private fun formatCurrencyAmount(amount: Double, currencyCode: String): String {
-    val code = if (currencyCode == "INR") "INR" else "CAD"
-    val locale = if (code == "INR") Locale.forLanguageTag("en-IN") else Locale.CANADA
+    val code = currencyCode.takeIf { it in setOf("INR", "CAD", "USD") } ?: "CAD"
+    val locale = when (code) {
+        "INR" -> Locale.forLanguageTag("en-IN")
+        "USD" -> Locale.US
+        else -> Locale.CANADA
+    }
     return runCatching {
         NumberFormat.getCurrencyInstance(locale).apply {
             currency = Currency.getInstance(code)
