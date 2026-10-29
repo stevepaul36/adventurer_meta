@@ -27,7 +27,10 @@ class AdventurerRepository {
         User("u9", "Arjun Pedal", "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80", "Gravel bike", "Bengaluru, India", "Cycling & bikepacking"),
         User("u10", "Maya Miles", "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80", "Scenic road-trip kit", "Vancouver, Canada", "Scenic road trips"),
         User("u11", "Kai Deep", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80", "Mask, fins and dive computer", "Vancouver Island, Canada", "Scuba diving"),
-        User("u12", "Robin Cast", "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80", "Fly-fishing kit", "Ontario, Canada", "Fishing & angling")
+        User("u12", "Robin Cast", "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80", "Fly-fishing kit", "Ontario, Canada", "Fishing & angling"),
+        User("u13", "Tenzin Trail", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80", "Cold-weather expedition kit", "Zanskar, India", "High-altitude exploration"),
+        User("u14", "Alex Rider", "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80", "DesertX touring kit", "Big Sur, California", "Motorcycling"),
+        User("u15", "Zara Moto", "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80", "Desert touring kit", "Spiti Valley, India", "Motorcycling")
     )
 
     // Demo follow graph; state lives in the repository so it survives navigation between screens.
