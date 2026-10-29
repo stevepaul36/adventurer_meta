@@ -111,10 +111,20 @@ object RegionalProviderCatalog {
      * Google Maps URLs launch external Maps/browser search without an API key.
      * This opens a provider; it does not reveal live navigation state to Adventurer.
      */
-    fun googleMapsSearchUrl(query: String, market: AdventureMarket): String {
+    fun googleMapsSearchUrl(
+        query: String,
+        market: AdventureMarket,
+        region: String? = null,
+    ): String {
         val normalizedQuery = query.trim()
         require(normalizedQuery.isNotEmpty()) { "Search query must not be blank." }
-        val contextualQuery = "$normalizedQuery in ${market.countryName}"
+        val normalizedRegion = region?.trim()?.takeIf { it.isNotEmpty() }
+        val locationContext = if (normalizedRegion == null) {
+            market.countryName
+        } else {
+            "$normalizedRegion, ${market.countryName}"
+        }
+        val contextualQuery = "$normalizedQuery in $locationContext"
         return "https://www.google.com/maps/search/?api=1&query=${encode(contextualQuery)}"
     }
 
@@ -122,12 +132,19 @@ object RegionalProviderCatalog {
         destination: String,
         market: AdventureMarket,
         origin: String? = null,
+        region: String? = null,
     ): String {
         val normalizedDestination = destination.trim()
         require(normalizedDestination.isNotEmpty()) { "Destination must not be blank." }
+        val normalizedRegion = region?.trim()?.takeIf { it.isNotEmpty() }
+        val destinationContext = listOfNotNull(
+            normalizedDestination,
+            normalizedRegion,
+            market.countryName,
+        ).joinToString(", ")
         val parameters = mutableListOf(
             "api=1",
-            "destination=${encode("$normalizedDestination, ${market.countryName}")}",
+            "destination=${encode(destinationContext)}",
         )
         if (!origin.isNullOrBlank()) parameters += "origin=${encode(origin.trim())}"
         return "https://www.google.com/maps/dir/?${parameters.joinToString("&")}"
