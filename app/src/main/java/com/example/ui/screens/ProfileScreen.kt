@@ -74,7 +74,7 @@ fun ProfileScreen(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "TRAIL SETTINGS",
+                                "ADVENTURER PROFILE",
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White,
                                 fontSize = 16.sp
@@ -94,7 +94,7 @@ fun ProfileScreen(
                             }
                         }
                         Text(
-                            "Preferences shape utility and calm",
+                            "Your stories, activity, following, and preferences",
                             style = MaterialTheme.typography.labelSmall,
                             color = FieldMuted
                         )
@@ -113,7 +113,7 @@ fun ProfileScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Profile & Rider Card
+            // Creator profile and Adventurer identity card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -139,7 +139,7 @@ fun ProfileScreen(
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(user.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("ADVENTURER · 📍 ${user.location} · LEVEL ${gamification.level}", style = MaterialTheme.typography.labelMedium, color = AmberGold)
+                        Text("ADVENTURER · ${user.primaryActivity} · 📍 ${user.location} · LEVEL ${gamification.level}", style = MaterialTheme.typography.labelMedium, color = AmberGold)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "“Sharing the journeys, field notes and wild places I discover with the people who follow my adventures.”",
