@@ -62,7 +62,8 @@ data class AdventureShort(
     val commentsCount: Int = 24,
     val speedKmH: Int = 84,
     val leanAngle: Int = 36,
-    val tags: List<String> = emptyList()
+    val tags: List<String> = emptyList(),
+    val activityLabel: String = "Motorcycling"
 )
 
 val defaultAdventureShorts = listOf(
@@ -157,6 +158,139 @@ val defaultAdventureShorts = listOf(
         speedKmH = 88,
         leanAngle = 36,
         tags = listOf("#Spiti", "#Tenere700", "#Drift")
+    ),
+    AdventureShort(
+        id = "short_6",
+        title = "Sunrise above the cloud line",
+        caption = "A quiet alpine start, a long climb, and a view that made every step worth it.",
+        riderName = "Leah Ridge",
+        riderAvatar = "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=200&q=80",
+        bikeModel = "Alpine trekking kit",
+        location = "Banff National Park",
+        altitude = "2,650 m",
+        durationText = "0:37",
+        viewerCount = "3.2k",
+        thumbnailUrl = "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80",
+        likes = 967,
+        commentsCount = 54,
+        speedKmH = 0,
+        leanAngle = 0,
+        tags = listOf("#Trekking", "#Rockies", "#Summit"),
+        activityLabel = "Trekking"
+    ),
+    AdventureShort(
+        id = "short_7",
+        title = "Paddling into Howe Sound",
+        caption = "Glassy water, coastal peaks and a slow morning exploring the inlet by kayak.",
+        riderName = "Noah Tide",
+        riderAvatar = "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80",
+        bikeModel = "Sea kayak and dry suit",
+        location = "Howe Sound, British Columbia",
+        altitude = "Sea level",
+        durationText = "0:44",
+        viewerCount = "2.6k",
+        thumbnailUrl = "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=800&q=80",
+        likes = 741,
+        commentsCount = 31,
+        speedKmH = 0,
+        leanAngle = 0,
+        tags = listOf("#Kayaking", "#Coast", "#ExploreBC"),
+        activityLabel = "Kayaking"
+    ),
+    AdventureShort(
+        id = "short_8",
+        title = "Rain-on-tent night in the pines",
+        caption = "A dry camp, warm food, a forest full of sound and a slow sunrise after the storm.",
+        riderName = "Sage Wilds",
+        riderAvatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+        bikeModel = "Backcountry camp kit",
+        location = "Algonquin Provincial Park",
+        altitude = "Trail camp",
+        durationText = "0:31",
+        viewerCount = "1.9k",
+        thumbnailUrl = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=800&q=80",
+        likes = 603,
+        commentsCount = 28,
+        speedKmH = 0,
+        leanAngle = 0,
+        tags = listOf("#Camping", "#WildPlaces", "#Ontario"),
+        activityLabel = "Camping & wildlife"
+    ),
+    AdventureShort(
+        id = "short_9",
+        title = "Gravel climb before the city wakes",
+        caption = "Loose gravel, a steady cadence and one last climb before the coffee stop.",
+        riderName = "Arjun Pedal",
+        riderAvatar = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+        bikeModel = "Gravel bike and repair roll",
+        location = "Nandi Hills, India",
+        altitude = "1,475 m",
+        durationText = "0:29",
+        viewerCount = "2.1k",
+        thumbnailUrl = "https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=800&q=80",
+        likes = 814,
+        commentsCount = 37,
+        speedKmH = 0,
+        leanAngle = 0,
+        tags = listOf("#Cycling", "#Bikepacking", "#Gravel"),
+        activityLabel = "Cycling & bikepacking"
+    ),
+    AdventureShort(
+        id = "short_10",
+        title = "The long way along the coast",
+        caption = "No fixed schedule today: ocean viewpoints, small-town diners and roads worth taking slowly.",
+        riderName = "Maya Miles",
+        riderAvatar = "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80",
+        bikeModel = "Scenic road-trip kit",
+        location = "Sea-to-Sky Highway, Canada",
+        altitude = "Coastal route",
+        durationText = "0:41",
+        viewerCount = "4.0k",
+        thumbnailUrl = "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80",
+        likes = 1104,
+        commentsCount = 63,
+        speedKmH = 0,
+        leanAngle = 0,
+        tags = listOf("#RoadTrip", "#CoastalDrive", "#SlowTravel"),
+        activityLabel = "Scenic road trips"
+    ),
+    AdventureShort(
+        id = "short_11",
+        title = "A bluewater world below the surface",
+        caption = "A calm, carefully planned dive with a buddy check and an unforgettable reef encounter.",
+        riderName = "Kai Deep",
+        riderAvatar = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
+        bikeModel = "Mask, fins and dive computer",
+        location = "Vancouver Island, Canada",
+        altitude = "Underwater",
+        durationText = "0:36",
+        viewerCount = "3.8k",
+        thumbnailUrl = "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=80",
+        likes = 1341,
+        commentsCount = 82,
+        speedKmH = 0,
+        leanAngle = 0,
+        tags = listOf("#Scuba", "#OceanLife", "#DiveBuddy"),
+        activityLabel = "Scuba diving"
+    ),
+    AdventureShort(
+        id = "short_12",
+        title = "Fly-fishing at first light",
+        caption = "Quiet water, patient casting and a catch-and-release morning on a favourite bend in the river.",
+        riderName = "Robin Cast",
+        riderAvatar = "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80",
+        bikeModel = "Fly rod and wader kit",
+        location = "Ontario backcountry",
+        altitude = "River level",
+        durationText = "0:33",
+        viewerCount = "1.5k",
+        thumbnailUrl = "https://images.unsplash.com/photo-1498654200943-1088dd4438ae?auto=format&fit=crop&w=800&q=80",
+        likes = 522,
+        commentsCount = 19,
+        speedKmH = 0,
+        leanAngle = 0,
+        tags = listOf("#Fishing", "#CatchAndRelease", "#Outdoors"),
+        activityLabel = "Fishing & angling"
     )
 )
 
@@ -211,7 +345,7 @@ fun ExpeditionShortsReel(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "LIVE SHORTS",
+                            text = "LIVE NOW",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.ExtraBold,
                             color = DangerRed,
@@ -220,7 +354,7 @@ fun ExpeditionShortsReel(
                     }
                 }
                 Text(
-                    text = "TRAIL REELS & VIDEOS",
+                    text = "ADVENTURER SHORTS",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -243,7 +377,7 @@ fun ExpeditionShortsReel(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "17.4k Active Viewers",
+                        text = "17.4k people watching",
                         style = MaterialTheme.typography.labelSmall,
                         color = AdventureOrange,
                         fontWeight = FontWeight.Bold,
@@ -411,7 +545,7 @@ fun ShortCard(
                 }
             }
 
-            // Bottom Content: Altitude, Title, Rider, Likes
+            // Bottom content: location, moment title, Adventurer identity and reactions
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -445,7 +579,7 @@ fun ShortCard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Rider row with quick like
+                // Adventurer identity with quick reaction
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -457,7 +591,7 @@ fun ShortCard(
                     ) {
                         AsyncImage(
                             model = short.riderAvatar,
-                            contentDescription = short.riderName,
+                            contentDescription = "Adventurer ${short.riderName}",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(18.dp)
@@ -627,7 +761,7 @@ fun ActiveShortsViewerModal(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Header Bar: Rider details, Live/Views badge, Mute toggle, Close button
+                // Header: Adventurer identity, activity, viewing context, mute and close controls
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -658,7 +792,7 @@ fun ActiveShortsViewerModal(
                                     color = DangerRed
                                 ) {
                                     Text(
-                                        text = if (short.isLive) "LIVE" else "PRO",
+                                        text = if (short.isLive) "LIVE" else "ADVENTURER",
                                         color = Color.White,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Black,
@@ -667,7 +801,7 @@ fun ActiveShortsViewerModal(
                                 }
                             }
                             Text(
-                                text = "${short.viewerCount} active viewers · ${short.altitude}",
+                                text = "${short.activityLabel} · ${short.viewerCount} watching · ${short.altitude}",
                                 color = Color.White.copy(alpha = 0.8f),
                                 fontSize = 11.sp
                             )
@@ -873,15 +1007,25 @@ fun ActiveShortsViewerModal(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Speed, contentDescription = null, tint = HighAltitudeCyan, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("${short.speedKmH} km/h", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        if (short.activityLabel.contains("Motorcycling", true) || short.activityLabel.contains("Cycling", true)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Speed, contentDescription = null, tint = HighAltitudeCyan, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("${short.speedKmH.takeIf { it > 0 }?.let { "$it km/h" } ?: "Moving"}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.ScreenRotation, contentDescription = null, tint = AmberGold, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("${short.leanAngle}° Lean", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        if (short.activityLabel.contains("Motorcycling", true)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.ScreenRotation, contentDescription = null, tint = AmberGold, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("${short.leanAngle}° Lean", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Explore, contentDescription = null, tint = AmberGold, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(short.activityLabel, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            }
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Terrain, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(14.dp))
@@ -899,7 +1043,7 @@ fun ActiveShortsViewerModal(
                     fontSize = 16.sp
                 )
                 Text(
-                    text = "${short.bikeModel} • ${short.location}",
+                    text = "${short.activityLabel} · ${short.location} · ${short.bikeModel}",
                     color = AmberGold,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 12.sp,
@@ -922,7 +1066,7 @@ fun ActiveShortsViewerModal(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    listOf("🔥 Fire", "🏍️ Send It", "🏔️ Summit", "⚡ Fast", "❤️ Epic").forEach { reaction ->
+                    listOf("🔥 Wild", "🧭 Explore", "🏔️ Summit", "🌊 Flow", "❤️ Inspiring").forEach { reaction ->
                         Surface(
                             shape = RoundedCornerShape(16.dp),
                             color = Color.White.copy(alpha = 0.2f),
