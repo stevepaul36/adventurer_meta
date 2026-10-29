@@ -8,6 +8,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -28,6 +29,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -35,6 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.analytics.AdventureFunnelAnalytics
 import com.example.data.model.*
 import com.example.data.repository.formatRideDuration
@@ -72,6 +75,8 @@ fun FeedScreen(
     var activeViewerShort by remember { mutableStateOf<AdventureShort?>(null) }
     var activePhotoViewer by remember { mutableStateOf<Pair<String, String>?>(null) }
     var activeViewerFilter by remember { mutableStateOf("All Media") }
+    var selectedFeedTab by remember { mutableStateOf("For you") }
+    val followedAdventurerIds by viewModel.followedAdventurerIds.collectAsState()
     val listState = rememberLazyListState()
 
     val rotationAngle by animateFloatAsState(
@@ -99,6 +104,53 @@ fun FeedScreen(
                 }
             }
             if (matched.isEmpty()) feedItems else matched
+        }
+    }
+
+    val audienceFeedItems = remember(filteredFeedItems, selectedFeedTab, followedAdventurerIds) {
+        if (selectedFeedTab == "Following") {
+            FeedAudiencePolicy.followingItems(filteredFeedItems, followedAdventurerIds)
+        } else {
+            filteredFeedItems
+        }
+    }
+    val displayFeedItems = remember(audienceFeedItems, activeViewerFilter) {
+        when (activeViewerFilter) {
+            "🔥 Trail Shorts" -> emptyList()
+            "📸 Trail Photos" -> audienceFeedItems.filter { item ->
+                when (item) {
+                    is FeedItem.PostItem -> !item.post.imageUrl.isNullOrBlank()
+                    is FeedItem.StoryItem -> item.story.coverImageUrl.isNotBlank()
+                    is FeedItem.RideShareItem -> false
+                }
+            }
+            "🏔️ High Pass" -> audienceFeedItems.filter { item ->
+                when (item) {
+                    is FeedItem.PostItem -> (item.post.caption + " " + item.post.user.location).contains("pass", true)
+                    is FeedItem.StoryItem -> (item.story.title + " " + item.story.description).contains("pass", true)
+                    is FeedItem.RideShareItem -> (item.rideShare.title + " " + item.rideShare.user.location).contains("pass", true)
+                }
+            }
+            else -> audienceFeedItems
+        }
+    }
+    val followedAdventurerNames = remember(viewModel.friendUsers, followedAdventurerIds) {
+        viewModel.friendUsers.filter { it.id in followedAdventurerIds }.map { it.name }.toSet()
+    }
+    val audienceShorts = remember(selectedFeedTab, followedAdventurerNames) {
+        if (selectedFeedTab == "Following") {
+            defaultAdventureShorts.filter { it.riderName in followedAdventurerNames }
+        } else {
+            defaultAdventureShorts
+        }
+    }
+    val availableShorts = remember(audienceShorts, activeViewerFilter) {
+        when (activeViewerFilter) {
+            "📸 Trail Photos" -> emptyList()
+            "🏔️ High Pass" -> audienceShorts.filter {
+                it.location.contains("pass", true) || it.tags.any { tag -> tag.contains("highpass", true) }
+            }
+            else -> audienceShorts
         }
     }
 
@@ -253,7 +305,75 @@ fun FeedScreen(
             contentPadding = PaddingValues(bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. TOP: Expedition Live Shorts & Vertical Video Reels (Active Viewer Showcase)
+            // 1. Follower-first stories rail: familiar horizontal story bubbles at the top of Home.
+            item {
+                AdventurerStoriesRail(
+                    currentUser = viewModel.currentUser,
+                    adventurers = viewModel.friendUsers,
+                    followedIds = followedAdventurerIds,
+                    onAddStoryClick = { viewModel.setShowCreatePost(true) },
+                    onStoryClick = { adventurer ->
+                        val short = defaultAdventureShorts.firstOrNull { it.riderName == adventurer.name }
+                        if (short != null) {
+                            activeViewerShort = short
+                        } else {
+                            activePhotoViewer = Pair(
+                                adventurerStoryCovers[adventurer.id] ?: adventurer.avatarUrl,
+                                "A recent moment from ${adventurer.name} · ${adventurer.location}"
+                            )
+                        }
+                    }
+                )
+            }
+
+            // 2. For-you vs Following: viewers control whose updates fill the feed.
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "YOUR ADVENTURE FEED",
+                            color = AdventureOrange,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            if (selectedFeedTab == "Following") "Moments from Adventurers you follow" else "Discover journeys worth following",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("For you", "Following").forEach { tab ->
+                            FilterChip(
+                                selected = selectedFeedTab == tab,
+                                onClick = { selectedFeedTab = tab },
+                                label = { Text(tab, fontWeight = if (selectedFeedTab == tab) FontWeight.Bold else FontWeight.Medium) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AdventureOrange,
+                                    selectedLabelColor = Color.White
+                                ),
+                                modifier = Modifier.testTag("feed_audience_${tab.lowercase().replace(" ", "_")}")
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 3. Follow discovery connects creator identity with one-tap following.
+            item {
+                SuggestedAdventurersRail(
+                    adventurers = viewModel.friendUsers,
+                    followedIds = followedAdventurerIds,
+                    onFollowToggle = { viewModel.toggleFollowAdventurer(it) }
+                )
+            }
+
+            // 4. Immersive shorts respond to the selected audience and media view.
+            if (availableShorts.isNotEmpty()) {
             item {
                 AnimatedVisibility(
                     visible = true,
@@ -265,7 +385,7 @@ fun FeedScreen(
                     label = "feed_hero_entrance"
                 ) {
                     ExpeditionShortsReel(
-                        shorts = defaultAdventureShorts,
+                        shorts = availableShorts,
                         onShortClick = { shortItem ->
                             activeViewerShort = shortItem
                         },
@@ -274,7 +394,9 @@ fun FeedScreen(
                 }
             }
 
-            // 2. Active Viewer Filter Chips
+
+            }
+            // 5. Media filters now change the actual feed content
             item {
                 Row(
                     modifier = Modifier
@@ -310,6 +432,72 @@ fun FeedScreen(
                             ),
                             modifier = Modifier.testTag("viewer_filter_${filterName.replace(" ", "_").lowercase()}")
                         )
+                    }
+                }
+            }
+
+            // 4. Photos & Visual Media Feed Section Header
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "ADVENTURER UPDATES & MOMENTS",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AdventureOrange
+                    )
+                    Text(
+                        text = "Stories and field notes",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (displayFeedItems.isEmpty() && activeViewerFilter != "🔥 Trail Shorts") {
+                item {
+                    Text(
+                        if (selectedFeedTab == "Following") "Nothing from your followed Adventurers matches this view yet." else Str.FEED_EMPTY.get(currentLang),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(32.dp)
+                    )
+                }
+            }
+
+            // 5. Active Viewer Photos & Post Cards (Elevated to top)
+            itemsIndexed(displayFeedItems) { _, item ->
+                val sourceIndex = feedItems.indexOfFirst { it == item }.coerceAtLeast(0)
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    when (item) {
+                        is FeedItem.PostItem -> {
+                            PostCard(
+                                post = item.post,
+                                onLikeClick = { viewModel.toggleLike(sourceIndex) },
+                                onCommentClick = { viewModel.openCommentSheet(sourceIndex) },
+                                onPhotoClick = { photoUrl, caption ->
+                                    activePhotoViewer = Pair(photoUrl, caption)
+                                }
+                            )
+                        }
+                        is FeedItem.RideShareItem -> {
+                            RideShareCard(
+                                rideShare = item.rideShare,
+                                onLikeClick = { viewModel.toggleLike(index) },
+                                onCommentClick = { viewModel.openCommentSheet(sourceIndex) }
+                            )
+                        }
+                        is FeedItem.StoryItem -> {
+                            RideStoryCard(
+                                story = item.story,
+                                onClick = { viewModel.navigateTo(Screen.STORY_STUDIO) }
+                            )
+                        }
                     }
                 }
             }
@@ -414,82 +602,6 @@ fun FeedScreen(
                     onOpenAllModules = { viewModel.setShowFeatureOrganizer(true) },
                     lang = currentLang
                 )
-            }
-
-            // 5. Expedition Live Stories Avatars Strip
-            item {
-                ExpeditionStoriesStrip(
-                    onAddStoryClick = { viewModel.setShowCreatePost(true) },
-                    onStoryClick = { story ->
-                        viewModel.navigateTo(Screen.STORY_STUDIO)
-                    },
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-
-            // 4. Photos & Visual Media Feed Section Header
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "EXPEDITION PHOTOS & MOMENTS",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = AdventureOrange
-                    )
-                    Text(
-                        text = "High-Res Trail View",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            if (filteredFeedItems.isEmpty()) {
-                item {
-                    Text(
-                        Str.FEED_EMPTY.get(currentLang),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth().padding(32.dp)
-                    )
-                }
-            }
-
-            // 5. Active Viewer Photos & Post Cards (Elevated to top)
-            itemsIndexed(filteredFeedItems) { index, item ->
-                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    when (item) {
-                        is FeedItem.PostItem -> {
-                            PostCard(
-                                post = item.post,
-                                onLikeClick = { viewModel.toggleLike(index) },
-                                onCommentClick = { viewModel.openCommentSheet(index) },
-                                onPhotoClick = { photoUrl, caption ->
-                                    activePhotoViewer = Pair(photoUrl, caption)
-                                }
-                            )
-                        }
-                        is FeedItem.RideShareItem -> {
-                            RideShareCard(
-                                rideShare = item.rideShare,
-                                onLikeClick = { viewModel.toggleLike(index) },
-                                onCommentClick = { viewModel.openCommentSheet(index) }
-                            )
-                        }
-                        is FeedItem.StoryItem -> {
-                            RideStoryCard(
-                                story = item.story,
-                                onClick = { viewModel.navigateTo(Screen.STORY_STUDIO) }
-                            )
-                        }
-                    }
-                }
             }
 
             // 6. Section Divider: Adventure Hub & Telemetry
