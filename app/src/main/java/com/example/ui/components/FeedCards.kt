@@ -101,7 +101,7 @@ fun PostCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            // Optional Ride Telemetry Badge
+            // Optional Adventure Stats Badge
             post.rideStats?.let { stats ->
                 Spacer(modifier = Modifier.height(10.dp))
                 Surface(
@@ -420,7 +420,7 @@ fun RideStoryCard(
                     color = AdventureOrange.copy(alpha = 0.15f)
                 ) {
                     Text(
-                        text = "FEATURED EXPEDITION STORY",
+                        text = "FEATURED ADVENTURE STORY",
                         style = MaterialTheme.typography.labelSmall,
                         color = AdventureOrange,
                         fontWeight = FontWeight.Bold,
