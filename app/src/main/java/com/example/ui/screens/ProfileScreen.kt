@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.example.data.model.ActivityType
+import com.example.data.market.AdventureMarket
+import com.example.data.market.AdventureMarketSettings
 import com.example.ui.theme.*
 import com.example.viewmodel.AdventurerViewModel
 import com.example.viewmodel.Screen
@@ -45,6 +47,10 @@ fun ProfileScreen(
     val gamification by viewModel.gamification.collectAsState()
     val activityMode by viewModel.activityMode.collectAsState()
     val currentLang by viewModel.currentLang.collectAsState()
+    val marketContext by AdventureMarketSettings.state.collectAsState()
+    LaunchedEffect(context) { AdventureMarketSettings.initialize(context) }
+    var marketMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    var regionMenuExpanded by rememberSaveable { mutableStateOf(false) }
 
     var showActivitySettings by rememberSaveable { mutableStateOf(false) }
     var showLanguageSettings by rememberSaveable { mutableStateOf(false) }
@@ -191,6 +197,111 @@ fun ProfileScreen(
                         }
                         OutlinedButton(onClick = { viewModel.navigateTo(Screen.RADAR) }) {
                             Text("Open", color = Color(0xFFFFB4A6))
+                        }
+                    }
+                }
+            }
+
+            // User-editable market defaults are preferences, not proof of legal permission.
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().testTag("profile_market_context_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = SlatePanel),
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF315A55))
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Public, contentDescription = null, tint = SafeMint, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("MARKET & POLICY CONTEXT", color = SafeMint, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                                Text("Regional defaults for trip actions", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            }
+                        }
+                        Text(
+                            "Your photos and videos use the same viewer in every market. Regional providers and activity guidance can differ by destination.",
+                            color = FieldMuted,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                OutlinedButton(
+                                    modifier = Modifier.fillMaxWidth().testTag("market_country_selector"),
+                                    onClick = { marketMenuExpanded = true }
+                                ) {
+                                    Text(marketContext.market.label, maxLines = 1)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(Icons.Default.ExpandMore, contentDescription = "Choose market")
+                                }
+                                DropdownMenu(
+                                    expanded = marketMenuExpanded,
+                                    onDismissRequest = { marketMenuExpanded = false }
+                                ) {
+                                    AdventureMarket.entries.forEach { market ->
+                                        DropdownMenuItem(
+                                            text = { Text(market.label) },
+                                            onClick = {
+                                                AdventureMarketSettings.setMarket(context, market)
+                                                marketMenuExpanded = false
+                                                regionMenuExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                            Box(modifier = Modifier.weight(1.2f)) {
+                                OutlinedButton(
+                                    modifier = Modifier.fillMaxWidth().testTag("market_region_selector"),
+                                    onClick = { regionMenuExpanded = true }
+                                ) {
+                                    Text(marketContext.region, maxLines = 1, softWrap = false)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(Icons.Default.ExpandMore, contentDescription = "Choose region")
+                                }
+                                DropdownMenu(
+                                    expanded = regionMenuExpanded,
+                                    onDismissRequest = { regionMenuExpanded = false }
+                                ) {
+                                    marketContext.market.regions.forEach { region ->
+                                        DropdownMenuItem(
+                                            text = { Text(region) },
+                                            onClick = {
+                                                AdventureMarketSettings.setRegion(context, region)
+                                                regionMenuExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = SlatePanelAlt,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    "Defaults: ${marketContext.market.defaultsLabel}",
+                                    color = AmberGold,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "Policy status: not verified live. Rules can depend on the exact destination, land manager, activity, season and eligibility. Confirm requirements with the official source before acting.",
+                                    color = FieldMuted,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                     }
                 }
