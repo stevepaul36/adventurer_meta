@@ -18,6 +18,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -897,13 +899,22 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                 targetState = currentScreen,
                 transitionSpec = {
                     when {
-                        // Opening a detail screen: slide in from the right.
+                        // Detail screens enter with a compact directional motion.
                         !targetState.isTopLevel && initialState.isTopLevel ->
-                            (slideInHorizontally { it / 4 } + fadeIn()) togetherWith fadeOut()
-                        // Closing a detail screen: slide it away to the right.
+                            (slideInHorizontally(
+                                animationSpec = tween(300),
+                                initialOffsetX = { fullWidth -> fullWidth / 6 }
+                            ) + fadeIn(tween(240))) togetherWith fadeOut(tween(150))
+                        // Returning to a top-level destination reverses the motion.
                         targetState.isTopLevel && !initialState.isTopLevel ->
-                            fadeIn() togetherWith (slideOutHorizontally { it / 4 } + fadeOut())
-                        else -> fadeIn(tween(180)) togetherWith fadeOut(tween(120))
+                            fadeIn(tween(240)) togetherWith (
+                                slideOutHorizontally(
+                                    animationSpec = tween(220),
+                                    targetOffsetX = { fullWidth -> fullWidth / 8 }
+                                ) + fadeOut(tween(180))
+                            )
+                        // Top-level navigation remains quick and lightweight.
+                        else -> fadeIn(tween(220)) togetherWith fadeOut(tween(140))
                     }
                 },
                 label = "screen_transition"
