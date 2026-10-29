@@ -14,6 +14,8 @@ Before the first public release, treat these as blocking decisions:
 - Finish the manual device acceptance checklist in [PRODUCTION_UX_ACCEPTANCE.md](PRODUCTION_UX_ACCEPTANCE.md), covering permissions, location, voice interruption, app lifecycle, billing, offline use, export/share and recovery from backend failure.
 - Configure Google Play internal testing, Play App Signing, subscriptions, and provider credentials before advertising paid features as available.
 
+Refer to [PRODUCTION_API_KEYS.md](PRODUCTION_API_KEYS.md) for the credentials matrix, which credentials are optional, and the distinction between public SDK keys, server secrets, Firebase app configuration, and signing material.
+
 ## 1. Firebase project and backend
 
 1. Install/use the Firebase CLI and select the intended project from the repository root:

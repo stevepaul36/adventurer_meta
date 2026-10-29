@@ -14,6 +14,7 @@ class RegionalProviderCatalogTest {
     fun suggestsMarketFromCountryCodeWithoutRequiringLocationPermission() {
         assertEquals(AdventureMarket.INDIA, AdventureMarket.suggestedFromCountryCode("in"))
         assertEquals(AdventureMarket.CANADA, AdventureMarket.suggestedFromCountryCode("CA"))
+        assertEquals(AdventureMarket.UNITED_STATES, AdventureMarket.suggestedFromCountryCode("us"))
         assertEquals(null, AdventureMarket.suggestedFromCountryCode("GB"))
         assertEquals(null, AdventureMarket.suggestedFromCountryCode(null))
     }
@@ -42,10 +43,16 @@ class RegionalProviderCatalogTest {
     fun catalogKeepsMarketsDistinctAndProviderIdsUnique() {
         val india = RegionalProviderCatalog.forMarket(AdventureMarket.INDIA)
         val canada = RegionalProviderCatalog.forMarket(AdventureMarket.CANADA)
+        val unitedStates = RegionalProviderCatalog.forMarket(AdventureMarket.UNITED_STATES)
         assertTrue(india.any { it.id == "irctc" })
         assertFalse(canada.any { it.id == "irctc" })
         assertTrue(india.none { it.id == "parks-canada" })
-        assertEquals((india + canada).size, (india + canada).map { it.id }.distinct().size)
+        assertTrue(unitedStates.any { it.id == "nps-us" })
+        assertTrue(unitedStates.any { it.id == "recreation-gov-us" })
+        assertTrue(unitedStates.none { it.id == "parks-canada" })
+        val allProviders = india + canada + unitedStates
+        assertEquals(allProviders.size, allProviders.map { it.id }.distinct().size)
+        assertTrue(allProviders.all { it.websiteUrl.startsWith("https://") })
         assertNotNull(RegionalProviderCatalog.find("parks-reservations-ca"))
     }
 
@@ -58,6 +65,13 @@ class RegionalProviderCatalogTest {
         assertTrue(url.startsWith("https://www.google.com/maps/search/?api=1&query="))
         assertTrue(url.contains("EV+charger+%26+coffee+in+Canada"))
         assertFalse(url.contains(" "))
+
+        val regionalUrl = RegionalProviderCatalog.googleMapsSearchUrl(
+            query = "camping",
+            market = AdventureMarket.CANADA,
+            region = "Ontario",
+        )
+        assertTrue(regionalUrl.contains("camping+in+Ontario%2C+Canada"))
     }
 
     @Test
