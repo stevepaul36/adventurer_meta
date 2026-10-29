@@ -5,6 +5,7 @@ import com.example.data.providers.AdventureMarket
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.Locale
 
 data class AdventureMarketContext(
     val market: AdventureMarket = AdventureMarket.CANADA,
@@ -56,6 +57,7 @@ object AdventureMarketSettings {
         val preferences = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val market = runCatching {
             preferences.getString(KEY_MARKET, null)?.let(AdventureMarket::valueOf)
+                ?: AdventureMarket.suggestedFromCountryCode(Locale.getDefault().country)
                 ?: AdventureMarket.CANADA
         }.getOrDefault(AdventureMarket.CANADA)
         val savedRegion = preferences.getString(KEY_REGION, null)
