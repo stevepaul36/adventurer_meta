@@ -363,15 +363,6 @@ fun FeedScreen(
                 }
             }
 
-            // 3. Follow discovery connects creator identity with one-tap following.
-            item {
-                SuggestedAdventurersRail(
-                    adventurers = viewModel.friendUsers,
-                    followedIds = followedAdventurerIds,
-                    onFollowToggle = { viewModel.toggleFollowAdventurer(it) }
-                )
-            }
-
             // 4. Immersive shorts respond to the selected audience and media view.
             if (availableShorts.isNotEmpty()) {
             item {
@@ -515,6 +506,15 @@ fun FeedScreen(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 18.dp)
                     )
                 }
+            }
+
+            // Suggested Adventurers sits after the social feed so the first screen stays viewer-first.
+            item {
+                SuggestedAdventurersRail(
+                    adventurers = viewModel.friendUsers,
+                    followedIds = followedAdventurerIds,
+                    onFollowToggle = { viewModel.toggleFollowAdventurer(it) }
+                )
             }
 
             // 3. Basecamp Active Plan & Preparation Resume Card (Screen 01)
