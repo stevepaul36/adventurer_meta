@@ -23,6 +23,10 @@ class AdventurerRepository {
         User("u5", "Dr. Tanya Sen", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80", "RE Scram 411 (Medic Spec)", "Leh, Ladakh")
     )
 
+    // Demo follow graph; state lives in the repository so it survives navigation between screens.
+    private val _followedAdventurerIds = MutableStateFlow(setOf("u2", "u3"))
+    val followedAdventurerIds: StateFlow<Set<String>> = _followedAdventurerIds.asStateFlow()
+
     private val initialExpeditions = listOf(
         ExpeditionRoute(
             id = "leh-ladakh",
@@ -297,6 +301,13 @@ class AdventurerRepository {
     val telemetry: StateFlow<LiveRideTelemetry> = _telemetry.asStateFlow()
 
     // Helper functions
+    fun toggleFollowAdventurer(adventurerId: String) {
+        if (adventurerId.isBlank() || adventurerId == currentUser.id) return
+        _followedAdventurerIds.value = _followedAdventurerIds.value.toMutableSet().apply {
+            if (!add(adventurerId)) remove(adventurerId)
+        }.toSet()
+    }
+
     fun toggleLike(feedIndex: Int) {
         val currentList = _feed.value.toMutableList()
         if (feedIndex in currentList.indices) {
