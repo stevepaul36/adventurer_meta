@@ -18,6 +18,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.scale
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.expandVertically
@@ -854,6 +856,14 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                     ) {
                         NavTabs.forEach { tab ->
                             val selected = currentScreen == tab.screen
+                            val iconScale by animateFloatAsState(
+                                targetValue = if (selected) 1.08f else 1f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMedium
+                                ),
+                                label = "nav_icon_scale_${tab.screen.name.lowercase()}"
+                            )
                             NavigationBarItem(
                                 selected = selected,
                                 onClick = { viewModel.navigateTo(tab.screen) },
@@ -862,7 +872,11 @@ fun AdventurerApp(viewModel: AdventurerViewModel) {
                                         if (tab.screen == Screen.LIVE_TRACKER && telemetry.isRecording) Badge(containerColor = DangerRed)
                                     }) {
                                         // The label below already names the tab, so the icon is decorative.
-                                        Icon(if (selected) tab.selected else tab.unselected, contentDescription = null)
+                                        Icon(
+                                            if (selected) tab.selected else tab.unselected,
+                                            contentDescription = null,
+                                            modifier = Modifier.scale(iconScale)
+                                        )
                                     }
                                 },
                                 label = {
