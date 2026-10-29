@@ -11,15 +11,18 @@ enum class AdventureMarket(
     val countryCode: String,
     val currencyCode: String,
     val distanceUnit: String,
+    val temperatureUnit: String,
 ) {
-    INDIA("India", "IN", "INR", "km"),
-    CANADA("Canada", "CA", "CAD", "km");
+    INDIA("India", "IN", "INR", "km", "°C"),
+    CANADA("Canada", "CA", "CAD", "km", "°C"),
+    UNITED_STATES("United States", "US", "USD", "mi", "°F");
 
     companion object {
         fun suggestedFromCountryCode(countryCode: String?): AdventureMarket? =
             when (countryCode?.uppercase()) {
                 "IN" -> INDIA
                 "CA" -> CANADA
+                "US" -> UNITED_STATES
                 else -> null
             }
     }
@@ -66,6 +69,16 @@ object RegionalProviderCatalog {
         RegionalProvider("airbnb-india", "Airbnb", AdventureMarket.INDIA, RegionalServiceCategory.STAYS, "https://www.airbnb.com/", "Stays and experiences handoff; no booking confirmation is returned to Adventurer."),
         RegionalProvider("incredible-india", "Incredible India", AdventureMarket.INDIA, RegionalServiceCategory.OUTDOORS, "https://www.incredibleindia.gov.in/", "Official tourism inspiration; verify local access, closures, permits and operating hours."),
         RegionalProvider("maps-fuel-in", "Google Maps fuel search", AdventureMarket.INDIA, RegionalServiceCategory.FUEL_AND_CHARGING, "https://maps.google.com/", "Use Maps to look for fuel or charging. Availability, opening hours and fuel stock are not verified."),
+        // United States: external discovery handoffs only; no provider APIs are connected.
+        RegionalProvider("google-maps-us", "Google Maps", AdventureMarket.UNITED_STATES, RegionalServiceCategory.NAVIGATION, "https://maps.google.com/", "External place search and directions handoff; no live route state is returned to Adventurer."),
+        RegionalProvider("uber-eats-us", "Uber Eats", AdventureMarket.UNITED_STATES, RegionalServiceCategory.FOOD, "https://www.ubereats.com/", "Food-provider handoff; menus, delivery coverage, payments and order status remain with Uber Eats."),
+        RegionalProvider("doordash-us", "DoorDash", AdventureMarket.UNITED_STATES, RegionalServiceCategory.FOOD, "https://www.doordash.com/", "Food-provider handoff; no cart or order confirmation is returned to Adventurer."),
+        RegionalProvider("amtrak-us", "Amtrak", AdventureMarket.UNITED_STATES, RegionalServiceCategory.TRANSPORT, "https://www.amtrak.com/", "Rail search/booking handoff; schedules and ticket confirmation remain with Amtrak."),
+        RegionalProvider("uber-us", "Uber", AdventureMarket.UNITED_STATES, RegionalServiceCategory.TRANSPORT, "https://www.uber.com/", "Mobility handoff; opening the provider does not request or confirm a ride."),
+        RegionalProvider("recreation-gov-us", "Recreation.gov", AdventureMarket.UNITED_STATES, RegionalServiceCategory.STAYS, "https://www.recreation.gov/", "Official federal recreation reservation handoff; availability and access conditions must be checked at the source."),
+        RegionalProvider("nps-us", "National Park Service", AdventureMarket.UNITED_STATES, RegionalServiceCategory.OUTDOORS, "https://www.nps.gov/", "Official US national-park information; it does not cover every state, local, tribal or private-land rule."),
+        RegionalProvider("alltrails-us", "AllTrails", AdventureMarket.UNITED_STATES, RegionalServiceCategory.OUTDOORS, "https://www.alltrails.com/us", "Trail discovery handoff; confirm current conditions and land-manager restrictions."),
+        RegionalProvider("plugshare-us", "PlugShare", AdventureMarket.UNITED_STATES, RegionalServiceCategory.FUEL_AND_CHARGING, "https://www.plugshare.com/", "EV charging discovery handoff; live connector availability is not connected to Adventurer."),
         // Canada: delivery, outdoor access, camping, transit and EV charging.
         RegionalProvider("google-maps-ca", "Google Maps", AdventureMarket.CANADA, RegionalServiceCategory.NAVIGATION, "https://maps.google.com/", "Open external maps for place search or turn-by-turn directions."),
         RegionalProvider("uber-eats-ca", "Uber Eats", AdventureMarket.CANADA, RegionalServiceCategory.FOOD, "https://www.ubereats.com/ca", "Restaurant delivery handoff; cart, fees, payment and order status stay with Uber Eats."),
