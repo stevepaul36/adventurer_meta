@@ -246,7 +246,7 @@ fun ProfileScreen(
                                     expanded = marketMenuExpanded,
                                     onDismissRequest = { marketMenuExpanded = false }
                                 ) {
-                                    AdventureMarket.entries.forEach { market ->
+                                    AdventureMarket.values().forEach { market ->
                                         DropdownMenuItem(
                                             text = { Text(market.label) },
                                             onClick = {
