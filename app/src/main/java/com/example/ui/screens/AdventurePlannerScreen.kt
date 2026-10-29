@@ -924,7 +924,7 @@ fun AdventurePlannerScreen(
                     }
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -944,7 +944,7 @@ fun AdventurePlannerScreen(
                         }
                     }
                     Text(
-                        "The amount is stored with its currency. Switching India/Canada does not convert your budget; review the amount when changing currency.",
+                        "The amount is stored with its currency. Switching markets does not convert your budget; review the amount when changing currency.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall
                     )
