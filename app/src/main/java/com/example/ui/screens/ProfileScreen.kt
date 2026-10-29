@@ -190,7 +190,7 @@ fun ProfileScreen(
                                     .padding(horizontal = 14.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                ProfileStatCol("RIDES", "${gamification.totalRides}")
+                                ProfileStatCol("ADVENTURES", "${gamification.totalRides}")
                                 ProfileStatCol("DISTANCE", "${gamification.totalDistanceKm.toInt()} km")
                                 ProfileStatCol("ELEVATION", "+${gamification.totalElevationM} m")
                                 ProfileStatCol("XP", "${gamification.currentXp}")
