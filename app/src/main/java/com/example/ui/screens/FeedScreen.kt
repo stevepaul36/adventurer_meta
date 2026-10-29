@@ -139,7 +139,7 @@ fun FeedScreen(
     }
     val audienceShorts = remember(selectedFeedTab, followedAdventurerNames) {
         if (selectedFeedTab == "Following") {
-            defaultAdventureShorts.filter { it.riderName in followedAdventurerNames }
+            defaultAdventureShorts.filter { it.adventurerName in followedAdventurerNames }
         } else {
             defaultAdventureShorts
         }
@@ -313,7 +313,7 @@ fun FeedScreen(
                     followedIds = followedAdventurerIds,
                     onAddStoryClick = { viewModel.navigateTo(Screen.STORY_STUDIO) },
                     onStoryClick = { adventurer ->
-                        val short = defaultAdventureShorts.firstOrNull { it.riderName == adventurer.name }
+                        val short = defaultAdventureShorts.firstOrNull { it.adventurerName == adventurer.name }
                         if (short != null) {
                             activeViewerShort = short
                         } else {
