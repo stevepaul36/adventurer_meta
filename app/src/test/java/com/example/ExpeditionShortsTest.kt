@@ -12,7 +12,7 @@ class ExpeditionShortsTest {
     fun defaultShortsListContainsValidActiveViewerContent() {
         val shorts = defaultAdventureShorts
         assertTrue("Shorts list should not be empty", shorts.isNotEmpty())
-        assertEquals(5, shorts.size)
+        assertEquals(12, shorts.size)
 
         shorts.forEach { shortItem ->
             assertTrue("Short must have a non-blank ID", shortItem.id.isNotBlank())
@@ -24,7 +24,18 @@ class ExpeditionShortsTest {
             assertTrue("Likes count must be non-negative", shortItem.likes >= 0)
             assertTrue("Lean angle must be realistic", shortItem.leanAngle in 0..60)
             assertTrue("Speed must be realistic", shortItem.speedKmH in 0..200)
+            assertTrue("Every short must identify an adventure activity", shortItem.activityLabel.isNotBlank())
         }
+    }
+
+    @Test
+    fun shortsRepresentMultipleAdventureActivities() {
+        val activityLabels = defaultAdventureShorts.map { it.activityLabel }.toSet()
+        assertTrue("Feed should show more than motorcycling", activityLabels.size >= 7)
+        assertTrue(activityLabels.contains("Trekking"))
+        assertTrue(activityLabels.contains("Kayaking"))
+        assertTrue(activityLabels.contains("Scuba diving"))
+        assertTrue(activityLabels.contains("Fishing & angling"))
     }
 
     @Test
