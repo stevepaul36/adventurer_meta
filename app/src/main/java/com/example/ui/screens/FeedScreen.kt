@@ -471,20 +471,29 @@ fun FeedScreen(
                                 onCommentClick = { viewModel.openCommentSheet(sourceIndex) },
                                 onPhotoClick = { photoUrl, caption ->
                                     activePhotoViewer = Pair(photoUrl, caption)
-                                }
+                                },
+                                isFollowing = item.post.user.id in followedAdventurerIds,
+                                canFollow = item.post.user.id != viewModel.currentUser.id,
+                                onFollowClick = { viewModel.toggleFollowAdventurer(item.post.user.id) }
                             )
                         }
                         is FeedItem.RideShareItem -> {
                             RideShareCard(
                                 rideShare = item.rideShare,
                                 onLikeClick = { viewModel.toggleLike(sourceIndex) },
-                                onCommentClick = { viewModel.openCommentSheet(sourceIndex) }
+                                onCommentClick = { viewModel.openCommentSheet(sourceIndex) },
+                                isFollowing = item.rideShare.user.id in followedAdventurerIds,
+                                canFollow = item.rideShare.user.id != viewModel.currentUser.id,
+                                onFollowClick = { viewModel.toggleFollowAdventurer(item.rideShare.user.id) }
                             )
                         }
                         is FeedItem.StoryItem -> {
                             RideStoryCard(
                                 story = item.story,
-                                onClick = { viewModel.navigateTo(Screen.STORY_STUDIO) }
+                                onClick = { viewModel.navigateTo(Screen.STORY_STUDIO) },
+                                isFollowing = item.story.user.id in followedAdventurerIds,
+                                canFollow = item.story.user.id != viewModel.currentUser.id,
+                                onFollowClick = { viewModel.toggleFollowAdventurer(item.story.user.id) }
                             )
                         }
                     }
