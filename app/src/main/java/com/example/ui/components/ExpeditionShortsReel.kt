@@ -63,12 +63,14 @@ data class AdventureShort(
     val speedKmH: Int = 84,
     val leanAngle: Int = 36,
     val tags: List<String> = emptyList(),
-    val activityLabel: String = "Motorcycling"
+    val activityLabel: String = "Motorcycling",
+    val adventurerId: String? = null
 )
 
 val defaultAdventureShorts = listOf(
     AdventureShort(
         id = "short_1",
+        adventurerId = "u2",
         title = "Hairpin Switchbacks at 18,000 ft",
         caption = "Carving the highest motorable road in sub-zero thin air. Throttle response was crisp! 🏍️💨",
         adventurerName = "Mia Torque",
@@ -88,6 +90,7 @@ val defaultAdventureShorts = listOf(
     ),
     AdventureShort(
         id = "short_2",
+        adventurerId = "u3",
         title = "Banff Singletrack Ridge Drop",
         caption = "Dropping into the loose shale descent along the continental divide! Brakes smoking 🔥",
         adventurerName = "Clutch Cargo",
@@ -106,6 +109,7 @@ val defaultAdventureShorts = listOf(
     ),
     AdventureShort(
         id = "short_3",
+        adventurerId = "u13",
         title = "Zanskar Frozen River Crossing",
         caption = "Ice sheets cracking under knobby tyres. -8°C and pure adrenaline! ❄️",
         adventurerName = "Tenzin Trail",
@@ -125,6 +129,7 @@ val defaultAdventureShorts = listOf(
     ),
     AdventureShort(
         id = "short_4",
+        adventurerId = "u14",
         title = "Pacific Coast Golden Hour Blast",
         caption = "Chasing the Pacific sunset through Big Sur sea-spray fog. Unfiltered perfection.",
         adventurerName = "Alex Rider",
@@ -143,6 +148,7 @@ val defaultAdventureShorts = listOf(
     ),
     AdventureShort(
         id = "short_5",
+        adventurerId = "u15",
         title = "Spiti Moonland Lunar Drift",
         caption = "Kick up dust in the otherworldly eroded canyons of Spiti Valley. Lunar playground!",
         adventurerName = "Zara Moto",
@@ -161,6 +167,7 @@ val defaultAdventureShorts = listOf(
     ),
     AdventureShort(
         id = "short_6",
+        adventurerId = "u6",
         title = "Sunrise above the cloud line",
         caption = "A quiet alpine start, a long climb, and a view that made every step worth it.",
         adventurerName = "Leah Ridge",
@@ -180,6 +187,7 @@ val defaultAdventureShorts = listOf(
     ),
     AdventureShort(
         id = "short_7",
+        adventurerId = "u7",
         title = "Paddling into Howe Sound",
         caption = "Glassy water, coastal peaks and a slow morning exploring the inlet by kayak.",
         adventurerName = "Noah Tide",
@@ -199,6 +207,7 @@ val defaultAdventureShorts = listOf(
     ),
     AdventureShort(
         id = "short_8",
+        adventurerId = "u8",
         title = "Rain-on-tent night in the pines",
         caption = "A dry camp, warm food, a forest full of sound and a slow sunrise after the storm.",
         adventurerName = "Sage Wilds",
@@ -218,6 +227,7 @@ val defaultAdventureShorts = listOf(
     ),
     AdventureShort(
         id = "short_9",
+        adventurerId = "u9",
         title = "Gravel climb before the city wakes",
         caption = "Loose gravel, a steady cadence and one last climb before the coffee stop.",
         adventurerName = "Arjun Pedal",
@@ -237,6 +247,7 @@ val defaultAdventureShorts = listOf(
     ),
     AdventureShort(
         id = "short_10",
+        adventurerId = "u10",
         title = "The long way along the coast",
         caption = "No fixed schedule today: ocean viewpoints, small-town diners and roads worth taking slowly.",
         adventurerName = "Maya Miles",
@@ -256,6 +267,7 @@ val defaultAdventureShorts = listOf(
     ),
     AdventureShort(
         id = "short_11",
+        adventurerId = "u11",
         title = "A bluewater world below the surface",
         caption = "A calm, carefully planned dive with a buddy check and an unforgettable reef encounter.",
         adventurerName = "Kai Deep",
@@ -275,6 +287,7 @@ val defaultAdventureShorts = listOf(
     ),
     AdventureShort(
         id = "short_12",
+        adventurerId = "u12",
         title = "Fly-fishing at first light",
         caption = "Quiet water, patient casting and a catch-and-release morning on a favourite bend in the river.",
         adventurerName = "Robin Cast",
@@ -645,6 +658,8 @@ fun ActiveShortsViewerModal(
     onDismiss: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    followedAdventurerIds: Set<String> = emptySet(),
+    onFollowToggle: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -863,6 +878,36 @@ fun ActiveShortsViewerModal(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Follow the creator without leaving the immersive viewer.
+                val adventurerId = short.adventurerId
+                val isFollowingAdventurer = adventurerId != null && adventurerId in followedAdventurerIds
+                if (adventurerId != null) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton(
+                            onClick = { onFollowToggle(adventurerId) },
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .background(if (isFollowingAdventurer) AdventureOrange.copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.5f))
+                                .testTag("viewer_follow_adventurer_button")
+                        ) {
+                            Icon(
+                                imageVector = if (isFollowingAdventurer) Icons.Default.CheckCircle else Icons.Default.PersonAdd,
+                                contentDescription = if (isFollowingAdventurer) "Unfollow Adventurer ${short.adventurerName}" else "Follow Adventurer ${short.adventurerName}",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Text(
+                            text = if (isFollowingAdventurer) "Following" else "Follow",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
+                    }
+                }
+
                 // Like Button
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     IconButton(
