@@ -1,6 +1,7 @@
 package com.example
 
 import com.example.ui.components.defaultAdventureShorts
+import com.example.data.repository.AdventurerRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -25,7 +26,17 @@ class ExpeditionShortsTest {
             assertTrue("Lean angle must be realistic", shortItem.leanAngle in 0..60)
             assertTrue("Speed must be realistic", shortItem.speedKmH in 0..200)
             assertTrue("Every short must identify an adventure activity", shortItem.activityLabel.isNotBlank())
+            assertTrue("Every short must identify its creator", !shortItem.adventurerId.isNullOrBlank())
         }
+    }
+
+    @Test
+    fun everyShortCreatorCanBeFollowedFromTheRepository() {
+        val shortCreatorIds = defaultAdventureShorts.mapNotNull { it.adventurerId }
+        val knownAdventurerIds = AdventurerRepository().friendUsers.map { it.id }.toSet()
+
+        assertEquals("Each short needs one unique creator ID", defaultAdventureShorts.size, shortCreatorIds.toSet().size)
+        assertTrue("Every short creator should exist in discovery", shortCreatorIds.all { it in knownAdventurerIds })
     }
 
     @Test
