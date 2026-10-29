@@ -19,8 +19,11 @@ class AdventurerRepository {
     val friendUsers = listOf(
         User("u2", "Mia Torque", "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80", "KTM 390 Adventure", "Pune, Maharashtra"),
         User("u3", "Clutch Cargo", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80", "BMW R1250 GS Adventure", "Shimla, HP"),
-        User("u4", "Vance Velocity", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80", "Triumph Tiger 900 Rally Pro", "Mumbai, Maharashtra"),
-        User("u5", "Dr. Tanya Sen", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80", "RE Scram 411 (Medic Spec)", "Leh, Ladakh")
+        User("u4", "Vance Velocity", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80", "Triumph Tiger 900 Rally Pro", "Mumbai, Maharashtra", "Motorcycling"),
+        User("u5", "Dr. Tanya Sen", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80", "Wilderness medicine kit", "Leh, Ladakh", "Wilderness medicine"),
+        User("u6", "Leah Ridge", "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=300&q=80", "Alpine trekking kit", "Canmore, Alberta", "Trekking"),
+        User("u7", "Noah Tide", "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80", "Sea kayak", "Squamish, British Columbia", "Kayaking"),
+        User("u8", "Sage Wilds", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80", "Backcountry camp kit", "Algonquin, Ontario", "Camping & wildlife")
     )
 
     // Demo follow graph; state lives in the repository so it survives navigation between screens.
