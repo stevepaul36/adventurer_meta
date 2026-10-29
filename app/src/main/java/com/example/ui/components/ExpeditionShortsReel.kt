@@ -559,7 +559,7 @@ fun ShortCard(
                     modifier = Modifier.padding(bottom = 4.dp)
                 ) {
                     Text(
-                        text = "▲ ${short.altitude}",
+                        text = "📍 ${short.location}",
                         color = HighAltitudeCyan,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
@@ -781,10 +781,11 @@ fun ActiveShortsViewerModal(
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = short.riderName,
+                                    text = "${short.riderName} · Adventurer",
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
+                                    fontSize = 14.sp,
+                                    maxLines = 1
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Surface(
@@ -988,7 +989,7 @@ fun ActiveShortsViewerModal(
                 }
             }
 
-            // Bottom Overlay: Telemetry HUD, Short Title, Active Reaction Bar
+            // Bottom Overlay: activity-aware context, moment title, and reactions
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -1035,7 +1036,7 @@ fun ActiveShortsViewerModal(
                     }
                 }
 
-                // Short Title & Bike Model
+                // Short title and activity-specific gear/context
                 Text(
                     text = short.title,
                     color = Color.White,
