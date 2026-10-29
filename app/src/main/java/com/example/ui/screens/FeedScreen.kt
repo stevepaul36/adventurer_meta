@@ -871,3 +871,228 @@ fun FeedScreen(
     }
 }
 
+
+
+private val adventurerStoryCovers = mapOf(
+    "u2" to "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=900&q=80",
+    "u3" to "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80",
+    "u4" to "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=900&q=80",
+    "u5" to "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=900&q=80"
+)
+
+/** Stories are surfaced first, like a familiar social viewer, while using Adventurer terminology. */
+@Composable
+private fun AdventurerStoriesRail(
+    currentUser: User,
+    adventurers: List<User>,
+    followedIds: Set<String>,
+    onAddStoryClick: () -> Unit,
+    onStoryClick: (User) -> Unit
+) {
+    val followedAdventurers = adventurers.filter { it.id in followedIds }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    "ADVENTURER STORIES",
+                    color = AdventureOrange,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    "Fresh moments from people you follow",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Text(
+                "${followedAdventurers.size} following",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(
+                modifier = Modifier.width(66.dp).clickable(onClick = onAddStoryClick),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier.size(62.dp).clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    AsyncImage(
+                        model = currentUser.avatarUrl,
+                        contentDescription = "Your Adventurer profile",
+                        modifier = Modifier.fillMaxSize().padding(3.dp).clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Surface(
+                        modifier = Modifier.align(Alignment.BottomEnd).size(23.dp)
+                            .border(2.dp, MaterialTheme.colorScheme.background, CircleShape),
+                        shape = CircleShape,
+                        color = AdventureOrange
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add a story",
+                            tint = Color.White,
+                            modifier = Modifier.padding(3.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(5.dp))
+                Text(
+                    "Your story",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1
+                )
+            }
+
+            followedAdventurers.forEach { adventurer ->
+                Column(
+                    modifier = Modifier.width(70.dp).clickable { onStoryClick(adventurer) },
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier.size(62.dp).clip(CircleShape)
+                            .background(Brush.sweepGradient(listOf(AdventureOrange, AmberGold, SafeMint, AdventureOrange)))
+                    ) {
+                        AsyncImage(
+                            model = adventurer.avatarUrl,
+                            contentDescription = "Open story from Adventurer ${adventurer.name}",
+                            modifier = Modifier.fillMaxSize().padding(3.dp).clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    Spacer(Modifier.height(5.dp))
+                    Text(
+                        adventurer.name.substringBefore(" "),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1
+                    )
+                    Text(
+                        "ADVENTURER",
+                        color = AdventureOrange,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 8.sp,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** A horizontal discovery shelf with explicit Follow/Following actions for every profile. */
+@Composable
+private fun SuggestedAdventurersRail(
+    adventurers: List<User>,
+    followedIds: Set<String>,
+    onFollowToggle: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "MEET ADVENTURERS",
+                color = AdventureOrange,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                "Follow their next journey",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            adventurers.forEach { adventurer ->
+                val isFollowing = adventurer.id in followedIds
+                Card(
+                    modifier = Modifier.width(224.dp).testTag("adventurer_card_${adventurer.id}"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = CardDefaults.outlinedCardBorder()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            AsyncImage(
+                                model = adventurer.avatarUrl,
+                                contentDescription = null,
+                                modifier = Modifier.size(44.dp).clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(Modifier.width(9.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    adventurer.name,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
+                                )
+                                Text(
+                                    "Adventurer",
+                                    color = AdventureOrange,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                                Text(
+                                    adventurer.location,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        if (isFollowing) {
+                            OutlinedButton(
+                                onClick = { onFollowToggle(adventurer.id) },
+                                modifier = Modifier.fillMaxWidth().height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text("Following")
+                            }
+                        } else {
+                            Button(
+                                onClick = { onFollowToggle(adventurer.id) },
+                                modifier = Modifier.fillMaxWidth().height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange)
+                            ) {
+                                Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text("Follow Adventurer")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
