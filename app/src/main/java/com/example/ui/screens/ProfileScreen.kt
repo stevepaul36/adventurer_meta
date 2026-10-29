@@ -47,6 +47,7 @@ fun ProfileScreen(
     val gamification by viewModel.gamification.collectAsState()
     val activityMode by viewModel.activityMode.collectAsState()
     val currentLang by viewModel.currentLang.collectAsState()
+    val followedAdventurerIds by viewModel.followedAdventurerIds.collectAsState()
     val marketContext by AdventureMarketSettings.state.collectAsState()
     LaunchedEffect(context) { AdventureMarketSettings.initialize(context) }
     var marketMenuExpanded by rememberSaveable { mutableStateOf(false) }
@@ -73,7 +74,7 @@ fun ProfileScreen(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "TRAIL SETTINGS",
+                                "ADVENTURER PROFILE",
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White,
                                 fontSize = 16.sp
@@ -93,7 +94,7 @@ fun ProfileScreen(
                             }
                         }
                         Text(
-                            "Preferences shape utility and calm",
+                            "Your stories, activity, following, and preferences",
                             style = MaterialTheme.typography.labelSmall,
                             color = FieldMuted
                         )
@@ -112,7 +113,7 @@ fun ProfileScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Profile & Rider Card
+            // Creator profile and Adventurer identity card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -138,14 +139,42 @@ fun ProfileScreen(
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(user.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("📍 ${user.location} • Level ${gamification.level} Trail Master", style = MaterialTheme.typography.labelMedium, color = AmberGold)
+                        Text("ADVENTURER · ${user.primaryActivity} · 📍 ${user.location} · LEVEL ${gamification.level}", style = MaterialTheme.typography.labelMedium, color = AmberGold)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "“Two wheels move the soul. Chasing Himalayan snow passes and Sahyadri monsoon ridges.”",
+                            text = "“Sharing the journeys, field notes and wild places I discover with the people who follow my adventures.”",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFFCBD5E1),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = SlatePanelAlt,
+                            modifier = Modifier.fillMaxWidth().testTag("adventurer_creator_identity")
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("ADVENTURER PROFILE", color = AdventureOrange, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.labelSmall)
+                                    Text(
+                                        "Your stories and trip moments are shared with your followers.",
+                                        color = FieldMuted,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("${followedAdventurerIds.size}", color = Color.White, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleLarge)
+                                    Text("FOLLOWING", color = SafeMint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -161,7 +190,7 @@ fun ProfileScreen(
                                     .padding(horizontal = 14.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                ProfileStatCol("RIDES", "${gamification.totalRides}")
+                                ProfileStatCol("ADVENTURES", "${gamification.totalRides}")
                                 ProfileStatCol("DISTANCE", "${gamification.totalDistanceKm.toInt()} km")
                                 ProfileStatCol("ELEVATION", "+${gamification.totalElevationM} m")
                                 ProfileStatCol("XP", "${gamification.currentXp}")

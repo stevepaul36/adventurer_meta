@@ -43,7 +43,10 @@ fun PostCard(
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onPhotoClick: ((String, String) -> Unit)? = null
+    onPhotoClick: ((String, String) -> Unit)? = null,
+    isFollowing: Boolean = false,
+    canFollow: Boolean = true,
+    onFollowClick: (() -> Unit)? = null
 ) {
     Card(
         modifier = modifier
@@ -79,10 +82,31 @@ fun PostCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "${post.user.bikeModel} • ${post.timestamp}",
+                        text = "${post.user.primaryActivity} Adventurer • ${post.timestamp}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Text(
+                        text = post.user.bikeModel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        maxLines = 1
+                    )
+                }
+                if (canFollow && onFollowClick != null) {
+                    TextButton(
+                        onClick = onFollowClick,
+                        modifier = Modifier.height(36.dp).testTag("post_follow_button_${post.id}"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isFollowing) Icons.Default.CheckCircle else Icons.Default.PersonAdd,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (isFollowing) "Following" else "Follow", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
 
@@ -95,7 +119,7 @@ fun PostCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            // Optional Ride Telemetry Badge
+            // Optional Adventure Stats Badge
             post.rideStats?.let { stats ->
                 Spacer(modifier = Modifier.height(10.dp))
                 Surface(
@@ -235,7 +259,10 @@ fun RideShareCard(
     rideShare: RideShare,
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isFollowing: Boolean = false,
+    canFollow: Boolean = true,
+    onFollowClick: (() -> Unit)? = null
 ) {
     Card(
         modifier = modifier
@@ -270,10 +297,26 @@ fun RideShareCard(
                         color = AdventureOrange
                     )
                     Text(
-                        text = "Mapped by ${rideShare.user.name} • ${rideShare.timestamp}",
+                        text = "Shared by ${rideShare.user.name} · Adventurer · ${rideShare.user.primaryActivity} • ${rideShare.timestamp}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2
                     )
+                }
+                if (canFollow && onFollowClick != null) {
+                    TextButton(
+                        onClick = onFollowClick,
+                        modifier = Modifier.height(36.dp).testTag("route_follow_button_${rideShare.id}"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isFollowing) Icons.Default.CheckCircle else Icons.Default.PersonAdd,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (isFollowing) "Following" else "Follow", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
 
@@ -389,7 +432,10 @@ fun RideShareCard(
 fun RideStoryCard(
     story: RideStory,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isFollowing: Boolean = false,
+    canFollow: Boolean = true,
+    onFollowClick: (() -> Unit)? = null
 ) {
     Card(
         modifier = modifier
@@ -414,7 +460,7 @@ fun RideStoryCard(
                     color = AdventureOrange.copy(alpha = 0.15f)
                 ) {
                     Text(
-                        text = "FEATURED EXPEDITION STORY",
+                        text = "FEATURED ADVENTURE STORY",
                         style = MaterialTheme.typography.labelSmall,
                         color = AdventureOrange,
                         fontWeight = FontWeight.Bold,
@@ -426,6 +472,50 @@ fun RideStoryCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = story.user.avatarUrl,
+                    contentDescription = "Adventurer ${story.user.name}",
+                    modifier = Modifier.size(36.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(Modifier.width(9.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "${story.user.name} · Adventurer",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${story.user.primaryActivity} · ${story.user.location}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+                if (canFollow && onFollowClick != null) {
+                    TextButton(
+                        onClick = onFollowClick,
+                        modifier = Modifier.height(36.dp).testTag("story_follow_button_${story.id}"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isFollowing) Icons.Default.CheckCircle else Icons.Default.PersonAdd,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (isFollowing) "Following" else "Follow", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))

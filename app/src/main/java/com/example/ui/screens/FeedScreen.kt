@@ -1,9 +1,14 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -24,6 +29,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -31,6 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.analytics.AdventureFunnelAnalytics
 import com.example.data.model.*
 import com.example.data.repository.formatRideDuration
@@ -68,6 +75,8 @@ fun FeedScreen(
     var activeViewerShort by remember { mutableStateOf<AdventureShort?>(null) }
     var activePhotoViewer by remember { mutableStateOf<Pair<String, String>?>(null) }
     var activeViewerFilter by remember { mutableStateOf("All Media") }
+    var selectedFeedTab by remember { mutableStateOf("For you") }
+    val followedAdventurerIds by viewModel.followedAdventurerIds.collectAsState()
     val listState = rememberLazyListState()
 
     val rotationAngle by animateFloatAsState(
@@ -94,7 +103,51 @@ fun FeedScreen(
                     is FeedItem.RideShareItem -> item.rideShare.title.contains(keyword, true) || item.rideShare.user.name.contains(keyword, true)
                 }
             }
-            if (matched.isEmpty()) feedItems else matched
+            matched
+        }
+    }
+
+    val audienceFeedItems = remember(filteredFeedItems, selectedFeedTab, followedAdventurerIds) {
+        if (selectedFeedTab == "Following") {
+            FeedAudiencePolicy.followingItems(filteredFeedItems, followedAdventurerIds)
+        } else {
+            filteredFeedItems
+        }
+    }
+    val displayFeedItems = remember(audienceFeedItems, activeViewerFilter) {
+        when (activeViewerFilter) {
+            "🔥 Trail Shorts" -> emptyList()
+            "📸 Trail Photos" -> audienceFeedItems.filter { item ->
+                when (item) {
+                    is FeedItem.PostItem -> !item.post.imageUrl.isNullOrBlank()
+                    is FeedItem.StoryItem -> item.story.coverImageUrl.isNotBlank()
+                    is FeedItem.RideShareItem -> false
+                }
+            }
+            "🏔️ High Pass" -> audienceFeedItems.filter { item ->
+                when (item) {
+                    is FeedItem.PostItem -> (item.post.caption + " " + item.post.user.location).contains("pass", true)
+                    is FeedItem.StoryItem -> (item.story.title + " " + item.story.description).contains("pass", true)
+                    is FeedItem.RideShareItem -> (item.rideShare.title + " " + item.rideShare.user.location).contains("pass", true)
+                }
+            }
+            else -> audienceFeedItems
+        }
+    }
+    val audienceShorts = remember(selectedFeedTab, followedAdventurerIds) {
+        if (selectedFeedTab == "Following") {
+            defaultAdventureShorts.filter { short -> short.adventurerId?.let { it in followedAdventurerIds } == true }
+        } else {
+            defaultAdventureShorts
+        }
+    }
+    val availableShorts = remember(audienceShorts, activeViewerFilter) {
+        when (activeViewerFilter) {
+            "📸 Trail Photos" -> emptyList()
+            "🏔️ High Pass" -> audienceShorts.filter {
+                it.location.contains("pass", true) || it.tags.any { tag -> tag.contains("highpass", true) }
+            }
+            else -> audienceShorts
         }
     }
 
@@ -249,18 +302,89 @@ fun FeedScreen(
             contentPadding = PaddingValues(bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. TOP: Expedition Live Shorts & Vertical Video Reels (Active Viewer Showcase)
+            // 1. Follower-first stories rail: familiar horizontal story bubbles at the top of Home.
             item {
-                ExpeditionShortsReel(
-                    shorts = defaultAdventureShorts,
-                    onShortClick = { shortItem ->
-                        activeViewerShort = shortItem
-                    },
-                    modifier = Modifier.padding(top = 4.dp)
+                AdventurerStoriesRail(
+                    currentUser = viewModel.currentUser,
+                    adventurers = viewModel.friendUsers,
+                    followedIds = followedAdventurerIds,
+                    onAddStoryClick = { viewModel.navigateTo(Screen.STORY_STUDIO) },
+                    onStoryClick = { adventurer ->
+                        val short = defaultAdventureShorts.firstOrNull { it.adventurerName == adventurer.name }
+                        if (short != null) {
+                            activeViewerShort = short
+                        } else {
+                            activePhotoViewer = Pair(
+                                adventurerStoryCovers[adventurer.id] ?: adventurer.avatarUrl,
+                                "A recent moment from ${adventurer.name} · ${adventurer.location}"
+                            )
+                        }
+                    }
                 )
             }
 
-            // 2. Active Viewer Filter Chips
+            // 2. For-you vs Following: viewers control whose updates fill the feed.
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "YOUR ADVENTURE FEED",
+                            color = AdventureOrange,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            if (selectedFeedTab == "Following") "Moments from Adventurers you follow" else "Discover journeys worth following",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("For you", "Following").forEach { tab ->
+                            FilterChip(
+                                selected = selectedFeedTab == tab,
+                                onClick = { selectedFeedTab = tab },
+                                label = { Text(tab, fontWeight = if (selectedFeedTab == tab) FontWeight.Bold else FontWeight.Medium) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AdventureOrange,
+                                    selectedLabelColor = Color.White
+                                ),
+                                modifier = Modifier.testTag("feed_audience_${tab.lowercase().replace(" ", "_")}")
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 4. Immersive shorts respond to the selected audience and media view.
+            if (availableShorts.isNotEmpty()) {
+            item {
+                AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn(animationSpec = tween(420, delayMillis = 60)) +
+                        slideInVertically(
+                            animationSpec = tween(420, delayMillis = 60),
+                            initialOffsetY = { it / 14 }
+                        ),
+                    label = "feed_hero_entrance"
+                ) {
+                    ExpeditionShortsReel(
+                        shorts = availableShorts,
+                        onShortClick = { shortItem ->
+                            activeViewerShort = shortItem
+                        },
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+
+
+            }
+            // 5. Media filters now change the actual feed content
             item {
                 Row(
                     modifier = Modifier
@@ -298,6 +422,105 @@ fun FeedScreen(
                         )
                     }
                 }
+            }
+
+            if (activeViewerFilter != "🔥 Trail Shorts") {
+            // 6. Social posts and stories, directly below the viewer shelves
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "ADVENTURER UPDATES & MOMENTS",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AdventureOrange
+                    )
+                    Text(
+                        text = "Stories and field notes",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (displayFeedItems.isEmpty() && activeViewerFilter != "🔥 Trail Shorts") {
+                item {
+                    Text(
+                        if (selectedFeedTab == "Following") "Nothing from your followed Adventurers matches this view yet." else Str.FEED_EMPTY.get(currentLang),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(32.dp)
+                    )
+                }
+            }
+
+            // 5. Active Viewer Photos & Post Cards (Elevated to top)
+            itemsIndexed(displayFeedItems) { _, item ->
+                val sourceIndex = feedItems.indexOfFirst { it == item }.coerceAtLeast(0)
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    when (item) {
+                        is FeedItem.PostItem -> {
+                            PostCard(
+                                post = item.post,
+                                onLikeClick = { viewModel.toggleLike(sourceIndex) },
+                                onCommentClick = { viewModel.openCommentSheet(sourceIndex) },
+                                onPhotoClick = { photoUrl, caption ->
+                                    activePhotoViewer = Pair(photoUrl, caption)
+                                },
+                                isFollowing = item.post.user.id in followedAdventurerIds,
+                                canFollow = item.post.user.id != viewModel.currentUser.id,
+                                onFollowClick = { viewModel.toggleFollowAdventurer(item.post.user.id) }
+                            )
+                        }
+                        is FeedItem.RideShareItem -> {
+                            RideShareCard(
+                                rideShare = item.rideShare,
+                                onLikeClick = { viewModel.toggleLike(sourceIndex) },
+                                onCommentClick = { viewModel.openCommentSheet(sourceIndex) },
+                                isFollowing = item.rideShare.user.id in followedAdventurerIds,
+                                canFollow = item.rideShare.user.id != viewModel.currentUser.id,
+                                onFollowClick = { viewModel.toggleFollowAdventurer(item.rideShare.user.id) }
+                            )
+                        }
+                        is FeedItem.StoryItem -> {
+                            RideStoryCard(
+                                story = item.story,
+                                onClick = { viewModel.navigateTo(Screen.STORY_STUDIO) },
+                                isFollowing = item.story.user.id in followedAdventurerIds,
+                                canFollow = item.story.user.id != viewModel.currentUser.id,
+                                onFollowClick = { viewModel.toggleFollowAdventurer(item.story.user.id) }
+                            )
+                        }
+                    }
+                }
+            }
+
+
+            }
+
+            if (activeViewerFilter == "🔥 Trail Shorts" && availableShorts.isEmpty()) {
+                item {
+                    Text(
+                        if (selectedFeedTab == "Following") "No shorts from the Adventurers you follow yet." else "No short videos match this view yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 18.dp)
+                    )
+                }
+            }
+
+            // Suggested Adventurers sits after the social feed so the first screen stays viewer-first.
+            item {
+                SuggestedAdventurersRail(
+                    adventurers = viewModel.friendUsers,
+                    followedIds = followedAdventurerIds,
+                    onFollowToggle = { viewModel.toggleFollowAdventurer(it) }
+                )
             }
 
             // 3. Basecamp Active Plan & Preparation Resume Card (Screen 01)
@@ -400,82 +623,6 @@ fun FeedScreen(
                     onOpenAllModules = { viewModel.setShowFeatureOrganizer(true) },
                     lang = currentLang
                 )
-            }
-
-            // 5. Expedition Live Stories Avatars Strip
-            item {
-                ExpeditionStoriesStrip(
-                    onAddStoryClick = { viewModel.setShowCreatePost(true) },
-                    onStoryClick = { story ->
-                        viewModel.navigateTo(Screen.STORY_STUDIO)
-                    },
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-
-            // 4. Photos & Visual Media Feed Section Header
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "EXPEDITION PHOTOS & MOMENTS",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = AdventureOrange
-                    )
-                    Text(
-                        text = "High-Res Trail View",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            if (filteredFeedItems.isEmpty()) {
-                item {
-                    Text(
-                        Str.FEED_EMPTY.get(currentLang),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth().padding(32.dp)
-                    )
-                }
-            }
-
-            // 5. Active Viewer Photos & Post Cards (Elevated to top)
-            itemsIndexed(filteredFeedItems) { index, item ->
-                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    when (item) {
-                        is FeedItem.PostItem -> {
-                            PostCard(
-                                post = item.post,
-                                onLikeClick = { viewModel.toggleLike(index) },
-                                onCommentClick = { viewModel.openCommentSheet(index) },
-                                onPhotoClick = { photoUrl, caption ->
-                                    activePhotoViewer = Pair(photoUrl, caption)
-                                }
-                            )
-                        }
-                        is FeedItem.RideShareItem -> {
-                            RideShareCard(
-                                rideShare = item.rideShare,
-                                onLikeClick = { viewModel.toggleLike(index) },
-                                onCommentClick = { viewModel.openCommentSheet(index) }
-                            )
-                        }
-                        is FeedItem.StoryItem -> {
-                            RideStoryCard(
-                                story = item.story,
-                                onClick = { viewModel.navigateTo(Screen.STORY_STUDIO) }
-                            )
-                        }
-                    }
-                }
             }
 
             // 6. Section Divider: Adventure Hub & Telemetry
@@ -716,12 +863,14 @@ fun FeedScreen(
 
         // Active Shorts Viewer Modal Overlay
         activeViewerShort?.let { currentShort ->
-            val shortsList = defaultAdventureShorts
-            val currentIndex = remember(currentShort) {
+            val shortsList = availableShorts.ifEmpty { defaultAdventureShorts }
+            val currentIndex = remember(currentShort, shortsList) {
                 shortsList.indexOfFirst { it.id == currentShort.id }.coerceAtLeast(0)
             }
             ActiveShortsViewerModal(
                 short = currentShort,
+                followedAdventurerIds = followedAdventurerIds,
+                onFollowToggle = { viewModel.toggleFollowAdventurer(it) },
                 onDismiss = { activeViewerShort = null },
                 onNext = {
                     val nextIndex = (currentIndex + 1) % shortsList.size
@@ -745,3 +894,239 @@ fun FeedScreen(
     }
 }
 
+
+
+private val adventurerStoryCovers = mapOf(
+    "u2" to "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=900&q=80",
+    "u3" to "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80",
+    "u4" to "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=900&q=80",
+    "u5" to "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=900&q=80",
+    "u6" to "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=900&q=80",
+    "u7" to "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=900&q=80",
+    "u8" to "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=900&q=80",
+    "u9" to "https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=900&q=80",
+    "u10" to "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
+    "u11" to "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=900&q=80",
+    "u12" to "https://images.unsplash.com/photo-1498654200943-1088dd4438ae?auto=format&fit=crop&w=900&q=80",
+    "u13" to "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=900&q=80",
+    "u14" to "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=900&q=80",
+    "u15" to "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=900&q=80"
+)
+
+/** Stories are surfaced first, like a familiar social viewer, while using Adventurer terminology. */
+@Composable
+private fun AdventurerStoriesRail(
+    currentUser: User,
+    adventurers: List<User>,
+    followedIds: Set<String>,
+    onAddStoryClick: () -> Unit,
+    onStoryClick: (User) -> Unit
+) {
+    val followedAdventurers = adventurers.filter { it.id in followedIds }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    "ADVENTURER STORIES",
+                    color = AdventureOrange,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    "Fresh moments from people you follow",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Text(
+                "${followedAdventurers.size} following",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(
+                modifier = Modifier.width(66.dp).clickable(onClick = onAddStoryClick),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier.size(62.dp).clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    AsyncImage(
+                        model = currentUser.avatarUrl,
+                        contentDescription = "Your Adventurer profile",
+                        modifier = Modifier.fillMaxSize().padding(3.dp).clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Surface(
+                        modifier = Modifier.align(Alignment.BottomEnd).size(23.dp)
+                            .border(2.dp, MaterialTheme.colorScheme.background, CircleShape),
+                        shape = CircleShape,
+                        color = AdventureOrange
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add a story",
+                            tint = Color.White,
+                            modifier = Modifier.padding(3.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(5.dp))
+                Text(
+                    "Your story",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1
+                )
+            }
+
+            followedAdventurers.forEach { adventurer ->
+                Column(
+                    modifier = Modifier.width(70.dp).clickable { onStoryClick(adventurer) },
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier.size(62.dp).clip(CircleShape)
+                            .background(Brush.sweepGradient(listOf(AdventureOrange, AmberGold, SafeMint, AdventureOrange)))
+                    ) {
+                        AsyncImage(
+                            model = adventurer.avatarUrl,
+                            contentDescription = "Open story from Adventurer ${adventurer.name}",
+                            modifier = Modifier.fillMaxSize().padding(3.dp).clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    Spacer(Modifier.height(5.dp))
+                    Text(
+                        adventurer.name.substringBefore(" "),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1
+                    )
+                    Text(
+                        "ADVENTURER",
+                        color = AdventureOrange,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 8.sp,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** A horizontal discovery shelf with explicit Follow/Following actions for every profile. */
+@Composable
+private fun SuggestedAdventurersRail(
+    adventurers: List<User>,
+    followedIds: Set<String>,
+    onFollowToggle: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "MEET ADVENTURERS",
+                color = AdventureOrange,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                "Follow their next journey",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            adventurers.forEach { adventurer ->
+                val isFollowing = adventurer.id in followedIds
+                Card(
+                    modifier = Modifier.width(224.dp).testTag("adventurer_card_${adventurer.id}"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = CardDefaults.outlinedCardBorder()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            AsyncImage(
+                                model = adventurer.avatarUrl,
+                                contentDescription = null,
+                                modifier = Modifier.size(44.dp).clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(Modifier.width(9.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    adventurer.name,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
+                                )
+                                Text(
+                                    adventurer.primaryActivity,
+                                    color = AdventureOrange,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1
+                                )
+                                Text(
+                                    adventurer.location,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        if (isFollowing) {
+                            OutlinedButton(
+                                onClick = { onFollowToggle(adventurer.id) },
+                                modifier = Modifier.fillMaxWidth().height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text("Following")
+                            }
+                        } else {
+                            Button(
+                                onClick = { onFollowToggle(adventurer.id) },
+                                modifier = Modifier.fillMaxWidth().height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = AdventureOrange)
+                            ) {
+                                Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text("Follow Adventurer")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

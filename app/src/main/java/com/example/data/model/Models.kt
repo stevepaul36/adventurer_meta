@@ -7,7 +7,8 @@ data class User(
     val name: String,
     val avatarUrl: String,
     val bikeModel: String = "Royal Enfield Himalayan 450",
-    val location: String = "Bengaluru, India"
+    val location: String = "Bengaluru, India",
+    val primaryActivity: String = "Motorcycling"
 )
 
 data class RideStats(

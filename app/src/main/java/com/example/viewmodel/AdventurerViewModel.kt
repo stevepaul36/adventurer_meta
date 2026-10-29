@@ -73,6 +73,12 @@ class AdventurerViewModel(
     }
 
     val feed = repository.feed
+    val friendUsers = repository.friendUsers
+    val followedAdventurerIds = repository.followedAdventurerIds
+
+    fun toggleFollowAdventurer(adventurerId: String) {
+        repository.toggleFollowAdventurer(adventurerId)
+    }
     val expeditions = repository.expeditions
     val emergencyStations = repository.emergencyStations
     val distressSignals = repository.distressSignals

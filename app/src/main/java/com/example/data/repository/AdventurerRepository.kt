@@ -19,9 +19,23 @@ class AdventurerRepository {
     val friendUsers = listOf(
         User("u2", "Mia Torque", "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80", "KTM 390 Adventure", "Pune, Maharashtra"),
         User("u3", "Clutch Cargo", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80", "BMW R1250 GS Adventure", "Shimla, HP"),
-        User("u4", "Vance Velocity", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80", "Triumph Tiger 900 Rally Pro", "Mumbai, Maharashtra"),
-        User("u5", "Dr. Tanya Sen", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80", "RE Scram 411 (Medic Spec)", "Leh, Ladakh")
+        User("u4", "Vance Velocity", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80", "Triumph Tiger 900 Rally Pro", "Mumbai, Maharashtra", "Motorcycling"),
+        User("u5", "Dr. Tanya Sen", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80", "Wilderness medicine kit", "Leh, Ladakh", "Wilderness medicine"),
+        User("u6", "Leah Ridge", "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=300&q=80", "Alpine trekking kit", "Canmore, Alberta", "Trekking"),
+        User("u7", "Noah Tide", "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80", "Sea kayak", "Squamish, British Columbia", "Kayaking"),
+        User("u8", "Sage Wilds", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80", "Backcountry camp kit", "Algonquin, Ontario", "Camping & wildlife"),
+        User("u9", "Arjun Pedal", "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80", "Gravel bike", "Bengaluru, India", "Cycling & bikepacking"),
+        User("u10", "Maya Miles", "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80", "Scenic road-trip kit", "Vancouver, Canada", "Scenic road trips"),
+        User("u11", "Kai Deep", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80", "Mask, fins and dive computer", "Vancouver Island, Canada", "Scuba diving"),
+        User("u12", "Robin Cast", "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80", "Fly-fishing kit", "Ontario, Canada", "Fishing & angling"),
+        User("u13", "Tenzin Trail", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80", "Cold-weather expedition kit", "Zanskar, India", "High-altitude exploration"),
+        User("u14", "Alex Rider", "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80", "DesertX touring kit", "Big Sur, California", "Motorcycling"),
+        User("u15", "Zara Moto", "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80", "Desert touring kit", "Spiti Valley, India", "Motorcycling")
     )
+
+    // Demo follow graph; state lives in the repository so it survives navigation between screens.
+    private val _followedAdventurerIds = MutableStateFlow(setOf("u2", "u3"))
+    val followedAdventurerIds: StateFlow<Set<String>> = _followedAdventurerIds.asStateFlow()
 
     private val initialExpeditions = listOf(
         ExpeditionRoute(
@@ -297,6 +311,13 @@ class AdventurerRepository {
     val telemetry: StateFlow<LiveRideTelemetry> = _telemetry.asStateFlow()
 
     // Helper functions
+    fun toggleFollowAdventurer(adventurerId: String) {
+        if (adventurerId.isBlank() || adventurerId == currentUser.id) return
+        _followedAdventurerIds.value = _followedAdventurerIds.value.toMutableSet().apply {
+            if (!add(adventurerId)) remove(adventurerId)
+        }.toSet()
+    }
+
     fun toggleLike(feedIndex: Int) {
         val currentList = _feed.value.toMutableList()
         if (feedIndex in currentList.indices) {
