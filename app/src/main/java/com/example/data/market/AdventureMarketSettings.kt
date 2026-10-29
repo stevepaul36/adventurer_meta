@@ -9,7 +9,7 @@ import java.util.Locale
 
 data class AdventureMarketContext(
     val market: AdventureMarket = AdventureMarket.CANADA,
-    val region: String = AdventureMarketSettings.defaultRegionFor(AdventureMarket.CANADA),
+    val region: String = "Ontario",
 )
 
 object AdventureMarketSettings {
@@ -23,8 +23,13 @@ object AdventureMarketSettings {
 
     fun regionsFor(market: AdventureMarket): List<String> = when (market) {
         AdventureMarket.INDIA -> listOf(
-            "Tamil Nadu", "Kerala", "Karnataka", "Maharashtra", "Himachal Pradesh",
-            "Uttarakhand", "Goa", "Delhi", "Rajasthan", "Other / not listed"
+            "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+            "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+            "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
+            "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
+            "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+            "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
+            "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry", "Other / not listed"
         )
         AdventureMarket.CANADA -> listOf(
             "Ontario", "Quebec", "British Columbia", "Alberta", "Manitoba",
@@ -33,8 +38,17 @@ object AdventureMarketSettings {
             "Other / not listed"
         )
         AdventureMarket.UNITED_STATES -> listOf(
-            "California", "New York", "Colorado", "Texas", "Washington", "Utah",
-            "Alaska", "Hawaii", "Other / not listed"
+            "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
+            "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia",
+            "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky",
+            "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
+            "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire",
+            "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota",
+            "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina",
+            "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia",
+            "Washington", "West Virginia", "Wisconsin", "Wyoming", "American Samoa",
+            "Guam", "Northern Mariana Islands", "Puerto Rico", "U.S. Virgin Islands",
+            "Other / not listed"
         )
     }
 
