@@ -14,6 +14,7 @@ class RegionalProviderCatalogTest {
     fun suggestsMarketFromCountryCodeWithoutRequiringLocationPermission() {
         assertEquals(AdventureMarket.INDIA, AdventureMarket.suggestedFromCountryCode("in"))
         assertEquals(AdventureMarket.CANADA, AdventureMarket.suggestedFromCountryCode("CA"))
+        assertEquals(AdventureMarket.UNITED_STATES, AdventureMarket.suggestedFromCountryCode("us"))
         assertEquals(null, AdventureMarket.suggestedFromCountryCode("GB"))
         assertEquals(null, AdventureMarket.suggestedFromCountryCode(null))
     }
@@ -42,10 +43,16 @@ class RegionalProviderCatalogTest {
     fun catalogKeepsMarketsDistinctAndProviderIdsUnique() {
         val india = RegionalProviderCatalog.forMarket(AdventureMarket.INDIA)
         val canada = RegionalProviderCatalog.forMarket(AdventureMarket.CANADA)
+        val unitedStates = RegionalProviderCatalog.forMarket(AdventureMarket.UNITED_STATES)
         assertTrue(india.any { it.id == "irctc" })
         assertFalse(canada.any { it.id == "irctc" })
         assertTrue(india.none { it.id == "parks-canada" })
-        assertEquals((india + canada).size, (india + canada).map { it.id }.distinct().size)
+        assertTrue(unitedStates.any { it.id == "nps-us" })
+        assertTrue(unitedStates.any { it.id == "recreation-gov-us" })
+        assertTrue(unitedStates.none { it.id == "parks-canada" })
+        val allProviders = india + canada + unitedStates
+        assertEquals(allProviders.size, allProviders.map { it.id }.distinct().size)
+        assertTrue(allProviders.all { it.websiteUrl.startsWith("https://") })
         assertNotNull(RegionalProviderCatalog.find("parks-reservations-ca"))
     }
 
