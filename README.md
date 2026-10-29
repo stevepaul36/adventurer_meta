@@ -56,13 +56,19 @@ A full-screen responsive product prototype is available at [`prototypes/india-ca
 
 The preview includes market switching, regional provider catalogue, search filters, local trip stop editing/export, reminders/checklists, fuel estimation, a food cart/review/confirmation simulation, a private memory timeline and a deterministic voice-demo workspace. It is a design/interaction sandbox, not a deployed service and not the Kotlin app. Run `node scripts/validate-market-preview.mjs` from the repository root to check the prototype's JavaScript syntax and required interactions.
 
+## Global market-aware UX — India, Canada and USA
+
+The native Trail Settings screen now includes an editable market and state/province/region preference, and Explore & Plan shares that saved context. The regional provider catalogue includes handoff examples for India, Canada and the United States. Market selection is a preference and never by itself establishes legal permission; the country selector does not request GPS. The browser concept at [Global Market-Aware UX](prototypes/global-market-aware-ux/index.html) demonstrates the shared media viewer and contextual action design. The UX validation script runs in the Android CI workflow.
+
+Production credential requirements and setup commands are documented in [PRODUCTION_API_KEYS.md](PRODUCTION_API_KEYS.md). A live legal/conditions policy service is **not** integrated; region-specific restrictions still require chosen official/licensed sources, freshness and expiry handling, and a fail-closed unknown state. Provider cards open external sites and do not complete orders, reservations, permits or emergency dispatch.
+
 ## India and Canada market support
 
 Explore & Plan now includes an explicit India/Canada service selector, category filters, regional provider cards and market-aware Google Maps search. The selection is user-editable and seeded from the device country only; it does not use GPS to choose a market. Provider cards are **external website handoffs only**—Adventurer does not read their private screens, live inventory, cart/booking data, payment state or receipts.
 
 The current catalogue includes examples such as Google Maps/Mappls, Swiggy/Zomato, IRCTC/redBus and MakeMyTrip for India, plus Google Maps, Uber Eats/DoorDash/Skip, Parks Canada, AllTrails, VIA Rail and PlugShare for Canada. It is a starting catalogue, not a signed partnership or a promise of market-wide availability. See [India + Canada Market Playbook](INDIA_CANADA_MARKET_PLAYBOOK.md) for the integration ladder, user preference model, privacy guardrails, roadmap and research sources.
 
-**Currency handling:** trip budgets and creator-draft suggested prices now store an explicit amount plus ISO currency code (INR or CAD). Room migration v1→v2 preserves legacy amounts as CAD without conversion; the planner lets users choose budget currency and formats totals accordingly. This is currency-aware storage and formatting, not live FX conversion or full translation/localization.
+**Currency handling:** trip budgets and creator-draft suggested prices now store an explicit amount plus ISO currency code (INR or CAD). Room migration v1→v2 preserves legacy amounts as CAD without conversion; the planner lets users choose budget currency and formats totals accordingly. USA UI defaults (USD, miles and Fahrenheit) are now represented in the market-context settings; the planner currency options include USD. Budget amounts are never silently converted across currencies. This is currency-aware storage and formatting, not live FX conversion or full translation/localization.
 
 ## Technology
 
