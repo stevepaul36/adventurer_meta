@@ -23,7 +23,11 @@ class AdventurerRepository {
         User("u5", "Dr. Tanya Sen", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80", "Wilderness medicine kit", "Leh, Ladakh", "Wilderness medicine"),
         User("u6", "Leah Ridge", "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=300&q=80", "Alpine trekking kit", "Canmore, Alberta", "Trekking"),
         User("u7", "Noah Tide", "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80", "Sea kayak", "Squamish, British Columbia", "Kayaking"),
-        User("u8", "Sage Wilds", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80", "Backcountry camp kit", "Algonquin, Ontario", "Camping & wildlife")
+        User("u8", "Sage Wilds", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80", "Backcountry camp kit", "Algonquin, Ontario", "Camping & wildlife"),
+        User("u9", "Arjun Pedal", "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80", "Gravel bike", "Bengaluru, India", "Cycling & bikepacking"),
+        User("u10", "Maya Miles", "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80", "Scenic road-trip kit", "Vancouver, Canada", "Scenic road trips"),
+        User("u11", "Kai Deep", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80", "Mask, fins and dive computer", "Vancouver Island, Canada", "Scuba diving"),
+        User("u12", "Robin Cast", "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80", "Fly-fishing kit", "Ontario, Canada", "Fishing & angling")
     )
 
     // Demo follow graph; state lives in the repository so it survives navigation between screens.
