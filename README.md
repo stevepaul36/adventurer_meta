@@ -56,6 +56,12 @@ A full-screen responsive product prototype is available at [`prototypes/india-ca
 
 The preview includes market switching, regional provider catalogue, search filters, local trip stop editing/export, reminders/checklists, fuel estimation, a food cart/review/confirmation simulation, a private memory timeline and a deterministic voice-demo workspace. It is a design/interaction sandbox, not a deployed service and not the Kotlin app. Run `node scripts/validate-market-preview.mjs` from the repository root to check the prototype's JavaScript syntax and required interactions.
 
+## Global market-aware UX (India, Canada and USA)
+
+The responsive [Global Market-Aware UX preview](prototypes/global-market-aware-ux/index.html) keeps video/photo viewing and creator interactions common while adapting provider handoffs, units, and action guidance to India, Canada or the United States. Users can switch market and region and inspect an illustrative activity-specific policy context. It is a self-contained prototype, not a live policy service. The design rules and implementation acceptance checklist are in [GLOBAL_MARKET_AWARE_UX.md](GLOBAL_MARKET_AWARE_UX.md).
+
+**Policy principle:** do not gate actions on country selection alone. Rules may depend on state/province/territory, municipality, park or land manager, activity, season and user eligibility. A production policy response must carry an official source and last-checked timestamp; missing or stale data must be shown as unknown, never as permission. The prototype's buttons are demos and do not perform bookings, legal verification, navigation or emergency dispatch.
+
 ## India and Canada market support
 
 Explore & Plan now includes an explicit India/Canada service selector, category filters, regional provider cards and market-aware Google Maps search. The selection is user-editable and seeded from the device country only; it does not use GPS to choose a market. Provider cards are **external website handoffs only**—Adventurer does not read their private screens, live inventory, cart/booking data, payment state or receipts.
