@@ -134,12 +134,9 @@ fun FeedScreen(
             else -> audienceFeedItems
         }
     }
-    val followedAdventurerNames = remember(viewModel.friendUsers, followedAdventurerIds) {
-        viewModel.friendUsers.filter { it.id in followedAdventurerIds }.map { it.name }.toSet()
-    }
-    val audienceShorts = remember(selectedFeedTab, followedAdventurerNames) {
+    val audienceShorts = remember(selectedFeedTab, followedAdventurerIds) {
         if (selectedFeedTab == "Following") {
-            defaultAdventureShorts.filter { it.adventurerName in followedAdventurerNames }
+            defaultAdventureShorts.filter { it.adventurerId in followedAdventurerIds }
         } else {
             defaultAdventureShorts
         }
@@ -863,6 +860,8 @@ fun FeedScreen(
             }
             ActiveShortsViewerModal(
                 short = currentShort,
+                followedAdventurerIds = followedAdventurerIds,
+                onFollowToggle = { viewModel.toggleFollowAdventurer(it) },
                 onDismiss = { activeViewerShort = null },
                 onNext = {
                     val nextIndex = (currentIndex + 1) % shortsList.size
