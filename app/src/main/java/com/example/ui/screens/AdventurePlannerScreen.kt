@@ -547,7 +547,7 @@ fun AdventurePlannerScreen(
                             val term = destinationQuery.trim()
                             if (term.isBlank()) Toast.makeText(context, "Enter a destination or interest to search.", Toast.LENGTH_SHORT).show()
                             else {
-                                val uri = Uri.parse(RegionalProviderCatalog.googleMapsSearchUrl("$term outdoor places", selectedMarket))
+                                val uri = Uri.parse(RegionalProviderCatalog.googleMapsSearchUrl("$term outdoor places", selectedMarket, marketContext.region))
                                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
                                     .onFailure { Toast.makeText(context, "No browser or map app can open this search.", Toast.LENGTH_LONG).show() }
                                 AdventureFunnelAnalytics.log(context, "destination_map_search_opened", mapOf("entry_point" to "explore_planner"))
@@ -851,7 +851,7 @@ fun AdventurePlannerScreen(
                                 TextButton(onClick = {
                                     val term = (destination.ifBlank { destinationQuery } + " " + idea.title).trim()
                                     if (term.isNotBlank()) runCatching {
-                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(RegionalProviderCatalog.googleMapsSearchUrl(term, selectedMarket))))
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(RegionalProviderCatalog.googleMapsSearchUrl(term, selectedMarket, marketContext.region))))
                                     }
                                 }) { Text("Check provider", color = HighAltitudeCyan) }
                             }
