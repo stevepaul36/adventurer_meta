@@ -1,5 +1,9 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -251,13 +255,23 @@ fun FeedScreen(
         ) {
             // 1. TOP: Expedition Live Shorts & Vertical Video Reels (Active Viewer Showcase)
             item {
-                ExpeditionShortsReel(
-                    shorts = defaultAdventureShorts,
-                    onShortClick = { shortItem ->
-                        activeViewerShort = shortItem
-                    },
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn(animationSpec = tween(420, delayMillis = 60)) +
+                        slideInVertically(
+                            animationSpec = tween(420, delayMillis = 60),
+                            initialOffsetY = { it / 14 }
+                        ),
+                    label = "feed_hero_entrance"
+                ) {
+                    ExpeditionShortsReel(
+                        shorts = defaultAdventureShorts,
+                        onShortClick = { shortItem ->
+                            activeViewerShort = shortItem
+                        },
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
             }
 
             // 2. Active Viewer Filter Chips
