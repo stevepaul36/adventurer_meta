@@ -857,8 +857,8 @@ fun FeedScreen(
 
         // Active Shorts Viewer Modal Overlay
         activeViewerShort?.let { currentShort ->
-            val shortsList = defaultAdventureShorts
-            val currentIndex = remember(currentShort) {
+            val shortsList = availableShorts.ifEmpty { defaultAdventureShorts }
+            val currentIndex = remember(currentShort, shortsList) {
                 shortsList.indexOfFirst { it.id == currentShort.id }.coerceAtLeast(0)
             }
             ActiveShortsViewerModal(
