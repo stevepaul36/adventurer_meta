@@ -65,6 +65,13 @@ class RegionalProviderCatalogTest {
         assertTrue(url.startsWith("https://www.google.com/maps/search/?api=1&query="))
         assertTrue(url.contains("EV+charger+%26+coffee+in+Canada"))
         assertFalse(url.contains(" "))
+
+        val regionalUrl = RegionalProviderCatalog.googleMapsSearchUrl(
+            query = "camping",
+            market = AdventureMarket.CANADA,
+            region = "Ontario",
+        )
+        assertTrue(regionalUrl.contains("camping+in+Ontario%2C+Canada"))
     }
 
     @Test
