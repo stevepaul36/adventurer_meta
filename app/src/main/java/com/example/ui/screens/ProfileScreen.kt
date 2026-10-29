@@ -238,7 +238,7 @@ fun ProfileScreen(
                                     modifier = Modifier.fillMaxWidth().testTag("market_country_selector"),
                                     onClick = { marketMenuExpanded = true }
                                 ) {
-                                    Text(marketContext.market.label, maxLines = 1)
+                                    Text(marketContext.market.countryName, maxLines = 1)
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Icon(Icons.Default.ExpandMore, contentDescription = "Choose market")
                                 }
@@ -271,7 +271,7 @@ fun ProfileScreen(
                                     expanded = regionMenuExpanded,
                                     onDismissRequest = { regionMenuExpanded = false }
                                 ) {
-                                    marketContext.market.regions.forEach { region ->
+                                    AdventureMarketSettings.regionsFor(marketContext.market).forEach { region ->
                                         DropdownMenuItem(
                                             text = { Text(region) },
                                             onClick = {
@@ -290,7 +290,7 @@ fun ProfileScreen(
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(
-                                    "Defaults: ${marketContext.market.defaultsLabel}",
+                                    "Defaults: ${AdventureMarketSettings.defaultsLabelFor(marketContext.market)}",
                                     color = AmberGold,
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.labelMedium
